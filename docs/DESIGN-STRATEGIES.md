@@ -12,3 +12,12 @@
 | Demonstrate | Demonstrate you are processing personal data in a privacy-friendly way. |
 
 
+---
+
+
+##### References
+```
+Privacy Design Strategies (The Little Blue Book)
+Jaap-Henk Hoepman
+Agusut 23, 2019
+```
