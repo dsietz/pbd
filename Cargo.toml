@@ -1,0 +1,21 @@
+[package]
+name = "pbd"
+version = "0.0.1"
+authors = ["dsietz <davidsietz@yahoo.com>"]
+edition = "2018"
+readme = "README.md"
+license = "Apache-2.0"
+keywords = ["data", "privacy", "sdk", "design", "development"]
+categories = ["web-programming", "development-tools", "data-structures","config"]
+description = "A software development kit for Privacy by Design (PbD)."
+documentation = ""
+repository = ""
+exclude = [
+    "examples/*",
+    "target/*",
+	"tests/*",
+	"benches/*",
+]
+
+[badges]
+maintenance = {status = "actively-developed"}
