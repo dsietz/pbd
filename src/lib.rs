@@ -1,7 +1,9 @@
 #[macro_use] extern crate serde_derive;
 extern crate serde_json;
 extern crate json;
+extern crate futures;
 extern crate actix_web;
+extern crate actix_service;
 
 // Structures
 /// Represents a Data Usage Agreement (DUA)
@@ -73,6 +75,7 @@ impl DUA {
 
 // Modules
 pub mod extractors;
+pub mod middleware;
 
 // Unit Tests
 #[cfg(test)]

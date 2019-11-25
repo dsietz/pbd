@@ -1,6 +1,51 @@
-use actix_web::{HttpRequest};
+use std::cell::RefCell;
+use std::rc::Rc;
+use actix_web::{FromRequest, HttpRequest};
+use actix_web::dev::{Extensions};
 use crate::{DUA};
 
+// Need to wrap it as an extractor
+/// see: https://github.com/actix/actix-web/blob/master/actix-session/src/lib.rs
+struct AuthorInner {
+    name: String,
+}
+
+pub struct Author(Rc<RefCell<AuthorInner>>);
+
+pub trait DataAuthor {
+    fn get_author(&mut self) -> Author;
+ }
+ 
+ impl DataAuthor for HttpRequest {
+    fn get_author(&mut self) -> Author {
+        Author::get_author(&mut *self.extensions_mut())
+    }
+}
+
+impl Author {
+    pub fn get_author(extensions: &mut Extensions) -> Author {
+        if let Some(s_impl) = extensions.get::<Rc<RefCell<AuthorInner>>>() {
+            return Author(Rc::clone(&s_impl));
+        }
+/*
+        let inner = Rc::new(RefCell::new(AuthorInner::default()));
+        extensions.insert(inner.clone());
+        Author(inner)
+*/        
+    }
+}
+/*
+impl FromRequest for Author {
+    type Error = Error;
+    type Future = Ready<Result<Session, Error>>;
+    type Config = ();
+
+    #[inline]
+    fn from_request(req: &HttpRequest, _: &mut Payload) -> Self::Future {
+        ok(author_from_httprequest(&mut *req.extensions_mut()))
+    }
+}
+*/
 /// Extracts the Author of the data from the actix_web::HttpRequest
 /// 
 /// # Arguments
@@ -13,7 +58,7 @@ use crate::{DUA};
 /// extern crate pbd;
 /// extern crate actix_web;
 ///
-/// use pbd::extractors::web::*;
+/// use pbd::extractors::actix::*;
 /// use actix_web::{test, HttpRequest};
 /// use actix_web::http::{header};
 ///
@@ -55,7 +100,7 @@ pub fn author_from_httprequest(req: HttpRequest) -> Result<String, String> {
 /// extern crate pbd;
 /// extern crate actix_web;
 ///
-/// use pbd::extractors::web::*;
+/// use pbd::extractors::actix::*;
 /// use actix_web::{test, HttpRequest};
 /// use actix_web::http::{header};
 ///
