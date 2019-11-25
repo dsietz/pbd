@@ -8,8 +8,8 @@ license = "Apache-2.0"
 keywords = ["data", "privacy", "sdk", "design", "development"]
 categories = ["web-programming", "development-tools", "data-structures","config"]
 description = "A software development kit for Privacy by Design (PbD)."
-documentation = ""
-repository = ""
+documentation = "https://github.com/dsietz/pbd"
+repository = "https://github.com/dsietz/pbd"
 exclude = [
     "examples/*",
     "target/*",

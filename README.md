@@ -2,6 +2,6 @@
 
 # Privacy by Design (PbD) SDK
 
-This is a placeholder for an up-coming crate to provide developers with a software development kit for building data privacy into their solutions.
----
+>This is a placeholder for an up-coming crate to provide developers with a software development kit for building data privacy into their solutions.
 
+---
