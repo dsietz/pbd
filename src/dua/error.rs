@@ -2,9 +2,6 @@ use std::error;
 use derive_more::Display;
 use actix_web::ResponseError;
 
-//#[derive(Debug, Clone)]
-//pub struct Error;
-
 #[derive(Debug, Clone, Display)]
 pub enum Error {
     /// Bad Data Uasage Agreement
