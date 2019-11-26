@@ -1,51 +1,115 @@
-use std::cell::RefCell;
-use std::rc::Rc;
+use actix_web::dev::Payload;
+use actix_web::http::header::HeaderValue;
 use actix_web::{FromRequest, HttpRequest};
-use actix_web::dev::{Extensions};
-use crate::{DUA};
+use json::JsonValue;
+use crate::DUA;
+use crate::error::Error;
+
+// 
+// The Data Usage Agreement Extractor
+// 
+
+// DUA list
+type DUAList = Vec<DUA>;
+
+pub struct DUAs{
+    list: DUAList,
+}
+
+impl DUAs {
+    // Constructor
+    pub fn new() -> DUAs {
+        DUAs {
+            list: Vec::new(),
+        }
+    }
+
+    // Associated Function
+    fn value_to_vec(docs: &JsonValue) -> Vec<DUA> {
+        let mut v = Vec::new();
+    
+        for d in 0..docs.len() {
+            v.push(DUA::from_serialized(&docs[d].to_string()));
+        }                    
+            
+        v
+    }
+
+    fn get_header_value(req: &HttpRequest) -> HeaderValue {
+        match req.headers().get("Data-Usage-Agreement") {
+            Some(u) => {
+                u.clone()
+            },
+            None => {
+                panic!("{}", Error::MissingDUA);
+            },
+        }
+    }
+
+    // Constructor
+    pub fn from_request(req: &HttpRequest) -> DUAs{
+        let lst = match DUAs::get_header_value(req).to_str() {
+             Ok(list) => {
+                let docs = match json::parse(list) {
+                    Ok(valid) => valid,
+                    Err(_e) => {
+                        panic!("{}", Error::BadDUAFormat);
+                    },
+                };
+                
+                match docs.is_array() {
+                    true => {
+                        DUAs::value_to_vec(&docs)
+                    },
+                    false => {
+                        panic!("{}", Error::BadDUAFormat);
+                    },
+                }
+            },
+            Err(_e) => {
+                panic!("{}", Error::BadDUAFormat);
+            }
+        };
+
+        DUAs {
+            list: lst,
+        }
+    }
+
+    // returns a Vector of DUA objects
+    pub fn vec(&self) -> Vec<DUA> {
+        self.list.clone()
+    }
+}
+
+impl FromRequest for DUAs {
+    type Config = ();
+    type Future = Result<Self, Self::Error>;
+    type Error = crate::error::Error;
+
+    // convert request to future self
+    fn from_request(req: &HttpRequest, _payload: &mut actix_web::dev::Payload) -> <Self as FromRequest>::Future {
+        /*
+        match DUAs::dua_from_httprequest(req) {
+            Ok(list) => {
+                Ok(list)
+            },
+            Err(err_str) => {
+                Err(err_str).into()
+            },
+        }
+        */
+        //self.insert(DUA::from_serialized(r#"{ "agreement_name": "billing", "location": "www.dua.org/billing.pdf", "agreed_dtm": 1553988607 }"#))
+        
+        Ok(DUAs::from_request(req))
+    }
+}
+
 
 // Need to wrap it as an extractor
 /// see: https://github.com/actix/actix-web/blob/master/actix-session/src/lib.rs
-struct AuthorInner {
-    name: String,
-}
-
-pub struct Author(Rc<RefCell<AuthorInner>>);
-
-pub trait DataAuthor {
-    fn get_author(&mut self) -> Author;
- }
- 
- impl DataAuthor for HttpRequest {
-    fn get_author(&mut self) -> Author {
-        Author::get_author(&mut *self.extensions_mut())
-    }
-}
-
-impl Author {
-    pub fn get_author(extensions: &mut Extensions) -> Author {
-        if let Some(s_impl) = extensions.get::<Rc<RefCell<AuthorInner>>>() {
-            return Author(Rc::clone(&s_impl));
-        }
-/*
-        let inner = Rc::new(RefCell::new(AuthorInner::default()));
-        extensions.insert(inner.clone());
-        Author(inner)
-*/        
-    }
-}
-/*
-impl FromRequest for Author {
-    type Error = Error;
-    type Future = Ready<Result<Session, Error>>;
-    type Config = ();
-
-    #[inline]
-    fn from_request(req: &HttpRequest, _: &mut Payload) -> Self::Future {
-        ok(author_from_httprequest(&mut *req.extensions_mut()))
-    }
-}
-*/
+/// Example : https://github.com/svartalf/actix-web-httpauth/blob/master/src/extractors/bearer.rs
+///
 /// Extracts the Author of the data from the actix_web::HttpRequest
 /// 
 /// # Arguments
@@ -58,7 +122,7 @@ impl FromRequest for Author {
 /// extern crate pbd;
 /// extern crate actix_web;
 ///
-/// use pbd::extractors::actix::*;
+/// use pbd::extractor::actix::*;
 /// use actix_web::{test, HttpRequest};
 /// use actix_web::http::{header};
 ///
@@ -100,7 +164,7 @@ pub fn author_from_httprequest(req: HttpRequest) -> Result<String, String> {
 /// extern crate pbd;
 /// extern crate actix_web;
 ///
-/// use pbd::extractors::actix::*;
+/// use pbd::extractor::actix::*;
 /// use actix_web::{test, HttpRequest};
 /// use actix_web::http::{header};
 ///

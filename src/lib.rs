@@ -1,5 +1,6 @@
 #[macro_use] extern crate serde_derive;
 extern crate serde_json;
+extern crate derive_more;
 extern crate json;
 extern crate futures;
 extern crate actix_web;
@@ -74,7 +75,8 @@ impl DUA {
 }
 
 // Modules
-pub mod extractors;
+pub mod error;
+pub mod extractor;
 pub mod middleware;
 
 // Unit Tests
