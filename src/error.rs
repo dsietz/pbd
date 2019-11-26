@@ -7,6 +7,9 @@ use actix_web::ResponseError;
 
 #[derive(Debug, Clone, Display)]
 pub enum Error {
+    /// Bad Data Uasage Agreement
+    #[display(fmt = "Malformed or missing one or more Data Usage Agreements")]
+    BadDUA,
     /// Bad format of Data Uasage Agreement
     #[display(fmt = "Invalid format for Data Usage Agreement")]
     BadDUAFormat,
@@ -23,6 +26,12 @@ impl ResponseError for Error{}
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_error_dua_bad() {
+        let err = Error::BadDUA;
+        assert_eq!(format!("{}", err), "Malformed or missing one or more Data Usage Agreements");
+    }
 
     #[test]
     fn test_error_dua_missing() {
