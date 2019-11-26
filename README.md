@@ -18,10 +18,10 @@ For software development teams who implement Privacy by Design practices, this P
 Here's whats new in 0.0.1:
 
 This project and codebase for this crate has change 
-1. Added the struct and impl for DUA
-2. Added the following functions to extractors::web
-   - author_from_httprequest
-   - dua_from_httprequest
+1. Added Data Usage Agreement feature
+   - DUA object
+   - DUA Errors
+   - actix-web extractor
 
 ## About
 
