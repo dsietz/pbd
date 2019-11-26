@@ -20,6 +20,10 @@ exclude = [
 [badges]
 maintenance = {status = "actively-developed"}
 
+[features]
+default = ["dua"]
+dua = [] # Data Usae Agreement funcitonality
+
 [dependencies]
 log = "0.4"
 serde ="1.0"
