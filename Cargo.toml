@@ -1,6 +1,6 @@
 [package]
 name = "pbd"
-version = "0.0.3"
+version = "0.0.5"
 authors = ["dsietz <davidsietz@yahoo.com>"]
 edition = "2018"
 readme = "README.md"
@@ -17,8 +17,16 @@ exclude = [
 	"benches/*",
 ]
 
+[lib]
+name = "pbd"
+path = "src/lib.rs"
+
 [badges]
 maintenance = {status = "actively-developed"}
+
+[features]
+default = ["dua"]
+dua = ["actix-web","actix-service","futures"] # Data Usae Agreement funcitonality
 
 [dependencies]
 log = "0.4"
@@ -27,6 +35,6 @@ serde_derive = "1.0"
 serde_json = "1.0"
 derive_more = "0.99"
 json = "0.11"
-actix-web = "1.0"
-actix-service = "0.4"
-futures = "0.3"
+actix-web = { version = "1.0", optional = true }
+actix-service = { version = "0.4", optional = true }
+futures = { version = "0.3", optional = true }

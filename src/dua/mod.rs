@@ -11,8 +11,29 @@
 //! A privacy engineering practice that supports this _promise_ to adhere the data intent is the use of Data Usage Agreements.
 //! 
 //! ### Usage   
+//! 
+//! One way is to incorporate the use of DUA objects directly in the code.
+//! ```
+//! extern crate pbd;
 //!
+//! use pbd::dua::DUA;
+//!
+//! fn main() {
+//!     let serialized = r#"{ "agreement_name": "For Billing Purpose", "location": "www.dua.org/billing.pdf", "agreed_dtm": 1553988607 }"#;
+//!     let dua = DUA::from_serialized(&serialized);
+//! 
+//!     match dua.agreement_name.as_ref() {
+//!         "For Billing Purpose" => println!("We can use the data for sending a bill."),
+//!          _ => println!("Oops: We can't use the data this way!")
+//!      }
+//!     
+//!     // Addtionally, check which version of the agreement aligns with the agreed_dtm (if the agreement is under version control).
+//! }
+//! ```
 //!    
+
+/// The standard header attribute for list (array) of the Data Usage Agreements
+pub static DUA_HEADER: &str = "Data-Usage-Agreement";
 
 /// Represents a Data Usage Agreement (DUA)
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -26,6 +47,38 @@ pub struct DUA {
 }
 
 impl DUA {
+    /// Constructs a DUA object
+    /// 
+    /// # Arguments
+    /// 
+    /// * agreement: String - The common name of the Data Usage Agreement, (e.g.: For Billing Purpose).</br>
+    /// * uri: String - The URI where the version of the DUA can be found, (e.g.: https://iStore.example.org/dua/v2/billing.pdf).</br>
+    /// * agreed_on: String - The Unix Epoch time when the DUA was agreed to.</br>
+    /// 
+    /// #Example
+    ///
+    /// ```
+    /// extern crate pbd;
+    ///
+    /// use pbd::dua::DUA;
+    ///
+    /// fn main() {
+    ///     let dua = DUA::new("For Billing Purpose".to_string(), "www.dua.org/billing.pdf".to_string(), 1553988607);
+    ///     
+    ///     match dua.agreement_name.as_ref() {
+    ///         "For Billing Purpose" => println!("We can use the data for sending a bill."),
+    ///         _ => println!("Oops: We can't use the data this way!")
+    ///     }
+    /// }
+    /// ```
+    pub fn new(agreement: String, uri: String, agreed_on: u64) -> DUA {
+        DUA {
+            agreement_name: agreement,
+            location: uri,
+            agreed_dtm: agreed_on,
+        }
+    }
+
     /// Constructs a DUA object from a serialized string
     /// 
     /// # Arguments
@@ -83,6 +136,7 @@ impl DUA {
 
 pub mod error;
 pub mod extractor;
+pub mod middleware;
 
 // Unit Tests
 #[cfg(test)]
