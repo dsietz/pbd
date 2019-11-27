@@ -32,6 +32,9 @@
 //! ```
 //!    
 
+/// The standard header attribute for list (array) of the Data Usage Agreements
+pub static DUA_HEADER: &str = "Data-Usage-Agreement";
+
 /// Represents a Data Usage Agreement (DUA)
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct DUA {
@@ -133,6 +136,7 @@ impl DUA {
 
 pub mod error;
 pub mod extractor;
+pub mod middleware;
 
 // Unit Tests
 #[cfg(test)]

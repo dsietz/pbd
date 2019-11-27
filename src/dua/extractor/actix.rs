@@ -8,7 +8,7 @@ use json::JsonValue;
 // The Data Usage Agreement Extractor
 // 
 // DUA list
-type LocalError = super::error::Error;
+pub type LocalError = super::error::Error;
 type DUAList = Vec<DUA>;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -40,7 +40,7 @@ impl DUAs {
     }
     // Constructor
     pub fn from_request(req: &HttpRequest) -> DUAs{
-        let lst = match req.headers().get("Data-Usage-Agreement") {
+        let lst = match req.headers().get(DUA_HEADER) {
             Some(u) => {
                 match u.to_str() {
                     Ok(list) => {
@@ -104,6 +104,7 @@ mod tests {
     use actix_web::{test, web, http, App, HttpRequest, HttpResponse};
     use actix_web::dev::Service;
     use actix_web::http::{StatusCode};
+
     // supporting functions
     fn index_extract_dua(duas: DUAs, _req: HttpRequest) -> HttpResponse {
         if duas.vec().len() > 0 {
@@ -116,13 +117,19 @@ mod tests {
                 .body(format!("{}", LocalError::BadDUA))
         }
     }
+
     // tests
+    #[test]
+    fn test_http_header_name() {
+        assert_eq!(DUA_HEADER, "Data-Usage-Agreement");
+    }
+
     #[test]
     fn test_dua_extractor_good() {
         let mut app = test::init_service(App::new().route("/", web::get().to(index_extract_dua)));
         let req = test::TestRequest::get().uri("/")
             .header("content-type", "application/json")
-            .header("Data-Usage-Agreement", r#"[{"agreement_name":"billing","location":"www.dua.org/billing.pdf","agreed_dtm": 1553988607}]"#)
+            .header(DUA_HEADER, r#"[{"agreement_name":"billing","location":"www.dua.org/billing.pdf","agreed_dtm": 1553988607}]"#)
             .to_request();
         let resp = test::block_on(app.call(req)).unwrap();
         assert_eq!(resp.status(), StatusCode::OK);
