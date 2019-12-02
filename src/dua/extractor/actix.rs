@@ -3,18 +3,20 @@ use super::*;
 use std::fmt;
 use actix_web::{FromRequest, HttpRequest};
 use json::JsonValue;
+//use futures::future::{Ready};
 
 // 
 // The Data Usage Agreement Extractor
 // 
-// DUA list
 pub type LocalError = super::error::Error;
+// DUA list
 type DUAList = Vec<DUA>;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct DUAs{
     list: DUAList,
 }
+
 
 impl fmt::Display for DUAs {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -93,7 +95,7 @@ impl FromRequest for DUAs {
     type Future = Result<Self, Self::Error>;
     type Error = LocalError;
     // convert request to future self
-    fn from_request(req: &HttpRequest, _payload: &mut actix_web::dev::Payload) -> <Self as FromRequest>::Future {
+    fn from_request(req: &HttpRequest, _payload: &mut actix_web::dev::Payload) -> Self::Future {
         Ok(DUAs::from_request(req))
     }
 }
