@@ -25,7 +25,7 @@
 use super::*;
 
 use actix_web::dev::{ServiceRequest, ServiceResponse};
-use actix_service::{Service, Transform, IntoTransform};
+use actix_service::{Service, Transform};
 use futures::future::{ok, FutureResult};
 use futures::{Future, Poll};
 // Middleware for checking Data Usage Agreement
@@ -109,6 +109,17 @@ mod tests {
             .header(http::header::CONTENT_TYPE, "application/json")
             .body(r#"{"status":"Ok"}"#)
     }    
+
+    fn test_add_middleware() {
+        let app = App::new()
+            .wrap(DUAEnforcer)
+            .service(
+                web::resource("/")
+                    .route(web::get().to(index_middleware_dua))
+            );
+
+          assert!(true);
+    }
 
     // tests
     #[ignore]
