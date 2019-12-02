@@ -5,7 +5,6 @@
 //! 
 //!
 //! ```
-//! use actix_web::middleware::Logger;
 //! use pbd::dua::middleware::actix::*;
 //! use actix_web::{web, App, HttpRequest, HttpResponse};
 //!
@@ -15,10 +14,10 @@
 //! 
 //! fn main () {
 //!     let app = App::new()
-//!         .wrap(DUAEnforcer::new())
+//!         .wrap(DUAEnforcer)
 //!         .service(
 //!             web::resource("/")
-//!                 .route(web::get().to(|| HttpResponse::Ok()))
+//!                 .route(web::get().to(index))
 //!          );
 //! }
 //! ```
@@ -45,14 +44,7 @@ impl DUAEnforcer {
         DUAEnforcer{}
     }
 }
-/*
-impl<T, S> IntoTransform<T, S> for DUAEnforcer 
-{
-    fn into_transform(&self) -> DUAEnforcer {
-        self
-    }
-}
-*/
+
 // `B` - type of response's body
 impl<S, B> Transform<S> for DUAEnforcer
 where
@@ -100,7 +92,6 @@ where
         }))
     }
 }
-
 
 
 #[cfg(test)]
