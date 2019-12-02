@@ -4,7 +4,6 @@
 //! designing systems with privacy in mind is a critical part of your work. For this reason, this library provides 
 //! functionality and components that help you implement PbD best practices.
 //!
-//! ---
 //!
 //! #### Usage
 //!
