@@ -10,10 +10,10 @@
 //! This crate follows the [privacy design strategies and tactics](./docs/DESIGN-STRATEGIES.md) and is broken down into aligned features.
 //! These features can be specified in Cargo.toml as a dependency.
 //!
-//! [dependencies.pbd]
-//! version = "0.0.5"
-//! default-features = false
-//! features = ["dua"]
+//! >[dependencies.pbd]
+//! >version = "0.0.5"
+//! >default-features = false
+//! >features = ["dua"]
 //!  
 //!
 //! ##### Feature List 

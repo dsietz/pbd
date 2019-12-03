@@ -3,11 +3,10 @@
 //! ---
 //! 
 //! Example 
-//!
+//! ```
 //! extern crate pbd;
 //! extern crate actix_web;
-//!
-//! ```
+//! 
 //! use pbd::dua::DUA_HEADER;
 //! use pbd::dua::extractor::actix::*;
 //! use actix_web::{web, http, test, App, HttpRequest, HttpResponse};
