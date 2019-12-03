@@ -15,17 +15,19 @@
 //! ### Usage
 //! 1. The requestor adds a HTTP header `Data-Usage-Agreement` with the json array of the DUA objects
 //!     
-//!     >JSON Structure
-//!     >[
-//!     >    {
-//!     >        "agreement_name": String,
-//!     >        "location": String,
-//!     >        "agreed_dtm": Unix Epoch Number
-//!     >    }
-//!     >]
+//!     > *JSON Structure*
 //!     >
-//!     >HTTP Header
-//!     >Data-Usage-Agreement: [{"agreement_name":"billing","location":"www.dua.org/billing.pdf","agreed_dtm": 1553988607}]
+//!     > [
+//!     >     {
+//!     >         "agreement_name": String,
+//!     >         "location": String,
+//!     >         "agreed_dtm": Unix Epoch Number
+//!     >     }
+//!     > ]
+//!     > 
+//!     > *HTTP Header*
+//!     >
+//!     > Data-Usage-Agreement: [{"agreement_name":"billing","location":"www.dua.org/billing.pdf","agreed_dtm": 1553988607}]
 //!     
 //!
 //! 

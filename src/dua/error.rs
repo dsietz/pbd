@@ -1,3 +1,5 @@
+//! Data Usage Agreement specific Errors
+
 use std::error;
 use derive_more::Display;
 use actix_web::ResponseError;

@@ -8,10 +8,10 @@
 //! 
 //! Example 
 //!
+//! ```
 //! extern crate pbd;
 //! extern crate actix_web;
 //!
-//! ```
 //! use pbd::dua::middleware::actix::*;
 //! use actix_web::{web, App};
 //! 
@@ -24,6 +24,9 @@
 //!                 );
 //! }
 //! ```
+//!
+//! For futher examples run `cargo run --example data-usage-agreement` 
+//!
 
 use super::*;
 use actix_web::{Error, HttpResponse};
