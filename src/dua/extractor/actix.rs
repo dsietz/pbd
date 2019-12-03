@@ -1,9 +1,47 @@
-//! Information extractors for `actix-web`
+//! The DUA Extractor is a simple way to pull the list of DUAs from the HTTP Request. 
+//! 
+//! ---
+//! 
+//! Example 
+//!
+//! extern crate pbd;
+//! extern crate actix_web;
+//!
+//! ```
+//! use pbd::dua::DUA_HEADER;
+//! use pbd::dua::extractor::actix::*;
+//! use actix_web::{web, http, test, App, HttpRequest, HttpResponse};
+//! use actix_web::http::{StatusCode};
+//! use actix_web::dev::Service;
+//!
+//! fn index_extract_dua(duas: DUAs, _req: HttpRequest) -> HttpResponse {
+//!     for dua in duas.vec().iter() {
+//!         println!("{:?}", dua);
+//!     }
+//!         
+//!     HttpResponse::Ok()
+//!         .header(http::header::CONTENT_TYPE, "application/json")
+//!         .body(format!("{}", duas))
+//! }
+//! 
+//! fn main () {
+//!     let mut app = test::init_service(App::new().route("/", web::get().to(index_extract_dua)));
+//!     let req = test::TestRequest::get().uri("/")
+//!         .header("content-type", "application/json")
+//!         .header(DUA_HEADER, r#"[{"agreement_name":"billing","location":"www.dua.org/billing.pdf","agreed_dtm": 1553988607},{"agreement_name":"shipping","location":"www.dua.org/shipping.pdf","agreed_dtm": 1553988607}]"#)
+//!         .to_request();
+//!     let resp = test::block_on(app.call(req)).unwrap();
+//!     
+//!     assert_eq!(resp.status(), StatusCode::OK);
+//! }
+//! ```
+
+
+
 use super::*;
 use std::fmt;
 use actix_web::{FromRequest, HttpRequest};
 use json::JsonValue;
-//use futures::future::{Ready};
 
 // 
 // The Data Usage Agreement Extractor
