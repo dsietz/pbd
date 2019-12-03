@@ -9,19 +9,23 @@ For software development teams who implement Privacy by Design practices, this P
 **Table of Contents**
 - [Privacy by Design (PbD) SDK](#privacy-by-design-pbd-sdk)
   - [What's New](#whats-new)
+  - [Features](#features)
   - [About](#about)
   - [How to Contribute](#how-to-contribute)
   - [License](#license)
 
 ## What's New
 
-Here's whats new in 0.0.1:
+Here's whats new in 0.0.6:
 
 This project and codebase for this crate has change 
-1. Added Data Usage Agreement feature
-   - DUA object
-   - DUA Errors
+1. Updated Data Usage Agreement feature
    - actix-web extractor
+   - actix-web middleware
+
+## Features
+
+- Data Usage Agreements
 
 ## About
 
