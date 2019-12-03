@@ -1,0 +1,39 @@
+{
+	"info": {
+		"_postman_id": "6c128175-0415-4471-8f70-ec288d015429",
+		"name": "pbd",
+		"description": "Privacy by Design",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "example data-usage-agreement",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					},
+					{
+						"key": "Data-Usage-Agreement",
+						"value": "[{\"agreement_name\":\"billing\",\"location\":\"www.dua.org/billing.pdf\",\"agreed_dtm\": 1553988607}]",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "http://localhost:8088",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8088"
+				},
+				"description": "Make a call to a service that requires a Data-Usage-Agreement header"
+			},
+			"response": []
+		}
+	],
+	"protocolProfileBehavior": {}
+}

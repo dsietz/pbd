@@ -6,25 +6,28 @@
 //!
 //! ```
 //! use pbd::dua::middleware::actix::*;
-//! use actix_web::{web, App};
+//! use actix_web::{web, App, HttpRequest, HttpResponse};
+//!
+//! pub fn index(_req: &HttpRequest) -> &'static str {
+//!     "Hello World!"
+//! }
 //! 
 //! fn main () {
 //!     let app = App::new()
-//!                 .wrap(DUAEnforcer::default())
-//!                 .service(
-//!                     web::resource("/")
-//!                     .route(web::get().to(|| "Got Data Usage Agreement?"))
-//!                 );
+//!         .wrap(DUAEnforcer)
+//!         .service(
+//!             web::resource("/")
+//!                 .route(web::get().to(index))
+//!          );
 //! }
 //! ```
 
 use super::*;
 
-use actix_web::{Error, HttpResponse};
 use actix_web::dev::{ServiceRequest, ServiceResponse};
 use actix_service::{Service, Transform};
-use futures::future::{ok, Either, FutureResult};
-use futures::{Poll};
+use futures::future::{ok, FutureResult};
+use futures::{Future, Poll};
 // Middleware for checking Data Usage Agreement
 ///
 /// If there is no `Data Usage Agreement` in the headers (use pbd::dua::DUA_HEADER),
@@ -32,20 +35,26 @@ use futures::{Poll};
 ///
 ///
 
-#[derive(Default, Clone)]
+pub type LocalError = super::error::Error;
+
 pub struct DUAEnforcer;
 
-impl DUAEnforcer {}
+impl DUAEnforcer {
+    pub fn new() -> DUAEnforcer {
+        DUAEnforcer{}
+    }
+}
 
 // `B` - type of response's body
 impl<S, B> Transform<S> for DUAEnforcer
 where
-    S: Service<Request = ServiceRequest, Response = ServiceResponse<B>, Error = Error>,
+    S: Service<Request = ServiceRequest, Response = ServiceResponse<B>, Error = LocalError>,
     S::Future: 'static,
+    B: 'static,
 {
     type Request = ServiceRequest;
     type Response = ServiceResponse<B>;
-    type Error = Error;
+    type Error = LocalError;
     type InitError = ();
     type Transform = DUAEnforcerMiddleware<S>;
     type Future = FutureResult<Self::Transform, Self::InitError>;
@@ -61,31 +70,26 @@ pub struct DUAEnforcerMiddleware<S> {
 
 impl<S, B> Service for DUAEnforcerMiddleware<S>
 where
-    S: Service<Request = ServiceRequest, Response = ServiceResponse<B>, Error = Error>,
+    S: Service<Request = ServiceRequest, Response = ServiceResponse<B>, Error = LocalError>,
     S::Future: 'static,
+    B: 'static,
 {
     type Request = ServiceRequest;
     type Response = ServiceResponse<B>;
-    type Error = Error;
-    type Future = Either<S::Future, FutureResult<Self::Response, Self::Error>>;
+    type Error = LocalError;
+    type Future = Box<dyn Future<Item = ServiceResponse<B>, Error = LocalError>>;
 
     fn poll_ready(&mut self) -> Poll<(), Self::Error> {
         self.service.poll_ready()
     }
 
     fn call(&mut self, req: ServiceRequest) -> Self::Future {
-        match  req.headers().get(DUA_HEADER) {
-            Some(_hdr) => {
-                Either::A(self.service.call(req))
-            },
-            None => {
-                Either::B(ok(req.into_response(
-                    HttpResponse::BadRequest()
-                        .finish()
-                        .into_body(),
-                )))
-            },
-        }
+        println!("Hi from start. You requested: {}", req.path());
+
+        Box::new(self.service.call(req).and_then(|res| {
+            println!("Hi from response");
+            Ok(res)
+        }))
     }
 }
 
@@ -104,10 +108,9 @@ mod tests {
             .body(r#"{"status":"Ok"}"#)
     }    
 
-    #[test]
     fn test_add_middleware() {
-        let _app = App::new()
-            .wrap(DUAEnforcer::default())
+        let app = App::new()
+            .wrap(DUAEnforcer)
             .service(
                 web::resource("/")
                     .route(web::get().to(index_middleware_dua))
