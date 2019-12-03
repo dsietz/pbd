@@ -20,8 +20,6 @@ Here's whats new in 0.0.6:
 
 This project and codebase for this crate has change 
 1. Updated Data Usage Agreement feature
-   - DUA object
-   - DUA Errors
    - actix-web extractor
    - actix-web middleware
 
