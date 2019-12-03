@@ -29,11 +29,13 @@
 //!
 
 use super::*;
+use crate::dua::extractor::actix::{DUAs};
 use actix_web::{Error, HttpResponse};
 use actix_web::dev::{ServiceRequest, ServiceResponse};
 use actix_service::{Service, Transform};
 use futures::future::{ok, Either, FutureResult};
 use futures::{Poll};
+use hyper::{Client, Uri};
 
 #[derive(Default, Clone)]
 pub struct DUAEnforcer;
@@ -78,7 +80,18 @@ where
 
     fn call(&mut self, req: ServiceRequest) -> Self::Future {
         match  req.headers().get(DUA_HEADER) {
-            Some(_hdr) => {
+            Some(list) => {
+                let duas = DUAs::duas_from_header_value(list);
+                let mut uri_list = Vec::new();
+
+                for dua in duas.vec().iter() {
+                    uri_list.push(dua.location.clone());
+                    println!("{}", dua.location);
+                }
+
+                let client = Client::new();
+                let rspns = client.get(Uri::from_static(&uri_list[0])).status();
+
                 Either::A(self.service.call(req))
             },
             None => {
@@ -129,10 +142,11 @@ mod tests {
         );
         let req = test::TestRequest::post().uri("/")
             .header("content-type", "application/json")
-            .header(DUA_HEADER, r#"[{"agreement_name":"billing","location":"www.dua.org/billing.pdf","agreed_dtm": 1553988607}]"#)
+            .header(DUA_HEADER, r#"[{"agreement_name":"patient data use","location":"https://github.com/dsietz/pbd/blob/master/tests/duas/Patient%20Data%20Use%20Agreement.pdf","agreed_dtm": 1553988607}]"#)
             .to_request();
         let resp = test::block_on(app.call(req)).unwrap();
-        assert_eq!(resp.status(), StatusCode::OK);
+        assert!(false);
+        //assert_eq!(resp.status(), StatusCode::OK);
     } 
 
     #[test]

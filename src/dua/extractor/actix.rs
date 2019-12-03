@@ -41,6 +41,7 @@ use super::*;
 use std::fmt;
 use actix_web::{FromRequest, HttpRequest};
 use json::JsonValue;
+use actix_web::http::header::HeaderValue;
 
 // 
 // The Data Usage Agreement Extractor
@@ -77,6 +78,40 @@ impl DUAs {
         }                    
         v
     }
+
+    pub fn duas_from_header_value(header_value: &HeaderValue) -> DUAs{
+        match header_value.to_str() {
+            Ok(list) => {
+                let docs = match json::parse(list) {
+                    Ok(valid) => valid,
+                    Err(_e) => {
+                        // couldn't find the header, so return empty list of DUAs
+                        warn!("{}", LocalError::BadDUAFormat);
+                        return DUAs::new()
+                    },
+                };
+            
+                match docs.is_array() {
+                    true => {
+                        DUAs{
+                            list: DUAs::value_to_vec(&docs),
+                        }
+                    },
+                    false => {
+                        // couldn't find the header, so return empty list of DUAs
+                        warn!("{}", LocalError::BadDUAFormat);
+                        return DUAs::new()
+                    },
+                }
+            },
+            Err(_e) => {
+                // couldn't find the header, so return empty list of DUAs
+                warn!("{}", LocalError::BadDUAFormat);
+                return DUAs::new()
+            },
+        }
+    }
+
     // Constructor
     pub fn from_request(req: &HttpRequest) -> DUAs{
         let lst = match req.headers().get(DUA_HEADER) {
