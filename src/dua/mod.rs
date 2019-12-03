@@ -1,4 +1,5 @@
 
+//! ### Background
 //! The practice of implementing Data Usage Agreements addresses the following Privacy Design Strategies:
 //! - Inform
 //! - Control
@@ -8,11 +9,29 @@
 //! Whenever data is passed between Actors (e.g.: data collection between an online portal and the backend service to order the product), 
 //! it is important to ensure that the owners' consent for how the data wil be used doesn't become _lost in translation_. 
 //! 
-//! A privacy engineering practice that supports this _promise_ to adhere the data intent is the use of Data Usage Agreements.
+//! A privacy engineering practice that supports this _promise_ to adhere how the data may be used is defined in the Data Usage Agreements 
+//! that are sent with the data.
+//!
+//! ### Usage
+//! 1. The requestor adds a HTTP header `Data-Usage-Agreement` with the json array of the DUA objects
+//!     
+//!     >JSON Structure
+//!     >[
+//!     >    {
+//!     >        "agreement_name": String,
+//!     >        "location": String,
+//!     >        "agreed_dtm": Unix Epoch Number
+//!     >    }
+//!     >]
+//!     >
+//!     >HTTP Header
+//!     >Data-Usage-Agreement: [{"agreement_name":"billing","location":"www.dua.org/billing.pdf","agreed_dtm": 1553988607}]
+//!     
+//!
 //! 
-//! ### Usage   
-//! 
-//! One way is to incorporate the use of DUA objects directly in the code.
+//! ---
+//!
+//! One way is to incorporate the use of DUA objects is directly in the code.
 //! ```
 //! extern crate pbd;
 //!

@@ -39,9 +39,4 @@ pub mod dua;
 // Unit Tests
 #[cfg(test)]
 mod tests {
-    #[ignore]
-    #[test]
-    fn test_ok() {
-        assert!(true);
-    }
 }

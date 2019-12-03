@@ -1,8 +1,15 @@
+//! The DUA Middleware is a simple way to ensure that web services that require 
+//! Data Usage Agreements are provided in the Request as a http header. 
+//!
+//! If there is no `Data Usage Agreement` in the headers (use pbd::dua::DUA_HEADER),
+//! the middleware will respond with a BadRequest status code.
+//! 
+//! ---
+//! 
+//! Example 
 //!
 //! extern crate pbd;
 //! extern crate actix_web;
-//!
-//! 
 //!
 //! ```
 //! use pbd::dua::middleware::actix::*;
@@ -19,18 +26,11 @@
 //! ```
 
 use super::*;
-
 use actix_web::{Error, HttpResponse};
 use actix_web::dev::{ServiceRequest, ServiceResponse};
 use actix_service::{Service, Transform};
 use futures::future::{ok, Either, FutureResult};
 use futures::{Poll};
-// Middleware for checking Data Usage Agreement
-///
-/// If there is no `Data Usage Agreement` in the headers (use pbd::dua::DUA_HEADER),
-/// the middleware will respond with a BadRequest status code.
-///
-///
 
 #[derive(Default, Clone)]
 pub struct DUAEnforcer;
@@ -117,10 +117,13 @@ mod tests {
     }
 
     // tests
-    #[ignore]
     #[test]
     fn test_dua_ok() {
-        let mut app = test::init_service(App::new().route("/", web::post().to(index_middleware_dua)));
+        let mut app = test::init_service(
+            App::new()
+            .wrap(DUAEnforcer::default())
+            .route("/", web::post().to(index_middleware_dua))
+        );
         let req = test::TestRequest::post().uri("/")
             .header("content-type", "application/json")
             .header(DUA_HEADER, r#"[{"agreement_name":"billing","location":"www.dua.org/billing.pdf","agreed_dtm": 1553988607}]"#)
@@ -129,10 +132,13 @@ mod tests {
         assert_eq!(resp.status(), StatusCode::OK);
     } 
 
-    #[ignore]
     #[test]
     fn test_dua_missing() {
-        let mut app = test::init_service(App::new().route("/", web::post().to(index_middleware_dua)));
+        let mut app = test::init_service(
+                            App::new()
+                            .wrap(DUAEnforcer::default())
+                            .route("/", web::post().to(index_middleware_dua))
+                        );
         let req = test::TestRequest::post().uri("/")
             .header("content-type", "application/json")
             .to_request();
