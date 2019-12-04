@@ -20,8 +20,7 @@ Here's whats new in 0.0.6:
 
 This project and codebase for this crate has change 
 1. Updated Data Usage Agreement feature
-   - actix-web extractor
-   - actix-web middleware
+   - actix-web middleware now checks the uri of the DUA to ensure they are valid (issue #14)
 
 ## Features
 
