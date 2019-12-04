@@ -41,6 +41,7 @@ use super::*;
 use std::fmt;
 use actix_web::{FromRequest, HttpRequest};
 use json::JsonValue;
+use actix_web::http::header::HeaderValue;
 
 // 
 // The Data Usage Agreement Extractor
@@ -53,7 +54,6 @@ type DUAList = Vec<DUA>;
 pub struct DUAs{
     list: DUAList,
 }
-
 
 impl fmt::Display for DUAs {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -77,38 +77,45 @@ impl DUAs {
         }                    
         v
     }
-    // Constructor
-    pub fn from_request(req: &HttpRequest) -> DUAs{
-        let lst = match req.headers().get(DUA_HEADER) {
-            Some(u) => {
-                match u.to_str() {
-                    Ok(list) => {
-                        let docs = match json::parse(list) {
-                            Ok(valid) => valid,
-                            Err(_e) => {
-                                // couldn't find the header, so return empty list of DUAs
-                                warn!("{}", LocalError::BadDUAFormat);
-                                return DUAs::new()
-                            },
-                        };
-                    
-                        match docs.is_array() {
-                            true => {
-                                DUAs::value_to_vec(&docs)
-                            },
-                            false => {
-                                // couldn't find the header, so return empty list of DUAs
-                                warn!("{}", LocalError::BadDUAFormat);
-                                return DUAs::new()
-                            },
-                        }
-                    },
+
+    pub fn duas_from_header_value(header_value: &HeaderValue) -> DUAs{
+        match header_value.to_str() {
+            Ok(list) => {
+                let docs = match json::parse(list) {
+                    Ok(valid) => valid,
                     Err(_e) => {
                         // couldn't find the header, so return empty list of DUAs
                         warn!("{}", LocalError::BadDUAFormat);
                         return DUAs::new()
                     },
+                };
+            
+                match docs.is_array() {
+                    true => {
+                        DUAs{
+                            list: DUAs::value_to_vec(&docs),
+                        }
+                    },
+                    false => {
+                        // couldn't find the header, so return empty list of DUAs
+                        warn!("{}", LocalError::BadDUAFormat);
+                        return DUAs::new()
+                    },
                 }
+            },
+            Err(_e) => {
+                // couldn't find the header, so return empty list of DUAs
+                warn!("{}", LocalError::BadDUAFormat);
+                return DUAs::new()
+            },
+        }
+    }
+
+    // Constructor
+    pub fn from_request(req: &HttpRequest) -> DUAs{
+        match req.headers().get(DUA_HEADER) {
+            Some(u) => {
+                return DUAs::duas_from_header_value(u)
             },
             None => {
                 // couldn't find the header, so return empty list of DUAs
@@ -116,10 +123,8 @@ impl DUAs {
                 return DUAs::new()
             },
         };
-        DUAs {
-            list: lst,
-        }
     }
+
     // returns a Vector of DUA objects
     #[allow(dead_code)]
     pub fn vec(&self) -> Vec<DUA> {
