@@ -35,7 +35,8 @@ use actix_web::dev::{ServiceRequest, ServiceResponse};
 use actix_service::{Service, Transform};
 use futures::future::{ok, Either, FutureResult};
 use futures::{Poll};
-use hyper::{Client, Uri};
+use reqwest::StatusCode;
+use rayon::prelude::*;
 
 #[derive(Default, Clone)]
 pub struct DUAEnforcer;
@@ -82,17 +83,47 @@ where
         match  req.headers().get(DUA_HEADER) {
             Some(list) => {
                 let duas = DUAs::duas_from_header_value(list);
-                let mut uri_list = Vec::new();
 
-                for dua in duas.vec().iter() {
-                    uri_list.push(dua.location.clone());
-                    println!("{}", dua.location);
+                // first check to see if there are DUAs provided
+                if duas.vec().len() < 1 {
+                    return Either::B(ok(req.into_response(
+                        HttpResponse::BadRequest()
+                            .finish()
+                         .into_body(),
+                    )))
                 }
 
-                let client = Client::new();
-                let rspns = client.get(Uri::from_static(&uri_list[0])).status();
+                // Next check to see if the DUAs provided are valid ones
+                let checks: usize = duas.vec().par_iter()
+                    .map(|d|
+                        match reqwest::get(&d.location.clone()) {
+                            Ok(rsp) => {
+                                if rsp.status() == StatusCode::OK { 
+                                    1
+                                } 
+                                else {
+                                    info!("{}", format!("Invalid DUA: {}", d.location.clone()));
+                                    0
+                                }
+                            },
+                            Err(_err) => {
+                                info!("{}", format!("Invalid DUA: {}", d.location.clone()));
+                                0
+                            },
+                        }
+                    )
+                    .sum();
 
-                Either::A(self.service.call(req))
+                if duas.vec().len() == checks {
+                    return Either::A(self.service.call(req))
+                }
+                else {
+                    return Either::B(ok(req.into_response(
+                        HttpResponse::BadRequest()
+                            .finish()
+                         .into_body(),
+                    )))
+                }
             },
             None => {
                 Either::B(ok(req.into_response(
@@ -145,8 +176,40 @@ mod tests {
             .header(DUA_HEADER, r#"[{"agreement_name":"patient data use","location":"https://github.com/dsietz/pbd/blob/master/tests/duas/Patient%20Data%20Use%20Agreement.pdf","agreed_dtm": 1553988607}]"#)
             .to_request();
         let resp = test::block_on(app.call(req)).unwrap();
-        assert!(false);
-        //assert_eq!(resp.status(), StatusCode::OK);
+        
+        assert_eq!(resp.status(), StatusCode::OK);
+    } 
+
+    #[test]
+    fn test_dua_empty() {
+        let mut app = test::init_service(
+            App::new()
+            .wrap(DUAEnforcer::default())
+            .route("/", web::post().to(index_middleware_dua))
+        );
+        let req = test::TestRequest::post().uri("/")
+            .header("content-type", "application/json")
+            .header(DUA_HEADER, r#"[]"#)
+            .to_request();
+        let resp = test::block_on(app.call(req)).unwrap();
+        
+        assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+    } 
+
+    #[test]
+    fn test_dua_invalid() {
+        let mut app = test::init_service(
+            App::new()
+            .wrap(DUAEnforcer::default())
+            .route("/", web::post().to(index_middleware_dua))
+        );
+        let req = test::TestRequest::post().uri("/")
+            .header("content-type", "application/json")
+            .header(DUA_HEADER, r#"[{"agreement_name":"patient data use","location":"https://example.com/invalid.pdf","agreed_dtm": 1553988607},{"agreement_name":"patient data use","location":"https://github.com/dsietz/pbd/blob/master/tests/duas/Patient%20Data%20Use%20Agreement.pdf","agreed_dtm": 1553988607}]"#)
+            .to_request();
+        let resp = test::block_on(app.call(req)).unwrap();
+        
+        assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
     } 
 
     #[test]
