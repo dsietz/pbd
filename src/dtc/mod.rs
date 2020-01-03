@@ -134,13 +134,11 @@ impl Marker {
 type Tracker = Vec<Marker>;
 
 trait MarkerChain {
-    fn is_valid(&self) -> bool{
+    fn is_valid(tracker: Tracker) -> bool{
         debug!("Validating chain ...");
 
-        for m in 0..self.len() {
-            let marker = self.get(m);
-
-            if marker.hash != Marker::calculate_hash(marker.identifier, DIFFICULTY).result {
+        for marker in tracker.iter() {
+            if marker.hash != Marker::calculate_hash(marker.clone().identifier, DIFFICULTY).result {
                 return false;
             }
         }
@@ -201,6 +199,15 @@ mod tests {
         mkrchn.push(Marker::genesis("order~clothing~iStore~15150".to_string()));
         mkrchn.push(get_marker());
 
-        assert!(mkrchn.is_valid());
+        assert_eq!(Tracker::is_valid(mkrchn), false);
+    }
+
+    #[test]
+    fn test_markerchain_valid() {
+        let mut mkrchn = Tracker::new();
+        mkrchn.push(Marker::genesis("order~clothing~iStore~15150".to_string()));
+        mkrchn.push(get_marker());
+
+        assert!(Tracker::is_valid(mkrchn));
     }
 }
