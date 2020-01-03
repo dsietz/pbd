@@ -25,10 +25,12 @@ path = "src/lib.rs"
 maintenance = {status = "actively-developed"}
 
 [features]
-default = ["dua"]
-dua = ["actix-web","actix-service","futures", "rayon", "reqwest"] # Data Usae Agreement funcitonality
+default = ["dua", "dtc"]
+dua = ["actix-web","actix-service","futures", "rayon", "reqwest"] # Data Usage Agreement funcitonality
+dtc =["pow_sha256"] # Data Tracker Chain functionality
 
 [dependencies]
+env_logger = "0.6"
 log = "0.4"
 serde ="1.0"
 serde_derive = "1.0"
@@ -40,3 +42,4 @@ actix-web = { version = "1.0.9", optional = true }
 actix-service = { version = "0.4.2", optional = true }
 futures = { version = "0.1", optional = true }
 rayon = { version = "1.2.1", optional = true }
+pow_sha256 = { version = "0.2", optional = true }

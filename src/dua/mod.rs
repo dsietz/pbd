@@ -4,7 +4,7 @@
 //! - Inform
 //! - Control
 //! - Enforce
-//! - Deomnstrate
+//! - Demonstrate
 //!
 //! Whenever data is passed between Actors (e.g.: data collection between an online portal and the backend service to order the product), 
 //! it is important to ensure that the owners' consent for how the data wil be used doesn't become _lost in translation_. 

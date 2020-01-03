@@ -16,15 +16,16 @@ For software development teams who implement Privacy by Design practices, this P
 
 ## What's New
 
-Here's whats new in 0.0.6:
+Here's whats new in 0.0.7:
 
 This project and codebase for this crate has change 
-1. Updated Data Usage Agreement feature
-   - actix-web middleware now checks the uri of the DUA to ensure they are valid (issue #14)
+1. Introduced the concept of Data Tracker Chains
+   - MarkerChain traits (issue #17)
 
 ## Features
 
 - Data Usage Agreements
+- Data Tracker Chain
 
 ## About
 
