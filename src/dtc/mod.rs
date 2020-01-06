@@ -31,6 +31,21 @@ pub struct MarkerIdentifier {
 }
 
 impl MarkerIdentifier {
+    /// Serializes the MarkerIdenifier.
+    /// 
+    /// #Example
+    ///
+    /// ```
+    /// extern crate pbd;
+    ///
+    /// use pbd::dtc::Marker;
+    ///
+    /// fn main() {
+    ///     let marker = Marker::new(1, 1578071239, "notifier~billing~receipt~email".to_string(), "order~clothing~iStore~15150".to_string(), "hash-12345".to_string());
+    ///     
+    ///     println!("{}", marker.identifier.serialize());
+    /// }
+    /// ```
     pub fn serialize(&self) -> String {
         serde_json::to_string(&self).unwrap()
     }
@@ -127,6 +142,25 @@ impl Marker {
             previous_hash: "0".to_string(),            
             nonce: DIFFICULTY,
         }
+    }
+
+    /// Serializes the Marker.
+    /// 
+    /// #Example
+    ///
+    /// ```
+    /// extern crate pbd;
+    ///
+    /// use pbd::dtc::Marker;
+    ///
+    /// fn main() {
+    ///     let marker = Marker::new(1, 1578071239, "notifier~billing~receipt~email".to_string(), "order~clothing~iStore~15150".to_string(), "hash-12345".to_string());
+    ///     
+    ///     println!("{}", marker.serialize());
+    /// }
+    /// ```
+    pub fn serialize(&self) -> String {
+        serde_json::to_string(&self).unwrap()
     }
 }
 
