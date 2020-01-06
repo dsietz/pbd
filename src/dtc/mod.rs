@@ -130,26 +130,177 @@ impl Marker {
     }
 }
 
-/// Represents a MarkerChain
-type Tracker = Vec<Marker>;
+/// Represents a Tacker (a.k.a. MarkerChain)
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct Tracker {
+    chain: Vec<Marker>,
+} 
 
-trait MarkerChain {
-    fn is_valid(tracker: Tracker) -> bool{
+impl Tracker {   
+    /// Constructs a Tracker (a.k.a. MarkerChain)
+    /// 
+    /// # Arguments
+    /// 
+    /// * dat_id: String - The unique identifier of the the data being tracked.</br>
+    /// 
+    /// #Example
+    ///
+    /// ```
+    /// extern crate pbd;
+    ///
+    /// use pbd::dtc::Tracker;
+    ///
+    /// fn main() {
+    ///     let tracker = Tracker::new("order~clothing~iStore~15150".to_string());
+    ///     
+    ///     // The genesis Marker is automaically created for you
+    ///     assert_eq!(tracker.len(), 1);
+    /// }
+    /// ```
+    pub fn new(dat_id: String) -> Tracker {
+        let mut tracker = Tracker {
+            chain: Vec::new(),
+        };
+
+        tracker.chain.push(Marker::genesis(dat_id));
+
+        tracker
+    }
+
+    /// Appends a new Marker to the end of the Marker Chain.
+    /// The index of the Marker and hash from the previous Marker are automatically defined when added.
+    /// 
+    /// # Arguments
+    /// 
+    /// * tmstp: String - The date and time (Unix timestamp) the data came into posession of the Actor.</br>
+    /// * act_id: String - The Unix Epoch time when the DUA was agreed to.</br>
+    /// * dat_id: String - The unique identifier of the the data being tracked.</br>
+    /// 
+    /// #Example
+    ///
+    /// ```
+    /// extern crate pbd;
+    ///
+    /// use pbd::dtc::Tracker;
+    ///
+    /// fn main() {
+    ///     let mut tracker = Tracker::new("order~clothing~iStore~15150".to_string());
+    ///     tracker.add(1578071239, "notifier~billing~receipt~email".to_string(), "order~clothing~iStore~15150".to_string());
+    ///     
+    ///     println!("There are {} items in the Marker Chain.", tracker.len());
+    /// }
+    /// ```
+    pub fn add(&mut self, tmstp: u64, act_id: String, dat_id: String) {
+        let prior_marker = self.chain[self.chain.len()-1].clone();
+        let marker = Marker::new(self.chain.len(), tmstp, act_id, dat_id, prior_marker.hash);
+
+        self.chain.push(marker);
+    }
+
+    /// Returns the Marker from the Marker Chain at the specified index.
+    ///
+    /// # Arguments
+    /// 
+    /// * index: usize - The index of the Marker.</br>
+    /// 
+    /// #Example
+    ///
+    /// ```
+    /// extern crate pbd;
+    ///
+    /// use pbd::dtc::Tracker;
+    ///
+    /// fn main() {
+    ///     let mut tracker = Tracker::new("order~clothing~iStore~15150".to_string());
+    ///     let marker = tracker.get(0).unwrap();
+    ///     
+    ///     println!("{}", marker.identifier.data_id);
+    /// }
+    /// ```
+    pub fn get(&self, index: usize) -> Option<Marker> {
+        if index < self.chain.len() {
+            return Some(self.chain[index].clone())
+        }
+
+        None
+    }
+
+    /// Determines if the Tracker has a valid Marker Chain, (a.k.a. not been tampered with).
+    /// 
+    /// #Example
+    ///
+    /// ```
+    /// extern crate pbd;
+    ///
+    /// use pbd::dtc::Tracker;
+    ///
+    /// fn main() {
+    ///     let mut mkrchn = Tracker::new("order~clothing~iStore~15150".to_string());
+    ///     mkrchn.add(1578071239, "notifier~billing~receipt~email".to_string(), "order~clothing~iStore~15150".to_string());
+    ///
+    ///     assert!(Tracker::is_valid(&mkrchn));
+    /// }
+    /// ```
+    pub fn is_valid(&self) -> bool{
         debug!("Validating chain ...");
 
-        for marker in tracker.iter() {
+        for (m, marker) in self.chain.clone().iter().enumerate() {
+            println!("Checking Marker #{}", m);
+            // make sure the Marker hasn't been altered
             if marker.hash != Marker::calculate_hash(marker.clone().identifier, DIFFICULTY).result {
+                return false;
+            }
+
+            // make sure the relationship with the prior Marker hasn't been altered
+            if m > 0 && marker.previous_hash != self.chain.clone()[m-1].hash {
                 return false;
             }
         }
 
         true
     }
-}
 
-impl MarkerChain for Tracker {
-}
+    /// Returns the length of the Tracker's Marker Chain.
+    /// 
+    /// #Example
+    ///
+    /// ```
+    /// extern crate pbd;
+    ///
+    /// use pbd::dtc::Tracker;
+    ///
+    /// fn main() {
+    ///     let mut tracker = Tracker::new("order~clothing~iStore~15150".to_string());
+    ///     tracker.add(1578071239, "notifier~billing~receipt~email".to_string(), "order~clothing~iStore~15150".to_string());
+    ///     
+    ///     // The Tracker has two Markers: the genesis Marker when new() was called, and the one that was added
+    ///     assert_eq!(tracker.len(), 2);
+    /// }
+    /// ```
+    pub fn len(&self) -> usize {
+        self.chain.len()
+    }
 
+    /// Serializes the Tracker's Marker Chain.
+    /// 
+    /// #Example
+    ///
+    /// ```
+    /// extern crate pbd;
+    ///
+    /// use pbd::dtc::Tracker;
+    ///
+    /// fn main() {
+    ///     let mut tracker = Tracker::new("order~clothing~iStore~15150".to_string());
+    ///     tracker.add(1578071239, "notifier~billing~receipt~email".to_string(), "order~clothing~iStore~15150".to_string());
+    ///     
+    ///     println!("{}", tracker.serialize());
+    /// }
+    /// ```
+    pub fn serialize(&self) -> String {
+        serde_json::to_string(&self.chain.clone()).unwrap()
+    }
+}
 
 
 pub mod error;
@@ -186,28 +337,34 @@ mod tests {
     }
 
     #[test]
-    fn test_markerchain_new() {
-        let mut mkrchn = Tracker::new();
-        mkrchn.push(Marker::genesis("order~clothing~iStore~15150".to_string()));
+    fn test_markerchain_get() {
+        let mut mkrchn = Tracker::new("order~clothing~iStore~15150".to_string());
+        mkrchn.add(1578071239, "notifier~billing~receipt~email".to_string(), "order~clothing~iStore~15150".to_string());
 
+        assert!(mkrchn.get(0).is_some());
+        assert!(mkrchn.get(1).is_some());
+        assert!(mkrchn.get(2).is_none());
+    }
+
+    #[test]
+    fn test_markerchain_new() {
+        let mkrchn = Tracker::new("order~clothing~iStore~15150".to_string());
         assert_eq!(mkrchn.len(), 1);
     }
 
     #[test]
-    fn test_markerchain_invalid() {
-        let mut mkrchn = Tracker::new();
-        mkrchn.push(Marker::genesis("order~clothing~iStore~15150".to_string()));
-        mkrchn.push(get_marker());
+    fn test_markerchain_serialize() {
+        let mkrchn = Tracker::new("order~clothing~iStore~15150".to_string());
 
-        assert_eq!(Tracker::is_valid(mkrchn), false);
+        assert!(mkrchn.serialize().len() > 0);
     }
 
     #[test]
     fn test_markerchain_valid() {
-        let mut mkrchn = Tracker::new();
-        mkrchn.push(Marker::genesis("order~clothing~iStore~15150".to_string()));
-        mkrchn.push(get_marker());
+        let mut mkrchn = Tracker::new("order~clothing~iStore~15150".to_string());
 
-        assert!(Tracker::is_valid(mkrchn));
+        mkrchn.add(1578071239, "notifier~billing~receipt~email".to_string(), "order~clothing~iStore~15150".to_string());
+
+        assert!(Tracker::is_valid(&mkrchn));
     }
 }
