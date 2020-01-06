@@ -20,11 +20,12 @@
 //! 
 //! | Feature              | Package  | Default | Descripotion                                 | 
 //! | :------------------- | :------: | :-----: | :------------------------------------------- |
+//! | Data Tracker Chain   | dtc      | true    | Auditing of the data lineage                 |
 //! | Data Usage Agreement | dua      | true    | Management of how data is allowed to be used |
 //! 
 //!
 //!
-
+extern crate env_logger;
 #[macro_use] extern crate log;
 #[macro_use] extern crate serde_derive;
 extern crate serde_json;
@@ -35,6 +36,7 @@ extern crate json;
 // Modules
 #[cfg(feature = "dua")]
 pub mod dua;
+pub mod dtc;
 
 // Unit Tests
 #[cfg(test)]
