@@ -9,7 +9,6 @@
 //! 
 //! A privacy engineering practice that supports the real-time recording of data ineage is to implement a Data Tracking Chain that lives with the data.
 //!
-//! ### Usage
 
 extern crate pow_sha256;
 

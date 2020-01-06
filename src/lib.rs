@@ -20,6 +20,7 @@
 //! 
 //! | Feature              | Package  | Default | Descripotion                                 | 
 //! | :------------------- | :------: | :-----: | :------------------------------------------- |
+//! | Data Tracker Chain   | dtc      | true    | Auditing of the data lineage                 |
 //! | Data Usage Agreement | dua      | true    | Management of how data is allowed to be used |
 //! 
 //!
