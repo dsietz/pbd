@@ -100,17 +100,9 @@ mod tests {
 
     // supporting functions
     fn index_extract_dtc(tracker: Tracker, _req: HttpRequest) -> HttpResponse {
-        //if tracker.is_ok() {
-            return HttpResponse::Ok()
-                .header(http::header::CONTENT_TYPE, "application/json")
-                .body(format!("{:?}", tracker))
-                /*
-        } else {
-            return HttpResponse::BadRequest()
-                .header(http::header::CONTENT_TYPE, "application/json")
-                .body(format!("{}", LocalError::BadDTC))
-        }
-        */
+        return HttpResponse::Ok()
+            .header(http::header::CONTENT_TYPE, "application/json")
+            .body(format!("{:?}", tracker))
     }
 
     // tests
