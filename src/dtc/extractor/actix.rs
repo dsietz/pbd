@@ -48,47 +48,46 @@ use actix_web::http::header::HeaderValue;
 // 
 pub type LocalError = super::error::Error;
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct DTCExtraction{
-    tracker: Tracker,
-}
-
-impl fmt::Display for DTCExtraction {
+impl fmt::Display for Tracker {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", serde_json::to_string(&self).unwrap())
     }
 }
 
-impl DTCExtraction {
-    pub fn tracker_from_header_value(header_value: &HeaderValue) -> Result<Tracker, crate::dtc::error::Error>{
-        Ok(Tracker::new("dtc-placeholder".to_string()))
-    }
+pub trait TrackerHeader {
+    fn tracker_from_header_value(header_value: &HeaderValue) -> Result<Tracker, crate::dtc::error::Error>;
+}
 
-    // Constructor
-    pub fn from_request(req: &HttpRequest) -> Option<Tracker>{
-        match req.headers().get(DTC_HEADER) {
-            Some(u) => {
-                return Some(DTCExtraction::tracker_from_header_value(u))
-            },
-            None => {
-                // couldn't find the header, so return empty list of DUAs
-                warn!("{}", LocalError::MissingDTC);
-                return None
-            },
-        };
+impl TrackerHeader for Tracker {
+    fn tracker_from_header_value(header_value: &HeaderValue) -> Result<Tracker, crate::dtc::error::Error>{
+        Ok(Tracker::new("dtc-placeholder".to_string()))
     }
 }
 
-impl FromRequest for DTCExtraction {
+
+
+impl FromRequest for Tracker {
     type Config = ();
     type Future = Result<Self, Self::Error>;
     type Error = LocalError;
     // convert request to future self
     fn from_request(req: &HttpRequest, _payload: &mut actix_web::dev::Payload) -> Self::Future {
-        match DTCExtraction::from_request(req) {
-            Some(dtc) => Ok(dtc),
-            None => Err(MissingDTC)
-        }
+        match req.headers().get(DTC_HEADER) {
+            Some(u) => {
+                match Tracker::tracker_from_header_value(u) {
+                    Ok(dtc) => return Ok(dtc),
+                    Err(e) => {
+                        warn!("{}", e);
+                        return Err(LocalError::BadDTC);
+                    },
+                }
+            },
+            None => {
+                // couldn't find the header
+                warn!("{}", LocalError::MissingDTC);
+                return Err(LocalError::MissingDTC);
+            },
+        };
     }
 }
 
@@ -100,16 +99,18 @@ mod tests {
     use actix_web::http::{StatusCode};
 
     // supporting functions
-    fn index_extract_dtc(tracker: DTCExtraction, _req: HttpRequest) -> HttpResponse {
-        if tracker.is_some() {
+    fn index_extract_dtc(tracker: Tracker, _req: HttpRequest) -> HttpResponse {
+        //if tracker.is_ok() {
             return HttpResponse::Ok()
                 .header(http::header::CONTENT_TYPE, "application/json")
-                .body(format!("{;?}", tracker))
+                .body(format!("{:?}", tracker))
+                /*
         } else {
             return HttpResponse::BadRequest()
                 .header(http::header::CONTENT_TYPE, "application/json")
                 .body(format!("{}", LocalError::BadDTC))
         }
+        */
     }
 
     // tests
@@ -120,7 +121,7 @@ mod tests {
 
     #[test]
     fn test_dua_extractor_good() {
-        let mut app = test::init_service(App::new().route("/", web::get().to(index_extract_dua)));
+        let mut app = test::init_service(App::new().route("/", web::get().to(index_extract_dtc)));
         let req = test::TestRequest::get().uri("/")
             .header("content-type", "application/json")
             .header(DTC_HEADER, r#"12345"#)
@@ -128,16 +129,17 @@ mod tests {
         let resp = test::block_on(app.call(req)).unwrap();
         assert_eq!(resp.status(), StatusCode::OK);
     }
+
     #[test]
     fn test_dtc_extractor_missing() {
-        let mut app = test::init_service(App::new().route("/", web::get().to(index_extract_dua)));
+        let mut app = test::init_service(App::new().route("/", web::get().to(index_extract_dtc)));
         let req = test::TestRequest::get().uri("/")
             .header("content-type", "application/json")
             .to_request();
         let resp = test::call_service(&mut app, req);
-        assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+        assert_eq!(resp.status(), StatusCode::INTERNAL_SERVER_ERROR);
         // read response
         let bdy = test::read_body(resp);
-        assert_eq!(&bdy[..], actix_web::web::Bytes::from_static(b"Corrupt or invalid Data Tracker Chain"));
+        assert_eq!(String::from_utf8(bdy[..].to_vec()).unwrap(), actix_web::web::Bytes::from_static(b"Missing Data Tracker Chain"));
     }
 }
