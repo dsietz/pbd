@@ -14,7 +14,10 @@ extern crate pow_sha256;
 
 use pow_sha256::PoW;
 
+/// The nonce value for adding complexity to the hash
 pub static DIFFICULTY: u128 = 5; 
+/// The standard header attribute for list (array) of the Data Usage Agreements
+pub static DTC_HEADER: &str = "Data-Tracker-Chain";
 
 /// Represents a MarkerIdentifier
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -49,7 +52,6 @@ impl MarkerIdentifier {
         serde_json::to_string(&self).unwrap()
     }
 }
-
 
 /// Represents a Marker
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -337,6 +339,7 @@ impl Tracker {
 
 
 pub mod error;
+pub mod extractor;
 
 
 // Unit Tests
