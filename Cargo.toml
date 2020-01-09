@@ -27,7 +27,7 @@ maintenance = {status = "actively-developed"}
 [features]
 default = ["dua", "dtc"]
 dua = ["actix-web","actix-service","futures", "rayon", "reqwest"] # Data Usage Agreement funcitonality
-dtc =["pow_sha256"] # Data Tracker Chain functionality
+dtc =["pow_sha256", "base64"] # Data Tracker Chain functionality
 
 [dependencies]
 env_logger = "0.6"
@@ -43,3 +43,4 @@ actix-service = { version = "0.4.2", optional = true }
 futures = { version = "0.1", optional = true }
 rayon = { version = "1.2.1", optional = true }
 pow_sha256 = { version = "0.2", optional = true }
+base64 = { version = "0.11.0", optional = true }

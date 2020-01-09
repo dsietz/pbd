@@ -5,6 +5,8 @@ use pbd::dtc::Tracker;
 use actix_web::{web, http, App, HttpServer, HttpRequest, HttpResponse};
 
 fn index(tracker: Tracker, _req: HttpRequest) -> HttpResponse  {
+    println!("{}", tracker.serialize());
+    
     HttpResponse::Ok()
         .header(http::header::CONTENT_TYPE, "plain/text")
         .body(r#"Hello World!"#)   

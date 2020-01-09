@@ -6,12 +6,15 @@ use actix_web::ResponseError;
 
 #[derive(Debug, Clone, Display)]
 pub enum Error {
-    /// Bad format of Data Uasage Agreement
+    /// Bad format of Data Tracker Chain
     #[display(fmt = "Invalid Marker Chain")]
     BadChain,
     /// Bad Data Tracker Chain
     #[display(fmt = "Corrupt or invalid Data Tracker Chain")]
     BadDTC,
+    /// Bad Data Tracker Chain
+    #[display(fmt = "Cannot decode Data Tracker Chain using Base64")]
+    Base64DTC,    
     /// Bad Data Uasage Agreement
     #[display(fmt = "Invalid or Currupt Marker")]
     BadMarker,
@@ -33,6 +36,11 @@ mod tests {
     fn test_error_dtc_bad() {
         let err = Error::BadDTC;
         assert_eq!(format!("{}", err), "Corrupt or invalid Data Tracker Chain");
+    }
+
+    #[test]
+    fn test_error_dtc_base64() {
+        assert_eq!(format!("{}", Error::Base64DTC), "Cannot decode Data Tracker Chain using Base64");
     }
 
     #[test]
