@@ -99,6 +99,12 @@ mod tests {
     use actix_web::http::{StatusCode};
 
     // supporting functions
+    fn index(_req: HttpRequest) -> HttpResponse {
+        return HttpResponse::Ok()
+            .header(http::header::CONTENT_TYPE, "application/json")
+            .body(r#"Ok"#)
+    }
+
     fn index_extract_dtc(tracker: Tracker, _req: HttpRequest) -> HttpResponse {
         return HttpResponse::Ok()
             .header(http::header::CONTENT_TYPE, "application/json")
@@ -133,5 +139,15 @@ mod tests {
         // read response
         let bdy = test::read_body(resp);
         assert_eq!(String::from_utf8(bdy[..].to_vec()).unwrap(), actix_web::web::Bytes::from_static(b"Missing Data Tracker Chain"));
+    }
+
+    #[test]
+    fn test_without_extractor() {
+        let mut app = test::init_service(App::new().route("/", web::get().to(index)));
+        let req = test::TestRequest::get().uri("/")
+            .header("content-type", "application/json")
+            .to_request();
+        let resp = test::call_service(&mut app, req);
+        assert_eq!(resp.status(), StatusCode::OK);
     }
 }
