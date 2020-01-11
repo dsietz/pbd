@@ -1,4 +1,10 @@
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+[![Coverage Status](https://coveralls.io/repos/github/dsietz/pbd/badge.svg?branch=master)](https://coveralls.io/github/dsietz/pbd?branch=master)
+[![Docs.rs](https://docs.rs/pbd/badge.svg)](https://docs.rs/pbd)
+
+Linux: [![Build Status](https://travis-ci.org/dsietz/pbd.svg?branch=master)](https://travis-ci.org/dsietz/pbd)
+Windows: [![Build status](https://ci.appveyor.com/api/projects/status/uw58v5t8ynwj8s8o/branch/master?svg=true)](https://ci.appveyor.com/project/dsietz/pbd/branch/master)
+
 
 # Privacy by Design (PbD) SDK
 
