@@ -46,7 +46,7 @@
 //! }
 //! ```
 //!
-//! For futher examples run `cargo run --example data-tracker-chain` 
+//! For futher examples run `cargo run --example data-tracker-chain`. There are example service calls for POSTMAN in the `examples` directory of the source code package.  
 //!
 //! 
 use super::*;

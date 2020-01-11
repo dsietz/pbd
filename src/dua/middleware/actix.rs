@@ -45,7 +45,7 @@
 //! }
 //! ```
 //!
-//! For futher examples run `cargo run --example data-usage-agreement` 
+//! For futher examples run `cargo run --example data-usage-agreement`. There are example service calls for POSTMAN in the `examples` directory of the source code package.  
 //!
 
 use super::*;
