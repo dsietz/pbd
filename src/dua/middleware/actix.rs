@@ -124,14 +124,14 @@ where
     }
 
     fn call(&mut self, req: ServiceRequest) -> Self::Future {
+        debug!("VALIDATION LEVEL: {}", self.validation_level);
+
         if self.validation_level == VALIDATION_NONE {
             return Either::A(self.service.call(req)) 
         }
 
         match  req.headers().get(DUA_HEADER) {
             Some(list) => {
-                println!("VALIDATION LEVEL: {}", self.validation_level);
-
                 let duas = DUAs::duas_from_header_value(list);
                 let mut valid_ind: bool = false;
 

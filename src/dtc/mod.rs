@@ -373,6 +373,7 @@ impl Tracker {
 
 pub mod error;
 pub mod extractor;
+pub mod middleware;
 
 
 // Unit Tests
