@@ -1,4 +1,54 @@
 
+//! The DTC Middleware is a simple way to ensure that web services that require 
+//! a Data Tracker Chain is provided in the Request as a http header. 
+//!
+//! If there is no `Data Tracker Chain` in the header (use pbd::dtc::DTC_HEADER),
+//! the middleware will respond with a BadRequest status code.
+//! 
+//! ---
+//! 
+//! Example 
+//!
+//! ```
+//! extern crate pbd;
+//! extern crate actix_web;
+//!
+//! use pbd::dtc::middleware::actix::*;
+//! use actix_web::{web, App};
+//! 
+//! fn main () {
+//!     let app = App::new()
+//!                 .wrap(DTCEnforcer::default())
+//!                 .service(
+//!                     web::resource("/")
+//!                     .route(web::get().to(|| "Got Data Tracker Chain?"))
+//!                 );
+//! }
+//! ```
+//!
+//! To set the level of validation, use `new()` and pass the validation level constant
+//!
+//! ```
+//! extern crate pbd;
+//! extern crate actix_web;
+//!
+//! use pbd::dtc::middleware::{VALIDATION_HIGH};
+//! use pbd::dtc::middleware::actix::*;
+//! use actix_web::{web, App};
+//! 
+//! fn main () {
+//!     let app = App::new()
+//!                 .wrap(DTCEnforcer::new(VALIDATION_HIGH))
+//!                 .service(
+//!                     web::resource("/")
+//!                     .route(web::get().to(|| "Got Data Tracker Chain?"))
+//!                 );
+//! }
+//! ```
+//!
+//! For futher examples run `cargo run --example data-tracker-chain` 
+//!
+//! 
 use super::*;
 use crate::dtc::Tracker;
 use crate::dtc::extractor::actix::{TrackerHeader};
@@ -7,8 +57,6 @@ use actix_web::dev::{ServiceRequest, ServiceResponse};
 use actix_service::{Service, Transform};
 use futures::future::{ok, Either, FutureResult};
 use futures::{Poll};
-use reqwest::StatusCode;
-use rayon::prelude::*;
 
 #[derive(Clone)]
 pub struct DTCEnforcer{
@@ -80,78 +128,53 @@ where
 
         match  req.headers().get(DTC_HEADER) {
             Some(header_value) => {
-                return Either::A(self.service.call(req))
+                let mut valid_ind: bool = false;
+
+                match Tracker::tracker_from_header_value(header_value) {
+                    Ok(tracker) => {
+                        // Level 1 Validation: Check to see if there are DTC is provided
+                        if self.validation_level >= VALIDATION_LOW {
+                            valid_ind = true;
+                        }
+
+                        // Level 2 Validation: Check to see if the DUAs provided are valid ones
+                        if valid_ind == true && self.validation_level >= VALIDATION_HIGH {
+                            if !tracker.is_valid() {
+                                warn!("{}", crate::dtc::error::Error::BadDTC);
+                                valid_ind = false;
+                            } else {
+                                valid_ind = true;
+                            }
+                        }
+
+                        if valid_ind == true {
+                            return Either::A(self.service.call(req));
+                        }else{
+                            return Either::B(ok(req.into_response(
+                                HttpResponse::BadRequest()
+                                    .finish()
+                                 .into_body(),
+                            )));
+                        }
+                    },
+                    Err(e) => {
+                        warn!("{}", e);
+                        return Either::B(ok(req.into_response(
+                            HttpResponse::BadRequest()
+                                .finish()
+                             .into_body(),
+                        )));
+                    },
+                }
             },
             None => {
                 return Either::B(ok(req.into_response(
                     HttpResponse::BadRequest()
                         .finish()
                      .into_body(),
-                )))
+                )));
             },
         }
-
-                // Level 1 Validation: Check to see if there are DTC is provided
-/*
-                match DUAs::tracker_from_header_value(header_value) {
-
-                }
-                let mut valid_ind: bool = false;
-
-                // Level 1 Validation: Check to see if there are DTC is provided
-                if self.validation_level >= VALIDATION_LOW && duas.vec().len() > 0 {
-                    valid_ind = true;
-                }
-                
-                // Level 2 Validation: Check to see if the DUAs provided are valid ones
-                if valid_ind == true && self.validation_level >= VALIDATION_HIGH {
-                    let checks: usize = duas.vec().par_iter()
-                        .map(|d|
-                            match reqwest::get(&d.location.clone()) {
-                                Ok(rsp) => {
-                                    if rsp.status() == StatusCode::OK { 
-                                        1
-                                    } 
-                                    else {
-                                        info!("{}", format!("Invalid DUA: {}", d.location.clone()));
-                                        0
-                                    }
-                                },
-                                Err(_err) => {
-                                    info!("{}", format!("Invalid DUA: {}", d.location.clone()));
-                                    0
-                                },
-                            }
-                        )
-                        .sum();
-                
-                    if duas.vec().len() == checks {
-                        valid_ind = true;
-                    } 
-                    else {
-                        valid_ind = false;
-                    }
-                }
-
-                if valid_ind == true {
-                    return Either::A(self.service.call(req))
-                }
-                else {
-                    return Either::B(ok(req.into_response(
-                        HttpResponse::BadRequest()
-                            .finish()
-                         .into_body(),
-                    )))
-                }
-            },
-            None => {
-                return Either::B(ok(req.into_response(
-                    HttpResponse::BadRequest()
-                        .finish()
-                        .into_body(),
-                )))
-            },
-*/
     }
 }
 
@@ -169,6 +192,15 @@ mod tests {
     use actix_web::http::{StatusCode};
 
     // supporting functions
+    fn get_dtc_header() -> String{
+        base64::encode(r#"[{"identifier":{"data_id":"order~clothing~iStore~15150","index":0,"timestamp":0,"actor_id":""},"hash":"185528985830230566760236203228589250556","previous_hash":"0","nonce":5},{"identifier":{"data_id":"order~clothing~iStore~15150","index":1,"timestamp":1578071239,"actor_id":"notifier~billing~receipt~email"},"hash":"291471950171806362795097431348191551247","previous_hash":"185528985830230566760236203228589250556","nonce":5}]"#)
+    }
+
+    fn get_dtc_header_invalid() -> String{
+        base64::encode(r#"[{"identifier":{"data_id":"order~clothing~iStore~15150","index":0,"timestamp":0,"actor_id":""},"hash":"185528985830230566760236203228589250556","previous_hash":"0","nonce":5},{"identifier":{"data_id":"order~clothing~iStore~15150","index":1,"timestamp":1578071239,"actor_id":"notifier~billing~receipt~email"},"hash":"291471950171806362795097431348191551247","previous_hash":"185528985830230566760236203228589250557","nonce":5}]"#)
+    }
+
+
     fn index_middleware_dtc(_req: HttpRequest) -> HttpResponse {
         HttpResponse::Ok()
             .header(http::header::CONTENT_TYPE, "application/json")
@@ -186,4 +218,205 @@ mod tests {
 
         assert!(true);
     }
+
+    #[test]
+    fn test_dtc_none_missing() {
+        let mut app = test::init_service(
+            App::new()
+            .wrap(DTCEnforcer::new(VALIDATION_NONE))
+            .route("/", web::post().to(index_middleware_dtc))
+        );
+        let req = test::TestRequest::post().uri("/")
+            .header("content-type", "application/json")
+            .to_request();
+        let resp = test::block_on(app.call(req)).unwrap();
+        assert_eq!(resp.status(), StatusCode::OK);
+    }
+
+    #[test]
+    fn test_dtc_default_ok() {
+        let mut app = test::init_service(
+            App::new()
+            .wrap(DTCEnforcer::default())
+            .route("/", web::post().to(index_middleware_dtc))
+        );
+        let req = test::TestRequest::post().uri("/")
+            .header("content-type", "application/json")
+            .header(DTC_HEADER, get_dtc_header())
+            .to_request();
+        let resp = test::block_on(app.call(req)).unwrap();
+        
+        assert_eq!(resp.status(), StatusCode::OK);
+    } 
+
+    #[test]
+    fn test_dtc_default_empty() {
+        let mut app = test::init_service(
+            App::new()
+            .wrap(DTCEnforcer::default())
+            .route("/", web::post().to(index_middleware_dtc))
+        );
+        let req = test::TestRequest::post().uri("/")
+            .header("content-type", "application/json")
+            .header(DTC_HEADER, "")
+            .to_request();
+        let resp = test::block_on(app.call(req)).unwrap();
+        
+        assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+    } 
+
+    #[test]
+    fn test_dtc_default_invalid() {
+        let mut app = test::init_service(
+            App::new()
+            .wrap(DTCEnforcer::default())
+            .route("/", web::post().to(index_middleware_dtc))
+        );
+        let req = test::TestRequest::post().uri("/")
+            .header("content-type", "application/json")
+            .header(DTC_HEADER, get_dtc_header())
+            .to_request();
+        let resp = test::block_on(app.call(req)).unwrap();
+        
+        assert_eq!(resp.status(), StatusCode::OK);
+    } 
+
+    #[test]
+    fn test_dtc_default_missing() {
+        let mut app = test::init_service(
+                            App::new()
+                            .wrap(DTCEnforcer::default())
+                            .route("/", web::post().to(index_middleware_dtc))
+                        );
+        let req = test::TestRequest::post().uri("/")
+            .header("content-type", "application/json")
+            .to_request();
+        let resp = test::block_on(app.call(req)).unwrap();
+        assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+    }     
+
+    #[test]
+    fn test_dtc_valid_high_ok() {
+        let mut app = test::init_service(
+            App::new()
+            .wrap(DTCEnforcer::new(VALIDATION_HIGH))
+            .route("/", web::post().to(index_middleware_dtc))
+        );
+        let req = test::TestRequest::post().uri("/")
+            .header("content-type", "application/json")
+            .header(DTC_HEADER, get_dtc_header())
+            .to_request();
+        let resp = test::block_on(app.call(req)).unwrap();
+        
+        assert_eq!(resp.status(), StatusCode::OK);
+    } 
+
+    #[test]
+    fn test_dtc_high_empty() {
+        let mut app = test::init_service(
+            App::new()
+            .wrap(DTCEnforcer::new(VALIDATION_HIGH))
+            .route("/", web::post().to(index_middleware_dtc))
+        );
+        let req = test::TestRequest::post().uri("/")
+            .header("content-type", "application/json")
+            .header(DTC_HEADER, "")
+            .to_request();
+        let resp = test::block_on(app.call(req)).unwrap();
+        
+        assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+    } 
+
+    #[test]
+    fn test_dtc_high_invalid() {
+        let mut app = test::init_service(
+            App::new()
+            .wrap(DTCEnforcer::new(VALIDATION_HIGH))
+            .route("/", web::post().to(index_middleware_dtc))
+        );
+        let req = test::TestRequest::post().uri("/")
+            .header("content-type", "application/json")
+            .header(DTC_HEADER, get_dtc_header_invalid())
+            .to_request();
+        let resp = test::block_on(app.call(req)).unwrap();
+        
+        assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+    } 
+
+    #[test]
+    fn test_dtc_high_missing() {
+        let mut app = test::init_service(
+            App::new()
+            .wrap(DTCEnforcer::new(VALIDATION_HIGH))
+            .route("/", web::post().to(index_middleware_dtc))
+        );
+        let req = test::TestRequest::post().uri("/")
+            .header("content-type", "application/json")
+            .to_request();
+        let resp = test::block_on(app.call(req)).unwrap();
+        assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+    } 
+
+    #[test]
+    fn test_dtc_low_ok() {
+        let mut app = test::init_service(
+            App::new()
+            .wrap(DTCEnforcer::new(VALIDATION_LOW))
+            .route("/", web::post().to(index_middleware_dtc))
+        );
+        let req = test::TestRequest::post().uri("/")
+            .header("content-type", "application/json")
+            .header(DTC_HEADER, get_dtc_header())
+            .to_request();
+        let resp = test::block_on(app.call(req)).unwrap();
+        
+        assert_eq!(resp.status(), StatusCode::OK);
+    } 
+
+    #[test]
+    fn test_dtc_low_empty() {
+        let mut app = test::init_service(
+            App::new()
+            .wrap(DTCEnforcer::new(VALIDATION_LOW))
+            .route("/", web::post().to(index_middleware_dtc))
+        );
+        let req = test::TestRequest::post().uri("/")
+            .header("content-type", "application/json")
+            .header(DTC_HEADER, "")
+            .to_request();
+        let resp = test::block_on(app.call(req)).unwrap();
+        
+        assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+    } 
+
+    #[test]
+    fn test_dtc_low_invalid() {
+        let mut app = test::init_service(
+            App::new()
+            .wrap(DTCEnforcer::new(VALIDATION_LOW))
+            .route("/", web::post().to(index_middleware_dtc))
+        );
+        let req = test::TestRequest::post().uri("/")
+            .header("content-type", "application/json")
+            .header(DTC_HEADER, get_dtc_header_invalid())
+            .to_request();
+        let resp = test::block_on(app.call(req)).unwrap();
+        
+        assert_eq!(resp.status(), StatusCode::OK);
+    } 
+
+    #[test]
+    fn test_dtc_low_missing() {
+        let mut app = test::init_service(
+            App::new()
+            .wrap(DTCEnforcer::new(VALIDATION_LOW))
+            .route("/", web::post().to(index_middleware_dtc))
+        );
+        let req = test::TestRequest::post().uri("/")
+            .header("content-type", "application/json")
+            .to_request();
+        let resp = test::block_on(app.call(req)).unwrap();
+        assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+    }        
+
 }

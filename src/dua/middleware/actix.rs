@@ -219,7 +219,6 @@ mod tests {
           assert!(true);
     }
 
-    // tests
     #[test]
     fn test_dua_none_missing() {
         let mut app = test::init_service(
@@ -345,7 +344,7 @@ mod tests {
     } 
 
     #[test]
-    fn test_dua_valid_high_missing() {
+    fn test_dua_high_missing() {
         let mut app = test::init_service(
             App::new()
             .wrap(DUAEnforcer::new(VALIDATION_HIGH))
@@ -359,7 +358,7 @@ mod tests {
     } 
 
     #[test]
-    fn test_dua_valid_low_ok() {
+    fn test_dua_low_ok() {
         let mut app = test::init_service(
             App::new()
             .wrap(DUAEnforcer::new(VALIDATION_LOW))
@@ -375,7 +374,7 @@ mod tests {
     } 
 
     #[test]
-    fn test_dua_valid_low_empty() {
+    fn test_dua_low_empty() {
         let mut app = test::init_service(
             App::new()
             .wrap(DUAEnforcer::new(VALIDATION_LOW))
@@ -391,7 +390,7 @@ mod tests {
     } 
 
     #[test]
-    fn test_dua_valid_low_invalid() {
+    fn test_dua_low_invalid() {
         let mut app = test::init_service(
             App::new()
             .wrap(DUAEnforcer::new(VALIDATION_LOW))
@@ -407,7 +406,7 @@ mod tests {
     } 
 
     #[test]
-    fn test_dua_valid_low_missing() {
+    fn test_dua_low_missing() {
         let mut app = test::init_service(
             App::new()
             .wrap(DUAEnforcer::new(VALIDATION_LOW))
