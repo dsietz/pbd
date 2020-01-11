@@ -255,8 +255,8 @@ impl Tracker {
     /// # Arguments
     /// 
     /// * tmstp: String - The date and time (Unix timestamp) the data came into posession of the Actor.</br>
-    /// * act_id: String - The Unix Epoch time when the DUA was agreed to.</br>
-    /// * dat_id: String - The unique identifier of the the data being tracked.</br>
+    /// * act_id: String - The unique identifier of the Actor touching the data.</br>
+    /// * dat_id: String - The unique identifier of the data being tracked.</br>
     /// 
     /// #Example
     ///
