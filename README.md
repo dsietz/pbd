@@ -3,7 +3,7 @@
 [![Docs.rs](https://docs.rs/pbd/badge.svg)](https://docs.rs/pbd)
 
 Linux: [![Build Status](https://travis-ci.org/dsietz/pbd.svg?branch=master)](https://travis-ci.org/dsietz/pbd)
-Windows: [![Build status](https://ci.appveyor.com/api/projects/status/uw58v5t8ynwj8s8o/branch/master?svg=true)](https://ci.appveyor.com/project/dsietz/pbd/branch/master)
+Windows: [![Build status](https://ci.appveyor.com/api/projects/status/o3w8863fpji4pfoq?svg=true)](https://ci.appveyor.com/project/dsietz/pbd/branch/master)
 
 
 # Privacy by Design (PbD) SDK
