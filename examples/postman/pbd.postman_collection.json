@@ -1,6 +1,6 @@
 {
 	"info": {
-		"_postman_id": "6c128175-0415-4471-8f70-ec288d015429",
+		"_postman_id": "6a15bfc9-3330-4266-bf05-7b2da4166221",
 		"name": "pbd",
 		"description": "Privacy by Design",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
@@ -23,14 +23,44 @@
 					}
 				],
 				"url": {
+					"raw": "http://localhost:8088/health",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8088",
+					"path": [
+						"health"
+					]
+				},
+				"description": "Make a call to a service that requires a Data-Usage-Agreement header"
+			},
+			"response": []
+		},
+		{
+			"name": "example data-tracker-chain",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					},
+					{
+						"key": "Data-Tracker-Chain",
+						"value": "W3siaWRlbnRpZmllciI6eyJkYXRhX2lkIjoib3JkZXJ+Y2xvdGhpbmd+aVN0b3JlfjE1MTUwIiwiaW5kZXgiOjAsInRpbWVzdGFtcCI6MCwiYWN0b3JfaWQiOiIifSwiaGFzaCI6IjE4NTUyODk4NTgzMDIzMDU2Njc2MDIzNjIwMzIyODU4OTI1MDU1NiIsInByZXZpb3VzX2hhc2giOiIwIiwibm9uY2UiOjV9LHsiaWRlbnRpZmllciI6eyJkYXRhX2lkIjoib3JkZXJ+Y2xvdGhpbmd+aVN0b3JlfjE1MTUwIiwiaW5kZXgiOjEsInRpbWVzdGFtcCI6MTU3ODA3MTIzOSwiYWN0b3JfaWQiOiJub3RpZmllcn5iaWxsaW5nfnJlY2VpcHR+ZW1haWwifSwiaGFzaCI6IjI5MTQ3MTk1MDE3MTgwNjM2Mjc5NTA5NzQzMTM0ODE5MTU1MTI0NyIsInByZXZpb3VzX2hhc2giOiIxODU1Mjg5ODU4MzAyMzA1NjY3NjAyMzYyMDMyMjg1ODkyNTA1NTYiLCJub25jZSI6NX1d",
+						"type": "text"
+					}
+				],
+				"url": {
 					"raw": "http://localhost:8088",
 					"protocol": "http",
 					"host": [
 						"localhost"
 					],
 					"port": "8088"
-				},
-				"description": "Make a call to a service that requires a Data-Usage-Agreement header"
+				}
 			},
 			"response": []
 		}

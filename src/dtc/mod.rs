@@ -11,10 +11,15 @@
 //!
 
 extern crate pow_sha256;
+extern crate base64;
 
+use crate::dtc::error::*;
 use pow_sha256::PoW;
 
+/// The nonce value for adding complexity to the hash
 pub static DIFFICULTY: u128 = 5; 
+/// The standard header attribute for list (array) of the Data Usage Agreements
+pub static DTC_HEADER: &str = "Data-Tracker-Chain";
 
 /// Represents a MarkerIdentifier
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -49,7 +54,6 @@ impl MarkerIdentifier {
         serde_json::to_string(&self).unwrap()
     }
 }
-
 
 /// Represents a Marker
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -230,6 +234,37 @@ impl Tracker {
         self.chain.push(marker);
     }
 
+    /// Constructs a Tracker (a.k.a. MarkerChain) from a serialized chain
+    /// 
+    /// # Arguments
+    /// 
+    /// * serialized: &str - The serialized Vec of Markers.</br>
+    /// 
+    /// #Example
+    ///
+    /// ```
+    /// extern crate pbd;
+    ///
+    /// use pbd::dtc::Tracker;
+    ///
+    /// fn main() {
+    ///     let tracker = Tracker::from_serialized(r#"[{"identifier":{"data_id":"order~clothing~iStore~15150","index":0,"timestamp":0,"actor_id":""},"hash":"185528985830230566760236203228589250556","previous_hash":"0","nonce":5},{"identifier":{"data_id":"order~clothing~iStore~15150","index":1,"timestamp":1578071239,"actor_id":"notifier~billing~receipt~email"},"hash":"291471950171806362795097431348191551247","previous_hash":"185528985830230566760236203228589250556","nonce":5}]"#);
+    ///     
+    ///     // unwrap() to get the Tracker is Result is Ok
+    ///     assert!(tracker.is_ok());
+    /// }
+    /// ```
+    pub fn from_serialized(serialized: &str) -> Result<Tracker, Error> {
+        match serde_json::from_str(&serialized) {
+            Ok(v) => {
+                Ok(Tracker {
+                    chain: v,
+                })
+            },
+            Err(_e) => Err(Error::BadChain),
+        }
+    }
+
     /// Returns the Marker from the Marker Chain at the specified index.
     ///
     /// # Arguments
@@ -337,6 +372,7 @@ impl Tracker {
 
 
 pub mod error;
+pub mod extractor;
 
 
 // Unit Tests
@@ -380,6 +416,13 @@ mod tests {
     }
 
     #[test]
+    fn test_markerchain_from_serialized() {
+        let mkrchn = Tracker::from_serialized(r#"[{"identifier":{"data_id":"order~clothing~iStore~15150","index":0,"timestamp":0,"actor_id":""},"hash":"185528985830230566760236203228589250556","previous_hash":"0","nonce":5},{"identifier":{"data_id":"order~clothing~iStore~15150","index":1,"timestamp":1578071239,"actor_id":"notifier~billing~receipt~email"},"hash":"291471950171806362795097431348191551247","previous_hash":"185528985830230566760236203228589250556","nonce":5}]"#);
+
+        assert!(mkrchn.is_ok());
+    }
+
+    #[test]
     fn test_markerchain_new() {
         let mkrchn = Tracker::new("order~clothing~iStore~15150".to_string());
         assert_eq!(mkrchn.len(), 1);
@@ -387,7 +430,8 @@ mod tests {
 
     #[test]
     fn test_markerchain_serialize() {
-        let mkrchn = Tracker::new("order~clothing~iStore~15150".to_string());
+        let mut mkrchn = Tracker::new("order~clothing~iStore~15150".to_string());
+        mkrchn.add(1578071239, "notifier~billing~receipt~email".to_string(), "order~clothing~iStore~15150".to_string());
 
         assert!(mkrchn.serialize().len() > 0);
     }
