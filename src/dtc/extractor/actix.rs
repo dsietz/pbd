@@ -1,4 +1,7 @@
-//! The DUA Extractor is a simple way to pull the list of DUAs from the HTTP Request. 
+//! The DTC Extractor is a simple way to pull the Tracker from the HTTP Request. 
+//! If you have a Tracker and wish to add it to a HTTP Header, use the `serialize()` method of the Tracker to get the MarkerChain.
+//! 
+//! NOTE: You need to Base64 encode the MarkerChain before setting the HTTP header value.
 //! 
 //! ---
 //! 
@@ -6,28 +9,29 @@
 //! ```
 //! extern crate pbd;
 //! extern crate actix_web;
+//! extern crate base64;
 //! 
-//! use pbd::dua::DUA_HEADER;
-//! use pbd::dua::extractor::actix::*;
+//! use pbd::dtc::{DTC_HEADER, Tracker};
+//! use pbd::dtc::extractor::actix::*;
 //! use actix_web::{web, http, test, App, HttpRequest, HttpResponse};
 //! use actix_web::http::{StatusCode};
 //! use actix_web::dev::Service;
+//! 
 //!
-//! fn index_extract_dua(duas: DUAs, _req: HttpRequest) -> HttpResponse {
-//!     for dua in duas.vec().iter() {
-//!         println!("{:?}", dua);
-//!     }
-//!         
+//! fn index_extract_dtc(tracker: Tracker, _req: HttpRequest) -> HttpResponse {  
 //!     HttpResponse::Ok()
 //!         .header(http::header::CONTENT_TYPE, "application/json")
-//!         .body(format!("{}", duas))
+//!         .body(format!("{}", tracker))
 //! }
 //! 
 //! fn main () {
-//!     let mut app = test::init_service(App::new().route("/", web::get().to(index_extract_dua)));
+//!     let tracker = Tracker::new("order~clothing~iStore~15150".to_string());
+//!     let markerchain = tracker.serialize();
+//! 
+//!     let mut app = test::init_service(App::new().route("/", web::get().to(index_extract_dtc)));
 //!     let req = test::TestRequest::get().uri("/")
 //!         .header("content-type", "application/json")
-//!         .header(DUA_HEADER, r#"[{"agreement_name":"billing","location":"www.dua.org/billing.pdf","agreed_dtm": 1553988607},{"agreement_name":"shipping","location":"www.dua.org/shipping.pdf","agreed_dtm": 1553988607}]"#)
+//!         .header(DTC_HEADER, base64::encode(&markerchain))
 //!         .to_request();
 //!     let resp = test::block_on(app.call(req)).unwrap();
 //!     

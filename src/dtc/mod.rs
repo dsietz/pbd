@@ -7,8 +7,53 @@
 //! Whenever data is passed through Actors (e.g.: data collection between an online portal and the backend service to order the product), 
 //! it is important to ensure that data lineage is tracked and retained. 
 //! 
-//! A privacy engineering practice that supports the real-time recording of data ineage is to implement a Data Tracking Chain that lives with the data.
+//! A privacy engineering practice that supports the real-time recording of data lineage is to implement a Data Tracking Chain that lives with the data.
 //!
+//! ### Usage
+//! Whenever the data is touched by a processor or landed in a location, we have the Tracker add a Marker its MarkerChain.
+//! 
+//! ```
+//! extern crate pbd;
+//! 
+//! use pbd::dtc::Tracker;
+//! 
+//! fn main() {
+//!     let mut tracker = Tracker::new("purchaseId=12345".to_string());
+//!     tracker.add(1578071239, "payment-validator".to_string(), "purchaseId=12345".to_string());
+//!     tracker.add(1578071245, "credit-card-transaction-processor".to_string(), "purchaseId=12345".to_string());
+//! 
+//!     println!("{}", tracker.serialize());
+//! }
+//! ```
+//! 
+//! ---
+//! 
+//! We can ensure that the MarkerChain has been tampered with outside of the Tracker's control (e.g.: `tracker.serialize()` => change the JSON => `Tracker::from_serialize()`) 
+//! by calling the `is_valid()` method.
+//! ```
+//! extern crate pbd;
+//! extern crate json;
+//! 
+//! use pbd::dtc::{Marker, Tracker};
+//! 
+//! fn main() {
+//!     let mut tracker = Tracker::new("purchaseId=12345".to_string());
+//!     tracker.add(1578071239, "payment-validator".to_string(), "purchaseId=12345".to_string());
+//!     tracker.add(1578071245, "credit-card-transaction-processor".to_string(), "purchaseId=12345".to_string());
+//!     
+//!     let mut markerchain: Vec<Marker> = serde_json::from_str(&tracker.serialize()).unwrap();
+//!     markerchain[1].identifier.actor_id = "tampered data".to_string();
+//!     let serialized = serde_json::to_string(&markerchain).unwrap();
+//!     let tracker_tampered = Tracker::from_serialized(&serialized).unwrap();
+//!     
+//!     assert_eq!(Tracker::is_valid(&tracker_tampered), false);
+//! }
+//! ```
+//! 
+//! ---
+//! 
+//! We can also ensure that Data Tracker Chains are passed when working with RESTful APIs by implementing the `middleware` and `extractor` modules.
+//! 
 
 extern crate pow_sha256;
 extern crate base64;
@@ -313,7 +358,7 @@ impl Tracker {
         debug!("Validating chain ...");
 
         for (m, marker) in self.chain.clone().iter().enumerate() {
-            println!("Checking Marker #{}", m);
+            debug!("Checking Marker #{}", m);
             // make sure the Marker hasn't been altered
             if marker.hash != Marker::calculate_hash(marker.clone().identifier, DIFFICULTY).result {
                 return false;
@@ -373,6 +418,7 @@ impl Tracker {
 
 pub mod error;
 pub mod extractor;
+pub mod middleware;
 
 
 // Unit Tests
@@ -443,5 +489,19 @@ mod tests {
         mkrchn.add(1578071239, "notifier~billing~receipt~email".to_string(), "order~clothing~iStore~15150".to_string());
 
         assert!(Tracker::is_valid(&mkrchn));
+    }
+
+    #[test]
+    fn test_markerchain_invalid() {
+        let mut tracker = Tracker::new("purchaseId=12345".to_string());
+        tracker.add(1578071239, "payment-validator".to_string(), "purchaseId=12345".to_string());
+        tracker.add(1578071245, "credit-card-transaction-processor".to_string(), "purchaseId=12345".to_string());
+
+        let mut markerchain: Vec<Marker> = serde_json::from_str(&tracker.serialize()).unwrap();
+        markerchain[1].identifier.actor_id = "tampered data".to_string();
+        let serialized = serde_json::to_string(&markerchain).unwrap();
+        let tracker_tampered = Tracker::from_serialized(&serialized).unwrap();
+
+        assert_eq!(Tracker::is_valid(&tracker_tampered), false);
     }
 }
