@@ -1,10 +1,15 @@
 extern crate pbd;
 extern crate actix_web;
 
+use pbd::dua::extractor::actix::*;
 use pbd::dua::middleware::actix::*;
 use actix_web::{web, http, App, HttpServer, HttpRequest, HttpResponse};
 
-fn index(_req: HttpRequest) -> HttpResponse  {
+fn index(duas: DUAs, _req: HttpRequest) -> HttpResponse  {
+    for dua in duas.vec().iter() {
+        println!("{:?}", dua);
+    }
+    
     HttpResponse::Ok()
         .header(http::header::CONTENT_TYPE, "plain/text")
         .body(r#"Hello World!"#)   

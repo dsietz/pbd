@@ -1,6 +1,6 @@
 {
 	"info": {
-		"_postman_id": "6a15bfc9-3330-4266-bf05-7b2da4166221",
+		"_postman_id": "c339437b-b393-417a-a5ef-27f78efd4ed2",
 		"name": "pbd",
 		"description": "Privacy by Design",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
@@ -23,15 +23,12 @@
 					}
 				],
 				"url": {
-					"raw": "http://localhost:8088/health",
+					"raw": "http://localhost:8088",
 					"protocol": "http",
 					"host": [
 						"localhost"
 					],
-					"port": "8088",
-					"path": [
-						"health"
-					]
+					"port": "8088"
 				},
 				"description": "Make a call to a service that requires a Data-Usage-Agreement header"
 			},
