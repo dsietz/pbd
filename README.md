@@ -22,11 +22,9 @@ For software development teams who implement Privacy by Design practices, this P
 
 ## What's New
 
-Here's whats new in 0.0.7:
+Here's whats new in 0.1.0:
 
-This project and codebase for this crate has change 
-1. Introduced the concept of Data Tracker Chains
-   - MarkerChain traits (issue #17)
+The crate is ready for general use. This first release has the basic features for data privacy design patterns.
 
 ## Features
 
