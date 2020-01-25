@@ -21,6 +21,7 @@
 //! | Feature              | Package  | Default | Descripotion                                 | 
 //! | :------------------- | :------: | :-----: | :------------------------------------------- |
 //! | Data Tracker Chain   | dtc      | true    | Auditing of the data lineage                 |
+//! | Data Security Guard  | dsg      | true    | Encryption and decryption of the data        |
 //! | Data Usage Agreement | dua      | true    | Management of how data is allowed to be used |
 //! 
 //!
@@ -36,6 +37,9 @@ extern crate json;
 // Modules
 #[cfg(feature = "dua")]
 pub mod dua;
+#[cfg(feature = "dsg")]
+pub mod dsg;
+#[cfg(feature = "dtc")]
 pub mod dtc;
 
 // Unit Tests
