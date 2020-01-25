@@ -186,9 +186,6 @@ pub trait PrivacySecurityGuard{
 /// Implementaitons of the PrivacySecurityGuard
 impl PrivacySecurityGuard for PrivacyGuard{}
 
-
-
-
 pub mod error;
 //pub mod extractor;
 //pub mod middleware;
@@ -416,7 +413,7 @@ mod tests {
         let padding = Padding::PKCS1;
         let pub_key = get_pub_pem();
         let message: Vec<u8> = String::from("_test123!# ").into_bytes();
-        let trans = match guard.secure_for_tranfer(pub_key, message, padding) {
+        let trans = match guard.secure_for_tranfer(pub_key, message.clone(), padding.clone()) {
             Ok(ts) => ts,
             Err(_err) => {
                 assert!(false);
@@ -424,6 +421,9 @@ mod tests {
             }
         };
 
-        assert!(true);
+        assert_ne!(trans.encrypted_data, message);
+        assert_eq!(trans.encrypted_symmetric_key.len(), 256);
+        assert_eq!(trans.nonce.unwrap().len(), 16);
+        assert_eq!(Padding::from_raw(trans.padding), padding);
     }
 }
