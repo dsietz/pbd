@@ -1,4 +1,80 @@
 
+//! The `dsg` module provides functionality and structures that the Data Security Guard utilizes to enforce the Privacy by Design `Separate` and `Enforce` strategies.
+//! 
+//! These security features can be implemented in two manners:
+//! 
+//! 1. Instantiating a `PrivacyGuard` object and calling it's methods
+//! 2. Implementing the `PrivacySecurityGuard` traits for your own defined structure
+//!
+//! # Examples
+//!
+//! Utilizing the PrivacyGuard structure to generate a RSA keypair
+//!
+//! ```
+//! extern crate pbd;
+//!
+//! use pbd::dsg::{PrivacyGuard, PrivacySecurityGuard, TransferSet};
+//!
+//! fn main() {
+//!     let guard = PrivacyGuard {};
+//!     let keypair = guard.generate_keypair();
+//!     assert!(keypair.is_ok());    
+//! }
+//! ```
+//! 
+//! Implementing the PrivacySecurityGuard trait to generate a RSA keypair
+//!
+//! ```
+//! extern crate pbd;
+//!
+//! use pbd::dsg::{PrivacySecurityGuard};
+//!
+//! fn main() {
+//!     struct MyStruct {}
+//!     impl MyStruct {
+//!         fn hello(&self) -> String {
+//!             "Hello World!".to_string()
+//!         }
+//!     }
+//!     impl PrivacySecurityGuard for MyStruct {}
+//! 
+//!     let my_obj = MyStruct {};
+//!     let keypair = my_obj.generate_keypair();
+//! 
+//!     println!("{}", my_obj.hello());
+//!     assert!(keypair.is_ok());    
+//! }
+//! ```
+//! 
+//! Use the `secure_for_tranfer()` and `data_from_tranfer()` methods, we can safely trasnfer the private data.
+//! 
+//! ```
+//! extern crate pbd;
+//! extern crate openssl;
+//!
+//! use pbd::dsg::{PrivacyGuard, PrivacySecurityGuard, TransferSet};
+//! use openssl::rsa::Padding;
+//!
+//! fn main() {
+//!     // Obtain your public key, We will generate one for this example instead of reading a predefined public key.
+//!     let guard = PrivacyGuard {};
+//!     let keypair = guard.generate_keypair().unwrap();
+//!     let priv_key = keypair.0;
+//!     let pub_key = keypair.1;
+//!     let padding = Padding::PKCS1;
+//!     let original_message = String::from("my private data").as_bytes().to_vec(); 
+//! 
+//!     // prepare the data for transfer
+//!     let transset = guard.secure_for_tranfer(pub_key, original_message.clone(), padding).unwrap();
+//! 
+//!     // The TransferSet returned has all the information the source will need to securely transfer the data
+//!     // Once the transfer has completed, the target can extract the decrytped data form teh TranferSet
+//!     let message_received = guard.data_from_tranfer(priv_key, transset).unwrap();
+//!     
+//!     assert_eq!(original_message, message_received);
+//! }
+//! ```
+
 use crate::dsg::error::*;
 use rand::Rng; 
 use rand::distributions::Alphanumeric;
@@ -21,7 +97,7 @@ pub struct TransferSet {
 }
 
 impl TransferSet {
-    fn serialize(&self) -> String {
+    pub fn serialize(&self) -> String {
         serde_json::to_string(&self).unwrap()
     }
 }
