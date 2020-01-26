@@ -12,11 +12,18 @@ pub static DSG_SYTMMETRIC_KEY_HEADER: &str = "Data-Security-Guard-Key";
 pub struct PrivacyGuard {}
 
 /// Represents the set of attributes your will need to transfer the data safely
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct TransferSet {
     pub encrypted_data: Vec<u8>,
     pub encrypted_symmetric_key: Vec<u8>,
-    pub nonce: Option<Vec<u8>>,
+    pub nonce: Vec<u8>,
     pub padding: i32,
+}
+
+impl TransferSet {
+    fn serialize(&self) -> String {
+        serde_json::to_string(&self).unwrap()
+    }
 }
 
 /// Trait that provides the DaaS security functionality 
@@ -38,6 +45,30 @@ pub trait PrivacySecurityGuard{
 
         debug!("There are {} zero control characters.", c);
         message_trimmed
+    }
+
+    fn data_from_tranfer(&self, priv_key: Vec<u8>, transfer_set: TransferSet) -> Result<Vec<u8>, Error> {
+        // 1. Decrypt the symmetric key
+        let decrypted_key = match self.decrypt_symmetric_key(priv_key, transfer_set.encrypted_symmetric_key, Padding::from_raw(transfer_set.padding)) {
+            Ok(e_key) => {
+                e_key
+            },
+            Err(_err) => {
+                return Err(Error::DecryptionError);
+            },
+        };
+
+        // 2. Decrypt the data using the symmetric key
+        let decrypted_data = match self.decrypt_data(decrypted_key, Some(&transfer_set.nonce), transfer_set.encrypted_data) {
+            Ok(msg) => {
+                msg                
+            },
+            Err(_err) => {
+                return Err(Error::DecryptionError);
+            },
+        }; 
+
+        Ok(decrypted_data)
     }
 
     /// Decrypts the data (small or large) using the symmetric key, IV and AES encryption algorithm
@@ -158,7 +189,7 @@ pub trait PrivacySecurityGuard{
             },
             Err(err) => {
                 error!("{:?}", err);
-                panic!("{:?}", err);
+                return Err(err);
             },
         };  
 
@@ -169,7 +200,7 @@ pub trait PrivacySecurityGuard{
             },
             Err(err) => {
                 error!("{:?}", err);
-                panic!("{:?}", err);
+                return Err(err);
             },
         };
 
@@ -177,7 +208,7 @@ pub trait PrivacySecurityGuard{
         Ok(TransferSet {
                 encrypted_data: secured_data,
                 encrypted_symmetric_key: encrypted_key,
-                nonce: Some(nonce),
+                nonce: nonce,
                 padding: padding.as_raw(),
             })
     }
@@ -423,7 +454,52 @@ mod tests {
 
         assert_ne!(trans.encrypted_data, message);
         assert_eq!(trans.encrypted_symmetric_key.len(), 256);
-        assert_eq!(trans.nonce.unwrap().len(), 16);
+        assert_eq!(trans.nonce.len(), 16);
         assert_eq!(Padding::from_raw(trans.padding), padding);
+    }
+
+    #[test]
+    fn test_data_from_tranfer() {
+        let guard = PrivacyGuard {};
+        let priv_key = get_priv_pem();
+        let message: Vec<u8> = String::from("_test123!# ").into_bytes();
+        let transset = TransferSet {
+            encrypted_data: [82,240,199,226,197,63,161,115,68,5,177,72,246,109,171,165].to_vec(),
+            encrypted_symmetric_key: [83,205,166,96,120,119,1,178,36,144,152,51,106,17,220,9,165,240,236,25,228,164,97,192,194,9,117,249,52,77,14,194,181,37,19,202,104,89,50,2,223,181,173,6,226,32,85,148,103,96,186,188,217,169,112,109,73,184,39,196,95,161,18,180,239,74,0,112,175,26,116,21,31,88,125,157,54,39,147,242,28,202,179,132,157,40,163,159,194,74,9,241,108,16,40,81,67,165,57,46,146,195,37,89,173,124,167,103,30,148,7,4,75,19,73,71,132,142,45,229,150,188,96,56,150,106,125,12,56,251,8,89,51,5,195,235,234,91,169,36,32,134,183,127,231,159,61,55,221,98,71,217,228,49,52,12,47,186,14,86,143,247,54,228,184,75,78,3,160,96,214,118,182,133,61,209,129,68,231,121,178,111,217,99,238,213,101,29,83,11,223,243,239,166,67,180,78,60,1,0,177,74,65,8,5,222,168,170,230,92,193,31,45,14,111,96,7,232,6,6,26,44,192,197,71,115,204,134,191,0,147,128,244,198,189,201,24,85,16,170,21,235,143,158,146,206,28,10,200,51,171,135,139,27,120,44].to_vec(),
+            nonce: [83,114,81,112,67,85,116,114,83,86,49,49,89,75,65,49].to_vec(),
+            padding:1
+        };
+
+        let data = match guard.data_from_tranfer(priv_key, transset) {
+            Ok(msg) => msg,
+            Err(_err) => {
+                assert!(false);
+                panic!("Cannot retrieve data from transfer set!")
+            }
+        };
+
+        assert_eq!(message, data);
+    }
+
+    #[test]
+    fn test_data_from_tranfer_bad_key() {
+        let guard = PrivacyGuard {};
+        let priv_key = guard.generate_keypair().unwrap().0;
+        let message: Vec<u8> = String::from("_test123!# ").into_bytes();
+        let transset = TransferSet {
+            encrypted_data: [82,240,199,226,197,63,161,115,68,5,177,72,246,109,171,165].to_vec(),
+            encrypted_symmetric_key: [83,205,166,96,120,119,1,178,36,144,152,51,106,17,220,9,165,240,236,25,228,164,97,192,194,9,117,249,52,77,14,194,181,37,19,202,104,89,50,2,223,181,173,6,226,32,85,148,103,96,186,188,217,169,112,109,73,184,39,196,95,161,18,180,239,74,0,112,175,26,116,21,31,88,125,157,54,39,147,242,28,202,179,132,157,40,163,159,194,74,9,241,108,16,40,81,67,165,57,46,146,195,37,89,173,124,167,103,30,148,7,4,75,19,73,71,132,142,45,229,150,188,96,56,150,106,125,12,56,251,8,89,51,5,195,235,234,91,169,36,32,134,183,127,231,159,61,55,221,98,71,217,228,49,52,12,47,186,14,86,143,247,54,228,184,75,78,3,160,96,214,118,182,133,61,209,129,68,231,121,178,111,217,99,238,213,101,29,83,11,223,243,239,166,67,180,78,60,1,0,177,74,65,8,5,222,168,170,230,92,193,31,45,14,111,96,7,232,6,6,26,44,192,197,71,115,204,134,191,0,147,128,244,198,189,201,24,85,16,170,21,235,143,158,146,206,28,10,200,51,171,135,139,27,120,44].to_vec(),
+            nonce: [83,114,81,112,67,85,116,114,83,86,49,49,89,75,65,49].to_vec(),
+            padding:1
+        };
+
+        match guard.data_from_tranfer(priv_key, transset) {
+            Ok(msg) => {
+                assert_ne!(message, msg);
+            },
+            Err(_err) => {
+                assert!(true);
+            }
+        };
     }
 }
