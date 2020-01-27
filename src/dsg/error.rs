@@ -16,4 +16,7 @@ pub enum Error {
     /// Encryption issue
     #[display(fmt = "Unable to encrypt the data.")]
     EncryptionError,
+    /// Missing Nonce
+    #[display(fmt = "Missing required nonce (a.k.a. IV).")]
+    MissingNonceError, 
 } 
