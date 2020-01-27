@@ -1,6 +1,8 @@
 //! Data Security Guard specific Errors
 
+use std::error;
 use derive_more::Display;
+use actix_web::ResponseError;
 
 #[derive(Debug, Clone, Display)]
 pub enum Error {
@@ -19,4 +21,11 @@ pub enum Error {
     /// Missing Nonce
     #[display(fmt = "Missing required nonce (a.k.a. IV).")]
     MissingNonceError, 
+    /// Missing symmetric key
+    #[display(fmt = "Missing required symmetric key.")]
+    MissingSymmetricKeyError,
 } 
+
+impl error::Error for Error{}
+
+impl ResponseError for Error{}
