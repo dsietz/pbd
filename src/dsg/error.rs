@@ -7,6 +7,9 @@ pub enum Error {
     /// Bad RSA Keypair
     #[display(fmt = "Bad key pair provided.")]
     BadKeyPairError,
+    /// Bad TransferSet
+    #[display(fmt = "Bad transfer set provided.")]
+    BadTransferSetError,    
     /// Decryption issue
     #[display(fmt = "Unable to decrypt the data.")]
     DecryptionError,
