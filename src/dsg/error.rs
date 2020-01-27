@@ -24,6 +24,9 @@ pub enum Error {
     /// Missing symmetric key
     #[display(fmt = "Missing required symmetric key.")]
     MissingSymmetricKeyError,
+    /// Overflow for reading payload
+    #[display(fmt = "Exeeded limit for reading payload.")]
+    PayloadOverflowError,
 } 
 
 impl error::Error for Error{}

@@ -74,7 +74,6 @@
 //!     assert_eq!(original_message, message_received);
 //! }
 //! ```
-
 use crate::dsg::error::*;
 use rand::Rng; 
 use rand::distributions::Alphanumeric;

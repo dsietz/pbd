@@ -38,9 +38,11 @@
 
 use super::*;
 use std::fmt;
-use actix_web::{FromRequest, HttpRequest};
-use futures::{Future, Stream};
+use actix_web::{FromRequest, HttpReques
+    t};
+use futures::{Future, Stream, StreamExt};
 use actix_web::{Error, web};
+//use bytes::BytesMut;
 use std::str::FromStr;
 
 // 
@@ -63,16 +65,13 @@ const MAX_SIZE: usize = 262_144; // max payload size is 256k
 
 impl TransferSetRequest for TransferSet {
     // Constructor
-    fn transferset_from_request(req: &HttpRequest, payload: &mut actix_web::dev::Payload) -> TransferSet {
-       web::Payload(payload.take()).map_err(Error::from)
-       .fold(web::BytesMut::new(), move |mut body, chunk| {
-           body.extend_from_slice(&chunk);
-           Ok::<_, Error>(body)
-        })
-        .and_then(|body| {
-            format!("Body {:?}!", body);
-        });         
-
+    async fn transferset_from_request(req: &HttpRequest, payload: &mut actix_web::dev::Payload) -> TransferSet {
+        /*
+        let body = web::Payload(payload.take())
+            .map_err(Error::from)
+            .fold(web::BytesMut::new(), move |mut body, chunk| {
+                body.extend_from_slice(&chunk)
+             }); 
         let encrypted_symmetric_key = match req.headers().get(DSG_SYTMMETRIC_KEY_HEADER) {
             Some(val) => {
                 val.as_bytes()
@@ -82,6 +81,12 @@ impl TransferSetRequest for TransferSet {
                 panic!("{}", super::error::Error::MissingSymmetricKeyError);
             },
         };
+        */
+        let body = web::Payload(payload.take());
+        let mut bytes = web::BytesMut::new();
+            while let Some(item) = body.next().await {
+            bytes.extend_from_slice(&item.unwrap());
+        }
 
         let nonce = match req.headers().get(DSG_NONCE_HEADER) {
             Some(val) => {
@@ -105,7 +110,7 @@ impl TransferSetRequest for TransferSet {
 
         // temporary return
         let transset = TransferSet {
-            encrypted_data: [82,240,199,226,197,63,161,115,68,5,177,72,246,109,171,165].to_vec(),
+            encrypted_data: body,
             encrypted_symmetric_key: encrypted_symmetric_key.to_vec(),
             nonce: nonce.to_vec(),
             padding: padding
@@ -153,20 +158,7 @@ mod tests {
             .to_request();
         let resp = test::block_on(app.call(req)).unwrap();
 
-        assert_eq!(resp.status(), StatusCode::OK);
+        assert!(false);
+        //assert_eq!(resp.status(), StatusCode::OK);
     }
-/*
-    #[test]
-    fn test_dua_extractor_missing() {
-        let mut app = test::init_service(App::new().route("/", web::get().to(index_extract_dua)));
-        let req = test::TestRequest::get().uri("/")
-            .header("content-type", "application/json")
-            .to_request();
-        let resp = test::call_service(&mut app, req);
-        assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
-        // read response
-        let bdy = test::read_body(resp);
-        assert_eq!(&bdy[..], actix_web::web::Bytes::from_static(b"Malformed or missing one or more Data Usage Agreements"));
-    }
-*/
 }
