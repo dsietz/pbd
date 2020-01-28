@@ -27,6 +27,12 @@ pub enum Error {
     /// Overflow for reading payload
     #[display(fmt = "Exeeded limit for reading payload.")]
     PayloadOverflowError,
+    /// Timed out while reading the payload
+    #[display(fmt = "Timed out while reading the payload.")]
+    PayloadTimeoutError,
+    /// Cannot read payload
+    #[display(fmt = "Cannot read payload.")]
+    PayloadUnreadableError,
 } 
 
 impl error::Error for Error{}

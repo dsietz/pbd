@@ -38,11 +38,10 @@
 
 use super::*;
 use std::fmt;
-use actix_web::{FromRequest, HttpReques
-    t};
-use futures::{Future, Stream, StreamExt};
+use actix_web::{FromRequest, HttpRequest};
+use futures::{Future, Stream};
+use futures::prelude::Async;
 use actix_web::{Error, web};
-//use bytes::BytesMut;
 use std::str::FromStr;
 
 // 
@@ -65,13 +64,27 @@ const MAX_SIZE: usize = 262_144; // max payload size is 256k
 
 impl TransferSetRequest for TransferSet {
     // Constructor
-    async fn transferset_from_request(req: &HttpRequest, payload: &mut actix_web::dev::Payload) -> TransferSet {
-        /*
-        let body = web::Payload(payload.take())
-            .map_err(Error::from)
-            .fold(web::BytesMut::new(), move |mut body, chunk| {
-                body.extend_from_slice(&chunk)
-             }); 
+    fn transferset_from_request(req: &HttpRequest, payload: &mut actix_web::dev::Payload) -> TransferSet {
+        let encrypted_data = match payload.poll() {
+            Ok(Async::Ready(t)) => {
+                match t {
+                    Some(b) => b.to_vec(),
+                    None => {
+                        debug!("{}", crate::dsg::error::Error::PayloadUnreadableError);
+                        panic!("{}", crate::dsg::error::Error::PayloadUnreadableError);
+                    },
+                }
+            },
+            Ok(Async::NotReady) => {
+                debug!("{}", crate::dsg::error::Error::PayloadTimeoutError);
+                panic!("{}", crate::dsg::error::Error::PayloadTimeoutError);
+            },
+            Err(e) => {
+                debug!("{}", crate::dsg::error::Error::PayloadUnreadableError);
+                panic!("{}", crate:: dsg::error::Error::PayloadUnreadableError);
+            },
+        };
+
         let encrypted_symmetric_key = match req.headers().get(DSG_SYTMMETRIC_KEY_HEADER) {
             Some(val) => {
                 val.as_bytes()
@@ -81,13 +94,7 @@ impl TransferSetRequest for TransferSet {
                 panic!("{}", super::error::Error::MissingSymmetricKeyError);
             },
         };
-        */
-        let body = web::Payload(payload.take());
-        let mut bytes = web::BytesMut::new();
-            while let Some(item) = body.next().await {
-            bytes.extend_from_slice(&item.unwrap());
-        }
-
+        
         let nonce = match req.headers().get(DSG_NONCE_HEADER) {
             Some(val) => {
                 val.as_bytes()
@@ -109,14 +116,13 @@ impl TransferSetRequest for TransferSet {
         };
 
         // temporary return
-        let transset = TransferSet {
-            encrypted_data: body,
+        TransferSet {
+            //encrypted_data: String::from("my private data").as_bytes().to_vec(),
+            encrypted_data: encrypted_data,
             encrypted_symmetric_key: encrypted_symmetric_key.to_vec(),
             nonce: nonce.to_vec(),
             padding: padding
-        };
-
-        transset
+        }
     }
 }
 
@@ -158,7 +164,7 @@ mod tests {
             .to_request();
         let resp = test::block_on(app.call(req)).unwrap();
 
-        assert!(false);
-        //assert_eq!(resp.status(), StatusCode::OK);
+        //assert!(false);
+        assert_eq!(resp.status(), StatusCode::OK);
     }
 }
