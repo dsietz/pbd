@@ -201,9 +201,9 @@ mod tests {
         let mut app = test::init_service(App::new().route("/", web::get().to(index_extract_transferset)));        
         let req = test::TestRequest::get().uri("/")
             .header("content-type", "plain/text")
-            .header(DSG_NONCE_HEADER, str::from_utf8(&trans.nonce).unwrap())
+            .header::<&str, Vec<u8>>(DSG_NONCE_HEADER, trans.nonce)
             .header::<&str, usize>(DSG_PADDING_HEADER, trans.padding.try_into().unwrap())
-            .header(DSG_SYTMMETRIC_KEY_HEADER, str::from_utf8(&trans.encrypted_symmetric_key).unwrap())
+            .header::<&str, Vec<u8>>(DSG_SYTMMETRIC_KEY_HEADER, trans.encrypted_symmetric_key)
             .set_payload(trans.encrypted_data)
             .to_request();
         let resp = test::block_on(app.call(req)).unwrap();
