@@ -363,7 +363,6 @@ impl PrivacySecurityGuard for PrivacyGuard{}
 
 pub mod error;
 pub mod extractor;
-pub mod middleware;
 
 #[cfg(test)]
 mod tests {
