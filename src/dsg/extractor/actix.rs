@@ -7,11 +7,69 @@
 //! extern crate pbd;
 //! extern crate actix_web;
 //! 
-//! use pbd::dsg::TransferSet;
+//! use actix_web::{test, web, http, App, HttpRequest, HttpResponse};
+//! use pbd::dsg::{PrivacyGuard,PrivacySecurityGuard, TransferSet};
+//! use openssl::rsa::{Rsa, Padding};
+//! use std::io::prelude::*;
+//! use std::fs::File;
 //!
+//! fn get_priv_pem() -> Vec<u8> {
+//!     let mut f = File::open("./tests/keys/priv-key.pem").unwrap();
+//!     let mut priv_pem = Vec::new();
+//!     f.read_to_end(&mut priv_pem).unwrap();
+//!     
+//!     priv_pem
+//! }
+//! 
+//! fn get_pub_pem() -> Vec<u8> {
+//!     let mut f = File::open("./tests/keys/pub-key.pem").unwrap();
+//!     let mut pub_pem = Vec::new();
+//!     f.read_to_end(&mut pub_pem).unwrap();
+//!     
+//!     pub_pem
+//! }
+//!
+//! // On the server side, the TransferSet is extracted from the payload.  
+//! // In this example., the server sends the message back for us to verify in our assertion. 
+//! fn index_extract_transferset(transset: TransferSet, _req: HttpRequest) -> HttpResponse {
+//!     let guard = PrivacyGuard {};
+//!     let priv_key = get_priv_pem();
+//! 
+//!     // extract the data form the TransferSet
+//!     match guard.data_from_tranfer(priv_key, transset) {
+//!         Ok(msg) => {
+//!             // send the message back to the client for our example
+//!             return HttpResponse::Ok()
+//!                 .header(http::header::CONTENT_TYPE, "plain/text")
+//!                 .body(String::from_utf8(msg).unwrap())
+//!         },
+//!         Err(err) => {
+//!             println!("{}", err);
+//!             return HttpResponse::BadRequest()
+//!                 .header(http::header::CONTENT_TYPE, "plain/text")
+//!                 .body(format!("{}", err))
+//!         }
+//!     }
+//! }
 //! 
 //! fn main () {
-//!     assert!(true);
+//!    // The data soruce prepares the data for transport
+//!    let guard = PrivacyGuard {};
+//!    let padding = Padding::PKCS1;
+//!    let pub_key = get_pub_pem();
+//!    let message: Vec<u8> = String::from("_test123!# ").into_bytes();
+//!    let trans = guard.secure_for_tranfer(pub_key, message, padding).unwrap();
+//!
+//!    // The data source sends the TransferSet in the payload
+//!    let mut app = test::init_service(App::new().route("/", web::get().to(index_extract_transferset)));      
+//!    let req = test::TestRequest::get().uri("/")
+//!        .header("content-type", "plain/text")
+//!        .set_payload(trans.serialize())
+//!        .to_request();    
+//!
+//!    // In this example, the server extracted our message and sent it back for us to verify in our assert
+//!    let msg = test::read_response(&mut app, req);
+//!    assert_eq!(String::from("_test123!# "), msg);
 //! }
 //! ```
 
@@ -20,7 +78,6 @@ use std::fmt;
 use actix_web::{FromRequest, HttpRequest};
 use futures::{Stream};
 use futures::prelude::Async;
-use std::str::FromStr;
 
 // 
 // The TransferSet Extractor
@@ -96,11 +153,8 @@ impl FromRequest for TransferSet {
 mod tests {
     use super::*;
     use actix_web::{test, web, http, App, HttpRequest, HttpResponse};
-    use actix_web::dev::Service;
-    use actix_web::http::{StatusCode};
     use std::io::prelude::*;
     use std::fs::File;
-    use std::convert::TryInto;
 
     fn get_priv_pem() -> Vec<u8> {
         let mut f = File::open("./tests/keys/priv-key.pem").unwrap();
