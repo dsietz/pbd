@@ -64,7 +64,7 @@ pub trait TransferSetRequest {
 impl TransferSetRequest for TransferSet {
     // Constructor
     fn transferset_from_request(req: &HttpRequest, payload: &mut actix_web::dev::Payload) -> TransferSet {
-        let encrypted_data = match payload.poll() {
+        let serialized_transset = match payload.poll() {
             Ok(Async::Ready(t)) => {
                 match t {
                     Some(b) => b.to_vec(),
@@ -84,6 +84,16 @@ impl TransferSetRequest for TransferSet {
             },
         };
 
+        match TransfereSet::from_serialized(serialized_transset) {
+            Ok(ts) => {
+                return ts;
+            },
+            Err(err) => {
+                error!("{}",err);
+                return Err(err);
+            },
+        }
+/*
         let encrypted_symmetric_key = match req.headers().get(DSG_SYTMMETRIC_KEY_HEADER) {
             Some(val) => {
                 val.as_bytes()
@@ -122,6 +132,9 @@ impl TransferSetRequest for TransferSet {
             nonce: nonce.to_vec(),
             padding: padding
         }
+*/
+
+        
     }
 }
 
@@ -144,7 +157,6 @@ mod tests {
     use std::io::prelude::*;
     use std::fs::File;
     use std::convert::TryInto;
-    use std::str;
 
     fn get_priv_pem() -> Vec<u8> {
         let mut f = File::open("./tests/keys/priv-key.pem").unwrap();
@@ -198,17 +210,22 @@ mod tests {
         };
 
         //let encrypted_symmetric_key = "[83,205,166,96,120,119,1,178,36,144,152,51,106,17,220,9,165,240,236,25,228,164,97,192,194,9,117,249,52,77,14,194,181,37,19,202,104,89,50,2,223,181,173,6,226,32,85,148,103,96,186,188,217,169,112,109,73,184,39,196,95,161,18,180,239,74,0,112,175,26,116,21,31,88,125,157,54,39,147,242,28,202,179,132,157,40,163,159,194,74,9,241,108,16,40,81,67,165,57,46,146,195,37,89,173,124,167,103,30,148,7,4,75,19,73,71,132,142,45,229,150,188,96,56,150,106,125,12,56,251,8,89,51,5,195,235,234,91,169,36,32,134,183,127,231,159,61,55,221,98,71,217,228,49,52,12,47,186,14,86,143,247,54,228,184,75,78,3,160,96,214,118,182,133,61,209,129,68,231,121,178,111,217,99,238,213,101,29,83,11,223,243,239,166,67,180,78,60,1,0,177,74,65,8,5,222,168,170,230,92,193,31,45,14,111,96,7,232,6,6,26,44,192,197,71,115,204,134,191,0,147,128,244,198,189,201,24,85,16,170,21,235,143,158,146,206,28,10,200,51,171,135,139,27,120,44]";
-        let mut app = test::init_service(App::new().route("/", web::get().to(index_extract_transferset)));        
+        let mut app = test::init_service(App::new().route("/", web::get().to(index_extract_transferset)));      
+ 
         let req = test::TestRequest::get().uri("/")
             .header("content-type", "plain/text")
-            .header::<&str, Vec<u8>>(DSG_NONCE_HEADER, trans.nonce)
+            /*
+            .header::<&str, Vec<u8>>(DSG_NONCE_HEADER, HeaderValue::from_bytes(&trans.nonce).set_sensitive(true))
             .header::<&str, usize>(DSG_PADDING_HEADER, trans.padding.try_into().unwrap())
             .header::<&str, Vec<u8>>(DSG_SYTMMETRIC_KEY_HEADER, trans.encrypted_symmetric_key)
             .set_payload(trans.encrypted_data)
+            */
+            .set_payload(trans.serialize())
             .to_request();
         let resp = test::block_on(app.call(req)).unwrap();
 
         //assert!(false);
         assert_eq!(resp.status(), StatusCode::OK);
+
     }
 }
