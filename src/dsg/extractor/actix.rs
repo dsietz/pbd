@@ -93,8 +93,10 @@ impl fmt::Display for TransferSet {
 
 pub trait TransferSetRequest {
     fn serialized_transset_from_payload(payload: &mut actix_web::dev::Payload) -> String {
+        println!("step 2");
         match payload.poll() {
             Ok(Async::Ready(t)) => {
+                println!("step 3a");
                 match t {
                     Some(b) => {
                         match String::from_utf8(b.to_vec()) {
@@ -112,10 +114,12 @@ pub trait TransferSetRequest {
                 }
             },
             Ok(Async::NotReady) => {
+                println!("step 3b");
                 debug!("{}", crate::dsg::error::Error::PayloadTimeoutError);
                 panic!("{}", crate::dsg::error::Error::PayloadTimeoutError);
             },
             Err(_e) => {
+                println!("step 3c");
                 debug!("{}", crate::dsg::error::Error::PayloadUnreadableError);
                 panic!("{}", crate:: dsg::error::Error::PayloadUnreadableError);
             },
@@ -126,7 +130,9 @@ pub trait TransferSetRequest {
 
 impl TransferSetRequest for TransferSet {
     // Constructor
+    #[allow(unused_variables)]
     fn transferset_from_request(req: &HttpRequest, payload: &mut actix_web::dev::Payload) -> TransferSet {
+        println!("step 1");
         match TransferSet::from_serialized(&Self::serialized_transset_from_payload(payload)) {
             Ok(ts) => {
                 return ts;
@@ -177,6 +183,8 @@ mod tests {
         let guard = PrivacyGuard {};
         let priv_key = get_priv_pem();
 
+        println!("{}",transset.clone());
+
         match guard.data_from_tranfer(priv_key, transset) {
             Ok(msg) => {
                 return HttpResponse::Ok()
@@ -214,6 +222,7 @@ mod tests {
             .to_request();    
         let msg = test::read_response(&mut app, req);
         
-        assert_eq!(message, msg);
+        assert!(false);
+        //assert_eq!(message, msg);
     }
 }
