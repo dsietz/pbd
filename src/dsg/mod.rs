@@ -362,7 +362,6 @@ pub trait PrivacySecurityGuard{
 impl PrivacySecurityGuard for PrivacyGuard{}
 
 pub mod error;
-pub mod extractor;
 
 #[cfg(test)]
 mod tests {
