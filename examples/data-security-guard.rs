@@ -2,7 +2,7 @@ extern crate pbd;
 extern crate actix_web;
 
 use pbd::dsg::{PrivacyGuard, PrivacySecurityGuard, TransferSet};
-use actix_web::{web, Error, App, HttpServer, HttpRequest, HttpResponse};
+use actix_web::{web, http, Error, App, HttpServer, HttpRequest, HttpResponse};
 use futures::{Future, Stream};
 use std::io::prelude::*;
 use std::fs::File;
@@ -15,41 +15,40 @@ fn get_priv_pem() -> Vec<u8> {
     priv_pem
 }
 
-fn index(mut body: web::Payload, _req: HttpRequest) -> impl Future<Item = HttpResponse, Error = Error>  {
+fn index(body: web::Payload, _req: HttpRequest) -> impl Future<Item = HttpResponse, Error = Error>  {
     body.map_err(Error::from)
     .fold(web::BytesMut::new(), move |mut body, chunk| {
         body.extend_from_slice(&chunk);
         Ok::<_, Error>(body)
      })
      .and_then(|body| {
-        let transset = match TransferSet::from_serialized(body) {
+        let transset = match TransferSet::from_serialized(&String::from_utf8(body.to_vec()).unwrap()) {
             Ok(ts) => ts,
             Err(e) => {
-                HttpResponse::BadRequest()
-                .header(http::header::CONTENT_TYPE, "plain/text")
-                .body(format!("{}",e))
+                return HttpResponse::BadRequest()
+                        .header(http::header::CONTENT_TYPE, "plain/text")
+                        .body(format!("{}",e))
             },
         } ;
 
         let guard = PrivacyGuard {};
         let priv_pem = get_priv_pem();
 
-        let msg = guard.data_from_tranfer(priv_pem,transset){
-            Ok(m) => m,
+        match guard.data_from_tranfer(priv_pem,transset) {
+            Ok(msg) => {
+                println!("Message Received: {}", String::from_utf8(msg).unwrap());
+
+                HttpResponse::Ok()
+                    .header(http::header::CONTENT_TYPE, "plain/text")
+                    .body(r#"Hello World!"#)
+            },
             Err(e) => {
-                HttpResponse::BadRequest()
-                .header(http::header::CONTENT_TYPE, "plain/text")
-                .body(format!("{}",e))
+                return HttpResponse::BadRequest()
+                        .header(http::header::CONTENT_TYPE, "plain/text")
+                        .body(format!("{}",e))
             }
-        };
-        format!("Body {:?}!", body);
-         Ok(HttpResponse::Ok().finish())
+        }
      })
-/*
-    HttpResponse::Ok()
-    .header(http::header::CONTENT_TYPE, "plain/text")
-    .body(r#"Hello World!"#)
-*/
 }
 
 fn main() {
