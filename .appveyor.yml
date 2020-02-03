@@ -6,6 +6,8 @@ environment:
     CHANNEL: stable 
   RUST_BACKTRACE: full
 install:
+  - ps: Start-FileDownload 'https://slproweb.com/download/Win64OpenSSL-1_1_1d.exe'
+  - ps: Start-Process "Win64OpenSSL-1_1_1d.exe" -ArgumentList "/silent /verysilent /sp- /suppressmsgboxes" -Wait
   - curl -sSf -o rustup-init.exe https://win.rustup.rs/
   - rustup-init.exe -y --default-host %TARGET%
   - set PATH=%PATH%;C:\Users\appveyor\.cargo\bin
