@@ -22,14 +22,15 @@ For software development teams who implement Privacy by Design practices, this P
 
 ## What's New
 
-Here's whats new in 0.1.0:
+Here's whats new in 0.1.1:
 
-The crate is ready for general use. This first release has the basic features for data privacy design patterns.
+We added a `Data Security Guard` (dsg) module that makes it easy to prepare data for transfer and simply read it when received.
 
 ## Features
 
 - Data Usage Agreements
 - Data Tracker Chain
+- Data Security Guard
 
 ## About
 
