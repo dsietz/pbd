@@ -24,7 +24,7 @@ For software development teams who implement Privacy by Design practices, this P
 
 Here's whats new in 0.1.1:
 
-We added a `Data Security Guard` (dsg) module that makes it easy to prepare data for transfer and simply read it when received.
+We added a `Data Security Guard` (dsg) module that makes it easy to prepare data for transfer and simply read it when received. An example has been added for this feature.
 
 ## Features
 
