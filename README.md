@@ -28,9 +28,9 @@ We added a `Data Security Guard` (dsg) module that makes it easy to prepare data
 
 ## Features
 
-- Data Usage Agreements
-- Data Tracker Chain
-- Data Security Guard
+- Data Usage Agreements (dua)
+- Data Tracker Chain (dtc)
+- Data Security Guard (dsg)
 
 ## About
 
