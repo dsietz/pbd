@@ -76,7 +76,7 @@ impl TrackerHeader for Tracker {
     ///
     /// fn main() {
     ///     // NOTE: The header value must be Base64 encoded
-    ///     let header_value = HeaderValue::from_static("W3siaWRlbnRpZmllciI6eyJkYXRhX2lkIjoib3JkZXJ+Y2xvdGhpbmd+aVN0b3JlfjE1MTUwIiwiaW5kZXgiOjAsInRpbWVzdGFtcCI6MCwiYWN0b3JfaWQiOiIifSwiaGFzaCI6IjE4NTUyODk4NTgzMDIzMDU2Njc2MDIzNjIwMzIyODU4OTI1MDU1NiIsInByZXZpb3VzX2hhc2giOiIwIiwibm9uY2UiOjV9XQ=="); 
+    ///     let header_value = HeaderValue::from_static("W3siaWRlbnRpZmllciI6eyJkYXRhX2lkIjoib3JkZXJ+Y2xvdGhpbmd+aVN0b3JlfjE1MTUwIiwiaW5kZXgiOjAsInRpbWVzdGFtcCI6MCwiYWN0b3JfaWQiOiIiLCJwcmV2aW91c19oYXNoIjoiMCJ9LCJoYXNoIjoiMjcyMDgxNjk2NjExNDY0NzczNzI4MDI0OTI2NzkzNzAzMTY3NzgyIiwibm9uY2UiOjV9XQ=="); 
     ///     let tracker = Tracker::tracker_from_header_value(&header_value);
     ///     
     ///     assert!(tracker.is_ok());
@@ -137,7 +137,7 @@ mod tests {
 
     // supporting functions
     fn get_dtc_header() -> String{
-        base64::encode(r#"[{"identifier":{"data_id":"order~clothing~iStore~15150","index":0,"timestamp":0,"actor_id":""},"hash":"185528985830230566760236203228589250556","previous_hash":"0","nonce":5},{"identifier":{"data_id":"order~clothing~iStore~15150","index":1,"timestamp":1578071239,"actor_id":"notifier~billing~receipt~email"},"hash":"291471950171806362795097431348191551247","previous_hash":"185528985830230566760236203228589250556","nonce":5}]"#)
+        base64::encode(r#"[{"identifier":{"data_id":"order~clothing~iStore~15150","index":0,"timestamp":0,"actor_id":"","previous_hash":"0"},"hash":"272081696611464773728024926793703167782","nonce":5},{"identifier":{"data_id":"order~clothing~iStore~15150","index":1,"timestamp":1578071239,"actor_id":"notifier~billing~receipt~email","previous_hash":"272081696611464773728024926793703167782"},"hash":"50104149701098700632511144125867736193","nonce":5}]"#)
     }
 
     fn index(_req: HttpRequest) -> HttpResponse {
