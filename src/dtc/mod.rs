@@ -76,7 +76,9 @@ pub struct MarkerIdentifier {
     // The date and time (Unix timestamp) the data came into posession of the Actor, (1578071239)
     pub timestamp: u64,
     /// The unique identifier of the Actor who touched the data, (e.g.: notifier~billing~receipt~email)
-    pub actor_id: String,
+    pub actor_id: String,    
+    /// The identifying hash of the previous Marker in the Data Tracker Chain
+    pub previous_hash: String,
 }
 
 impl MarkerIdentifier {
@@ -107,8 +109,6 @@ pub struct Marker {
     pub identifier: MarkerIdentifier,
     /// The identifying hash of the Marker
     pub hash: String,
-    /// The identifying hash of the previous Marker in the Data Tracker Chain
-    pub previous_hash: String,
     /// The difficulty of the Proof of Work
     nonce: u128,
 }
@@ -143,12 +143,12 @@ impl Marker {
             index: idx,
             timestamp: tmstp,
             actor_id: act_id,
+            previous_hash: prev_hash, 
         };
 
         Marker {
             identifier: idfy.clone(),
             hash: Marker::calculate_hash(idfy, DIFFICULTY).result,
-            previous_hash: prev_hash,            
             nonce: DIFFICULTY,
         }
     }
@@ -182,12 +182,12 @@ impl Marker {
             index: 0,
             timestamp: 0,
             actor_id: "".to_string(),
+            previous_hash: "0".to_string(),            
         };
         
         Marker {
             identifier: idfy.clone(),
             hash: Marker::calculate_hash(idfy, DIFFICULTY).result,
-            previous_hash: "0".to_string(),            
             nonce: DIFFICULTY,
         }
     }
@@ -293,7 +293,7 @@ impl Tracker {
     /// use pbd::dtc::Tracker;
     ///
     /// fn main() {
-    ///     let tracker = Tracker::from_serialized(r#"[{"identifier":{"data_id":"order~clothing~iStore~15150","index":0,"timestamp":0,"actor_id":""},"hash":"185528985830230566760236203228589250556","previous_hash":"0","nonce":5},{"identifier":{"data_id":"order~clothing~iStore~15150","index":1,"timestamp":1578071239,"actor_id":"notifier~billing~receipt~email"},"hash":"291471950171806362795097431348191551247","previous_hash":"185528985830230566760236203228589250556","nonce":5}]"#);
+    ///     let tracker = Tracker::from_serialized(r#"[{"identifier":{"data_id":"order~clothing~iStore~15150","index":0,"timestamp":0,"actor_id":"","previous_hash":"0"},"hash":"272081696611464773728024926793703167782","nonce":5},{"identifier":{"data_id":"order~clothing~iStore~15150","index":1,"timestamp":1578071239,"actor_id":"notifier~billing~receipt~email","previous_hash":"272081696611464773728024926793703167782"},"hash":"50104149701098700632511144125867736193","nonce":5}]"#);
     ///     
     ///     // unwrap() to get the Tracker is Result is Ok
     ///     assert!(tracker.is_ok());
@@ -365,7 +365,7 @@ impl Tracker {
             }
 
             // make sure the relationship with the prior Marker hasn't been altered
-            if m > 0 && marker.previous_hash != self.chain.clone()[m-1].hash {
+            if m > 0 && marker.identifier.previous_hash != self.chain.clone()[m-1].hash {
                 return false;
             }
         }
@@ -463,7 +463,7 @@ mod tests {
 
     #[test]
     fn test_markerchain_from_serialized() {
-        let mkrchn = Tracker::from_serialized(r#"[{"identifier":{"data_id":"order~clothing~iStore~15150","index":0,"timestamp":0,"actor_id":""},"hash":"185528985830230566760236203228589250556","previous_hash":"0","nonce":5},{"identifier":{"data_id":"order~clothing~iStore~15150","index":1,"timestamp":1578071239,"actor_id":"notifier~billing~receipt~email"},"hash":"291471950171806362795097431348191551247","previous_hash":"185528985830230566760236203228589250556","nonce":5}]"#);
+        let mkrchn = Tracker::from_serialized(r#"[{"identifier":{"data_id":"order~clothing~iStore~15150","index":0,"timestamp":0,"actor_id":"","previous_hash":"0"},"hash":"272081696611464773728024926793703167782","nonce":5},{"identifier":{"data_id":"order~clothing~iStore~15150","index":1,"timestamp":1578071239,"actor_id":"notifier~billing~receipt~email","previous_hash":"272081696611464773728024926793703167782"},"hash":"50104149701098700632511144125867736193","nonce":5}]"#);
 
         assert!(mkrchn.is_ok());
     }

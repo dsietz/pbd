@@ -7,7 +7,7 @@
 //!
 //! #### Usage
 //!
-//! This crate follows the [privacy design strategies and tactics](./docs/DESIGN-STRATEGIES.md) and is broken down into aligned features.
+//! This crate follows the [privacy design strategies and tactics](https://github.com/dsietz/pbd/blob/master/docs/DESIGN-STRATEGIES.md) and is broken down into aligned features.
 //! These features can be specified in Cargo.toml as a dependency.
 //!
 //! >[dependencies.pbd]
