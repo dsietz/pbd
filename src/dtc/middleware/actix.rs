@@ -55,8 +55,8 @@ use crate::dtc::extractor::actix::{TrackerHeader};
 use actix_web::{Error, HttpResponse};
 use actix_web::dev::{ServiceRequest, ServiceResponse};
 use actix_service::{Service, Transform};
-use futures::future::{ok, Either, FutureResult};
-use futures::{Poll};
+use futures::future::{ok, Either, Ready};
+use std::task::{Context, Poll};
 
 #[derive(Clone)]
 pub struct DTCEnforcer{
@@ -88,13 +88,14 @@ impl<S, B> Transform<S> for DTCEnforcer
 where
     S: Service<Request = ServiceRequest, Response = ServiceResponse<B>, Error = Error>,
     S::Future: 'static,
+    B: 'static,
 {
     type Request = ServiceRequest;
     type Response = ServiceResponse<B>;
     type Error = Error;
     type InitError = ();
     type Transform = DTCEnforcerMiddleware<S>;
-    type Future = FutureResult<Self::Transform, Self::InitError>;
+    type Future = Ready<Result<Self::Transform, Self::InitError>>;
 
     fn new_transform(&self, service: S) -> Self::Future {
         ok(DTCEnforcerMiddleware { 
@@ -109,21 +110,22 @@ impl<S, B> Service for DTCEnforcerMiddleware<S>
 where
     S: Service<Request = ServiceRequest, Response = ServiceResponse<B>, Error = Error>,
     S::Future: 'static,
+    B: 'static,
 {
     type Request = ServiceRequest;
     type Response = ServiceResponse<B>;
     type Error = Error;
-    type Future = Either<S::Future, FutureResult<Self::Response, Self::Error>>;
+    type Future = Either<S::Future, Ready<Result<ServiceResponse<B>, Self::Error>>>;
 
-    fn poll_ready(&mut self) -> Poll<(), Self::Error> {
-        self.service.poll_ready()
+    fn poll_ready(&mut self, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
+        self.service.poll_ready(cx)
     }
 
     fn call(&mut self, req: ServiceRequest) -> Self::Future {
         debug!("VALIDATION LEVEL: {}", self.validation_level);
 
         if self.validation_level == VALIDATION_NONE {
-            return Either::A(self.service.call(req)) 
+            return Either::Left(self.service.call(req)) 
         }
 
         match  req.headers().get(DTC_HEADER) {
@@ -148,9 +150,9 @@ where
                         }
 
                         if valid_ind == true {
-                            return Either::A(self.service.call(req));
+                            return Either::Left(self.service.call(req));
                         }else{
-                            return Either::B(ok(req.into_response(
+                            return Either::Right(ok(req.into_response(
                                 HttpResponse::BadRequest()
                                     .finish()
                                  .into_body(),
@@ -159,7 +161,7 @@ where
                     },
                     Err(e) => {
                         warn!("{}", e);
-                        return Either::B(ok(req.into_response(
+                        return Either::Right(ok(req.into_response(
                             HttpResponse::BadRequest()
                                 .finish()
                              .into_body(),
@@ -168,7 +170,7 @@ where
                 }
             },
             None => {
-                return Either::B(ok(req.into_response(
+                return Either::Right(ok(req.into_response(
                     HttpResponse::BadRequest()
                         .finish()
                      .into_body(),
@@ -220,202 +222,202 @@ mod tests {
     }
 
     #[test]
-    fn test_dtc_none_missing() {
+    async fn test_dtc_none_missing() {
         let mut app = test::init_service(
             App::new()
             .wrap(DTCEnforcer::new(VALIDATION_NONE))
             .route("/", web::post().to(index_middleware_dtc))
-        );
+        ).await;
         let req = test::TestRequest::post().uri("/")
             .header("content-type", "application/json")
             .to_request();
-        let resp = test::block_on(app.call(req)).unwrap();
+        let resp = test::call_service(&mut app, req).await;
         assert_eq!(resp.status(), StatusCode::OK);
     }
 
     #[test]
-    fn test_dtc_default_ok() {
+    async fn test_dtc_default_ok() {
         let mut app = test::init_service(
             App::new()
             .wrap(DTCEnforcer::default())
             .route("/", web::post().to(index_middleware_dtc))
-        );
+        ).await;
         let req = test::TestRequest::post().uri("/")
             .header("content-type", "application/json")
             .header(DTC_HEADER, get_dtc_header())
             .to_request();
-        let resp = test::block_on(app.call(req)).unwrap();
+        let resp = test::call_service(&mut app, req).await;
         
         assert_eq!(resp.status(), StatusCode::OK);
     } 
 
     #[test]
-    fn test_dtc_default_empty() {
+    async fn test_dtc_default_empty() {
         let mut app = test::init_service(
             App::new()
             .wrap(DTCEnforcer::default())
             .route("/", web::post().to(index_middleware_dtc))
-        );
+        ).await;
         let req = test::TestRequest::post().uri("/")
             .header("content-type", "application/json")
             .header(DTC_HEADER, "")
             .to_request();
-        let resp = test::block_on(app.call(req)).unwrap();
+        let resp = test::call_service(&mut app, req).await;
         
         assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
     } 
 
     #[test]
-    fn test_dtc_default_invalid() {
+    async fn test_dtc_default_invalid() {
         let mut app = test::init_service(
             App::new()
             .wrap(DTCEnforcer::default())
             .route("/", web::post().to(index_middleware_dtc))
-        );
+        ).await;
         let req = test::TestRequest::post().uri("/")
             .header("content-type", "application/json")
             .header(DTC_HEADER, get_dtc_header())
             .to_request();
-        let resp = test::block_on(app.call(req)).unwrap();
+        let resp = test::call_service(&mut app, req).await;
         
         assert_eq!(resp.status(), StatusCode::OK);
     } 
 
     #[test]
-    fn test_dtc_default_missing() {
+    async fn test_dtc_default_missing() {
         let mut app = test::init_service(
-                            App::new()
-                            .wrap(DTCEnforcer::default())
-                            .route("/", web::post().to(index_middleware_dtc))
-                        );
+            App::new()
+            .wrap(DTCEnforcer::default())
+            .route("/", web::post().to(index_middleware_dtc))
+        ).await;
         let req = test::TestRequest::post().uri("/")
             .header("content-type", "application/json")
             .to_request();
-        let resp = test::block_on(app.call(req)).unwrap();
+        let resp = test::call_service(&mut app, req).await;
         assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
     }     
 
     #[test]
-    fn test_dtc_valid_high_ok() {
+    async fn test_dtc_valid_high_ok() {
         let mut app = test::init_service(
             App::new()
             .wrap(DTCEnforcer::new(VALIDATION_HIGH))
             .route("/", web::post().to(index_middleware_dtc))
-        );
+        ).await;
         let req = test::TestRequest::post().uri("/")
             .header("content-type", "application/json")
             .header(DTC_HEADER, get_dtc_header())
             .to_request();
-        let resp = test::block_on(app.call(req)).unwrap();
+        let resp = test::call_service(&mut app, req).await;
         
         assert_eq!(resp.status(), StatusCode::OK);
     } 
 
     #[test]
-    fn test_dtc_high_empty() {
+    async fn test_dtc_high_empty() {
         let mut app = test::init_service(
             App::new()
             .wrap(DTCEnforcer::new(VALIDATION_HIGH))
             .route("/", web::post().to(index_middleware_dtc))
-        );
+        ).await;
         let req = test::TestRequest::post().uri("/")
             .header("content-type", "application/json")
             .header(DTC_HEADER, "")
             .to_request();
-        let resp = test::block_on(app.call(req)).unwrap();
+        let resp = test::call_service(&mut app, req).await;
         
         assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
     } 
 
     #[test]
-    fn test_dtc_high_invalid() {
+    async fn test_dtc_high_invalid() {
         let mut app = test::init_service(
             App::new()
             .wrap(DTCEnforcer::new(VALIDATION_HIGH))
             .route("/", web::post().to(index_middleware_dtc))
-        );
+        ).await;
         let req = test::TestRequest::post().uri("/")
             .header("content-type", "application/json")
             .header(DTC_HEADER, get_dtc_header_invalid())
             .to_request();
-        let resp = test::block_on(app.call(req)).unwrap();
+        let resp = test::call_service(&mut app, req).await;
         
         assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
     } 
 
     #[test]
-    fn test_dtc_high_missing() {
+    async fn test_dtc_high_missing() {
         let mut app = test::init_service(
             App::new()
             .wrap(DTCEnforcer::new(VALIDATION_HIGH))
             .route("/", web::post().to(index_middleware_dtc))
-        );
+        ).await;
         let req = test::TestRequest::post().uri("/")
             .header("content-type", "application/json")
             .to_request();
-        let resp = test::block_on(app.call(req)).unwrap();
+        let resp = test::call_service(&mut app, req).await;
         assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
     } 
 
     #[test]
-    fn test_dtc_low_ok() {
+    async fn test_dtc_low_ok() {
         let mut app = test::init_service(
             App::new()
             .wrap(DTCEnforcer::new(VALIDATION_LOW))
             .route("/", web::post().to(index_middleware_dtc))
-        );
+        ).await;
         let req = test::TestRequest::post().uri("/")
             .header("content-type", "application/json")
             .header(DTC_HEADER, get_dtc_header())
             .to_request();
-        let resp = test::block_on(app.call(req)).unwrap();
+        let resp = test::call_service(&mut app, req).await;
         
         assert_eq!(resp.status(), StatusCode::OK);
     } 
 
     #[test]
-    fn test_dtc_low_empty() {
+    async fn test_dtc_low_empty() {
         let mut app = test::init_service(
             App::new()
             .wrap(DTCEnforcer::new(VALIDATION_LOW))
             .route("/", web::post().to(index_middleware_dtc))
-        );
+        ).await;
         let req = test::TestRequest::post().uri("/")
             .header("content-type", "application/json")
             .header(DTC_HEADER, "")
             .to_request();
-        let resp = test::block_on(app.call(req)).unwrap();
+        let resp = test::call_service(&mut app, req).await;
         
         assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
     } 
 
     #[test]
-    fn test_dtc_low_invalid() {
+    async fn test_dtc_low_invalid() {
         let mut app = test::init_service(
             App::new()
             .wrap(DTCEnforcer::new(VALIDATION_LOW))
             .route("/", web::post().to(index_middleware_dtc))
-        );
+        ).await;
         let req = test::TestRequest::post().uri("/")
             .header("content-type", "application/json")
             .header(DTC_HEADER, get_dtc_header_invalid())
             .to_request();
-        let resp = test::block_on(app.call(req)).unwrap();
+        let resp = test::call_service(&mut app, req).await;
         
         assert_eq!(resp.status(), StatusCode::OK);
     } 
 
     #[test]
-    fn test_dtc_low_missing() {
+    async fn test_dtc_low_missing() {
         let mut app = test::init_service(
             App::new()
             .wrap(DTCEnforcer::new(VALIDATION_LOW))
             .route("/", web::post().to(index_middleware_dtc))
-        );
+        ).await;
         let req = test::TestRequest::post().uri("/")
             .header("content-type", "application/json")
             .to_request();
-        let resp = test::block_on(app.call(req)).unwrap();
+        let resp = test::call_service(&mut app, req).await;
         assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
     }        
 

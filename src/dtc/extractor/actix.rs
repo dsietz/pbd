@@ -45,6 +45,7 @@ use super::*;
 use std::fmt;
 use actix_web::{FromRequest, HttpRequest};
 use actix_web::http::header::HeaderValue;
+use futures::future::{ok, err, Ready};
 
 // 
 // The Data Tracker Chain Extractor
@@ -105,24 +106,24 @@ impl TrackerHeader for Tracker {
 
 impl FromRequest for Tracker {
     type Config = ();
-    type Future = Result<Self, Self::Error>;
+    type Future = Ready<Result<Self, Self::Error>>;
     type Error = LocalError;
     // convert request to future self
     fn from_request(req: &HttpRequest, _payload: &mut actix_web::dev::Payload) -> Self::Future {
         match req.headers().get(DTC_HEADER) {
             Some(u) => {
                 match Tracker::tracker_from_header_value(u) {
-                    Ok(dtc) => return Ok(dtc),
+                    Ok(dtc) => return ok(dtc),
                     Err(e) => {
                         warn!("{}", e);
-                        return Err(LocalError::BadDTC);
+                        return err(LocalError::BadDTC);
                     },
                 }
             },
             None => {
                 // couldn't find the header
                 warn!("{}", LocalError::MissingDTC);
-                return Err(LocalError::MissingDTC);
+                return err(LocalError::MissingDTC);
             },
         };
     }
@@ -159,23 +160,31 @@ mod tests {
     }
 
     #[test]
-    fn test_dtc_extractor_good() {
-        let mut app = test::init_service(App::new().route("/", web::get().to(index_extract_dtc)));
+    async fn test_dtc_extractor_good() {
+        let mut app = test::init_service(
+            App::new()
+            .route("/", web::get()
+            .to(index_extract_dtc))
+        ).await;
         let req = test::TestRequest::get().uri("/")
             .header("content-type", "application/json")
             .header(DTC_HEADER, get_dtc_header())
             .to_request();
-        let resp = test::block_on(app.call(req)).unwrap();
+            let resp = test::call_service(&mut app, req).await;
         assert_eq!(resp.status(), StatusCode::OK);
     }
 
     #[test]
-    fn test_dtc_extractor_missing() {
-        let mut app = test::init_service(App::new().route("/", web::get().to(index_extract_dtc)));
+    async fn test_dtc_extractor_missing() {
+        let mut app = test::init_service(
+            App::new()
+            .route("/", web::get()
+            .to(index_extract_dtc))
+        ).await;
         let req = test::TestRequest::get().uri("/")
             .header("content-type", "application/json")
             .to_request();
-        let resp = test::call_service(&mut app, req);
+        let resp = test::call_service(&mut app, req).await;
         assert_eq!(resp.status(), StatusCode::INTERNAL_SERVER_ERROR);
         // read response
         let bdy = test::read_body(resp);
@@ -183,26 +192,35 @@ mod tests {
     }
 
     #[test]
-    fn test_without_extractor() {
-        let mut app = test::init_service(App::new().route("/", web::get().to(index)));
+    async fn test_without_extractor() {
+        let mut app = test::init_service(
+            App::new()
+            .route("/", web::get()
+            .to(index))
+        ).await;
         let req = test::TestRequest::get().uri("/")
             .header("content-type", "application/json")
             .to_request();
-        let resp = test::call_service(&mut app, req);
+        let resp = test::call_service(&mut app, req).await;
         assert_eq!(resp.status(), StatusCode::OK);
     }
 
     #[test]
-    fn test_dtc_extractor_no_base64() {
-        let mut app = test::init_service(App::new().route("/", web::get().to(index_extract_dtc)));
+    async fn test_dtc_extractor_no_base64() {
+        let mut app = test::init_service(
+            App::new()
+            .route("/", web::get()
+            .to(index_extract_dtc))
+        ).await;
         let req = test::TestRequest::get().uri("/")
             .header("content-type", "application/json")
             .header(DTC_HEADER, r#"[{"identifier":{"data_id":"order~clothing~iStore~15150","index":0,"timestamp":0,"actor_id":""},"hash":"185528985830230566760236203228589250556","previous_hash":"0","nonce":5}]"#)
             .to_request();
-        let resp = test::call_service(&mut app, req);
+        let resp = test::call_service(&mut app, req).await;
         assert_eq!(resp.status(), StatusCode::INTERNAL_SERVER_ERROR);
         // read response
-        let bdy = test::read_body(resp);
+        //let bdy = test::read_body(resp);
+        let bdy = resp.take_body();
         assert_eq!(String::from_utf8(bdy[..].to_vec()).unwrap(), actix_web::web::Bytes::from_static(b"Corrupt or invalid Data Tracker Chain"));
     }
 }

@@ -42,6 +42,7 @@ use std::fmt;
 use actix_web::{FromRequest, HttpRequest};
 use json::JsonValue;
 use actix_web::http::header::HeaderValue;
+use futures::future::{ok, Ready};
 
 // 
 // The Data Usage Agreement Extractor
@@ -134,11 +135,11 @@ impl DUAs {
 
 impl FromRequest for DUAs {
     type Config = ();
-    type Future = Result<Self, Self::Error>;
+    type Future = Ready<Result<Self, Self::Error>>;
     type Error = LocalError;
     // convert request to future self
     fn from_request(req: &HttpRequest, _payload: &mut actix_web::dev::Payload) -> Self::Future {
-        Ok(DUAs::from_request(req))
+        ok(DUAs::from_request(req))
     }
 }
 
@@ -169,22 +170,22 @@ mod tests {
     }
 
     #[test]
-    fn test_dua_extractor_good() {
-        let mut app = test::init_service(App::new().route("/", web::get().to(index_extract_dua)));
+    async fn test_dua_extractor_good() {
+        let mut app = test::init_service(App::new().route("/", web::get().to(index_extract_dua))).await;
         let req = test::TestRequest::get().uri("/")
             .header("content-type", "application/json")
             .header(DUA_HEADER, r#"[{"agreement_name":"billing","location":"www.dua.org/billing.pdf","agreed_dtm": 1553988607}]"#)
             .to_request();
-        let resp = test::block_on(app.call(req)).unwrap();
+        let resp = test::call_service(&mut app, req).await;
         assert_eq!(resp.status(), StatusCode::OK);
     }
     #[test]
-    fn test_dua_extractor_missing() {
-        let mut app = test::init_service(App::new().route("/", web::get().to(index_extract_dua)));
+    async fn test_dua_extractor_missing() {
+        let mut app = test::init_service(App::new().route("/", web::get().to(index_extract_dua))).await;
         let req = test::TestRequest::get().uri("/")
             .header("content-type", "application/json")
             .to_request();
-        let resp = test::call_service(&mut app, req);
+        let resp = test::call_service(&mut app, req).await;
         assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
         // read response
         let bdy = test::read_body(resp);

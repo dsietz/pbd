@@ -51,7 +51,7 @@ fn index(body: web::Payload, _req: HttpRequest) -> impl Future<Item = HttpRespon
      })
 }
 
-fn main() {
+async fn main() {
     HttpServer::new(
         || App::new()
             .service(
@@ -62,5 +62,5 @@ fn main() {
     .bind("localhost:8088")
     .unwrap()
     .run()
-    .unwrap();
+    .await;
 }

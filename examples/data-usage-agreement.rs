@@ -23,5 +23,5 @@ fn main() {
     .bind("localhost:8088")
     .unwrap()
     .run()
-    .unwrap();
+    .await;
 }
