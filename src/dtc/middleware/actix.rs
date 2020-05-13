@@ -9,46 +9,60 @@
 //! 
 //! Example 
 //!
-//! ```
+//! ```rust,no_run
 //! extern crate pbd;
 //! extern crate actix_web;
 //!
 //! use pbd::dtc::middleware::actix::*;
-//! use actix_web::{web, App};
+//! use actix_web::{web, App, HttpServer, Responder};
 //! 
-//! fn main () {
-//!     let app = App::new()
-//!                 .wrap(DTCEnforcer::default())
-//!                 .service(
-//!                     web::resource("/")
-//!                     .route(web::get().to(|| "Got Data Tracker Chain?"))
-//!                 );
+//! async fn index() -> impl Responder {
+//!    "Got Data Tracker Chain?"
+//! }
+//! 
+//! #[actix_rt::main]
+//! async fn main() -> std::io::Result<()> {
+//!     HttpServer::new(|| App::new()
+//!         .wrap(DTCEnforcer::default())
+//!         .service(
+//!             web::resource("/").to(index))
+//!         )
+//!             .bind("127.0.0.1:8080")?
+//!             .run()
+//!             .await
 //! }
 //! ```
 //!
 //! To set the level of validation, use `new()` and pass the validation level constant
 //!
-//! ```
+//! ```rust,no_run
 //! extern crate pbd;
 //! extern crate actix_web;
 //!
 //! use pbd::dtc::middleware::{VALIDATION_HIGH};
 //! use pbd::dtc::middleware::actix::*;
-//! use actix_web::{web, App};
+//! use actix_web::{web, App, HttpServer, Responder};
 //! 
-//! fn main () {
-//!     let app = App::new()
-//!                 .wrap(DTCEnforcer::new(VALIDATION_HIGH))
-//!                 .service(
-//!                     web::resource("/")
-//!                     .route(web::get().to(|| "Got Data Tracker Chain?"))
-//!                 );
+//! async fn index() -> impl Responder {
+//!    "Got Data Tracker Chain?"
+//! }
+//! 
+//! #[actix_rt::main]
+//! async fn main() -> std::io::Result<()> {
+//!     HttpServer::new(|| App::new()
+//!         .wrap(DTCEnforcer::new(VALIDATION_HIGH))
+//!         .service(
+//!             web::resource("/").to(index))
+//!         )
+//!             .bind("127.0.0.1:8080")?
+//!             .run()
+//!             .await
 //! }
 //! ```
 //!
-//! For futher examples run `cargo run --example data-tracker-chain`. There are example service calls for POSTMAN in the `examples` directory of the source code package.  
+//! For a further example, run the command `cargo run --example data-tracker-chain`. 
+//! There are example service calls for POSTMAN (pbd.postman_collection.json) in the `examples` directory of the source code package.  
 //!
-//! 
 use super::*;
 use crate::dtc::Tracker;
 use crate::dtc::extractor::actix::{TrackerHeader};
@@ -190,7 +204,6 @@ pub struct DTCEnforcerMiddleware<S> {
 mod tests {
     use super::*;
     use actix_web::{test, web, http, App, HttpRequest, HttpResponse};
-    use actix_web::dev::Service;
     use actix_web::http::{StatusCode};
 
     // supporting functions

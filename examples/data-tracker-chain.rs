@@ -15,6 +15,7 @@ async fn index(tracker: Tracker, _req: HttpRequest) -> HttpResponse  {
 
 #[actix_rt::main]
 async fn main() -> std::io::Result<()> {
+    println!("Starting service on localhost:8088 ...");
     HttpServer::new(
         || App::new()
             .wrap(DTCEnforcer::default())
