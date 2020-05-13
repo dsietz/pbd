@@ -6,45 +6,40 @@
 //! ---
 //! 
 //! Example 
-//! ```
+//! 
+//! ```rust,no_run
 //! extern crate pbd;
 //! extern crate actix_web;
 //! extern crate base64;
 //! 
 //! use pbd::dtc::{DTC_HEADER, Tracker};
 //! use pbd::dtc::extractor::actix::*;
-//! use actix_web::{web, http, test, App, HttpRequest, HttpResponse};
+//! use actix_web::{web, http, test, App, HttpRequest, HttpResponse, HttpServer};
 //! use actix_web::http::{StatusCode};
 //! use actix_web::dev::Service;
 //! 
-//!
-//! fn index_extract_dtc(tracker: Tracker, _req: HttpRequest) -> HttpResponse {  
+//! async fn index(tracker: Tracker, _req: HttpRequest) -> HttpResponse {  
 //!     HttpResponse::Ok()
 //!         .header(http::header::CONTENT_TYPE, "application/json")
 //!         .body(format!("{}", tracker))
 //! }
 //! 
-//! fn main () {
-//!     let tracker = Tracker::new("order~clothing~iStore~15150".to_string());
-//!     let markerchain = tracker.serialize();
-//! 
-//!     let mut app = test::init_service(App::new().route("/", web::get().to(index_extract_dtc)));
-//!     let req = test::TestRequest::get().uri("/")
-//!         .header("content-type", "application/json")
-//!         .header(DTC_HEADER, base64::encode(&markerchain))
-//!         .to_request();
-//!     let resp = test::block_on(app.call(req)).unwrap();
-//!     
-//!     assert_eq!(resp.status(), StatusCode::OK);
+//! #[actix_rt::main]
+//! async fn main() -> std::io::Result<()> { 
+//!     HttpServer::new(|| App::new().service(
+//!         web::resource("/").to(index))
+//!     )
+//!         .bind("127.0.0.1:8080")?
+//!         .run()
+//!         .await
 //! }
 //! ```
-
-
 
 use super::*;
 use std::fmt;
 use actix_web::{FromRequest, HttpRequest};
 use actix_web::http::header::HeaderValue;
+use futures::future::{ok, err, Ready};
 
 // 
 // The Data Tracker Chain Extractor
@@ -105,24 +100,24 @@ impl TrackerHeader for Tracker {
 
 impl FromRequest for Tracker {
     type Config = ();
-    type Future = Result<Self, Self::Error>;
+    type Future = Ready<Result<Self, Self::Error>>;
     type Error = LocalError;
     // convert request to future self
     fn from_request(req: &HttpRequest, _payload: &mut actix_web::dev::Payload) -> Self::Future {
         match req.headers().get(DTC_HEADER) {
             Some(u) => {
                 match Tracker::tracker_from_header_value(u) {
-                    Ok(dtc) => return Ok(dtc),
+                    Ok(dtc) => return ok(dtc),
                     Err(e) => {
                         warn!("{}", e);
-                        return Err(LocalError::BadDTC);
+                        return err(LocalError::BadDTC);
                     },
                 }
             },
             None => {
                 // couldn't find the header
                 warn!("{}", LocalError::MissingDTC);
-                return Err(LocalError::MissingDTC);
+                return err(LocalError::MissingDTC);
             },
         };
     }
@@ -132,8 +127,8 @@ impl FromRequest for Tracker {
 mod tests {
     use super::*;
     use actix_web::{test, web, http, App, HttpRequest, HttpResponse};
-    use actix_web::dev::Service;
     use actix_web::http::{StatusCode};
+    use bytes::Bytes;
 
     // supporting functions
     fn get_dtc_header() -> String{
@@ -158,51 +153,67 @@ mod tests {
         assert_eq!(DTC_HEADER, "Data-Tracker-Chain");
     }
 
-    #[test]
-    fn test_dtc_extractor_good() {
-        let mut app = test::init_service(App::new().route("/", web::get().to(index_extract_dtc)));
+    #[actix_rt::test]
+    async fn test_dtc_extractor_good() {
+        let mut app = test::init_service(
+            App::new()
+            .route("/", web::get()
+            .to(index_extract_dtc))
+        ).await;
         let req = test::TestRequest::get().uri("/")
             .header("content-type", "application/json")
             .header(DTC_HEADER, get_dtc_header())
             .to_request();
-        let resp = test::block_on(app.call(req)).unwrap();
+            let resp = test::call_service(&mut app, req).await;
         assert_eq!(resp.status(), StatusCode::OK);
     }
 
-    #[test]
-    fn test_dtc_extractor_missing() {
-        let mut app = test::init_service(App::new().route("/", web::get().to(index_extract_dtc)));
+    #[actix_rt::test]
+    async fn test_dtc_extractor_missing() {
+        let mut app = test::init_service(
+            App::new()
+            .route("/", web::get()
+            .to(index_extract_dtc))
+        ).await;
         let req = test::TestRequest::get().uri("/")
             .header("content-type", "application/json")
             .to_request();
-        let resp = test::call_service(&mut app, req);
+        let resp = test::call_service(&mut app, req).await;
         assert_eq!(resp.status(), StatusCode::INTERNAL_SERVER_ERROR);
         // read response
-        let bdy = test::read_body(resp);
-        assert_eq!(String::from_utf8(bdy[..].to_vec()).unwrap(), actix_web::web::Bytes::from_static(b"Missing Data Tracker Chain"));
+        let body = test::read_body(resp).await;
+        assert_eq!(body, Bytes::from_static(b"Missing Data Tracker Chain"));
     }
 
-    #[test]
-    fn test_without_extractor() {
-        let mut app = test::init_service(App::new().route("/", web::get().to(index)));
+    #[actix_rt::test]
+    async fn test_without_extractor() {
+        let mut app = test::init_service(
+            App::new()
+            .route("/", web::get()
+            .to(index))
+        ).await;
         let req = test::TestRequest::get().uri("/")
             .header("content-type", "application/json")
             .to_request();
-        let resp = test::call_service(&mut app, req);
+        let resp = test::call_service(&mut app, req).await;
         assert_eq!(resp.status(), StatusCode::OK);
     }
 
-    #[test]
-    fn test_dtc_extractor_no_base64() {
-        let mut app = test::init_service(App::new().route("/", web::get().to(index_extract_dtc)));
+    #[actix_rt::test]
+    async fn test_dtc_extractor_no_base64() {
+        let mut app = test::init_service(
+            App::new()
+            .route("/", web::get()
+            .to(index_extract_dtc))
+        ).await;
         let req = test::TestRequest::get().uri("/")
             .header("content-type", "application/json")
             .header(DTC_HEADER, r#"[{"identifier":{"data_id":"order~clothing~iStore~15150","index":0,"timestamp":0,"actor_id":""},"hash":"185528985830230566760236203228589250556","previous_hash":"0","nonce":5}]"#)
             .to_request();
-        let resp = test::call_service(&mut app, req);
+        let resp = test::call_service(&mut app, req).await;
         assert_eq!(resp.status(), StatusCode::INTERNAL_SERVER_ERROR);
         // read response
-        let bdy = test::read_body(resp);
-        assert_eq!(String::from_utf8(bdy[..].to_vec()).unwrap(), actix_web::web::Bytes::from_static(b"Corrupt or invalid Data Tracker Chain"));
+        let body = test::read_body(resp).await;
+        assert_eq!(body, actix_web::web::Bytes::from_static(b"Corrupt or invalid Data Tracker Chain"));
     }
 }

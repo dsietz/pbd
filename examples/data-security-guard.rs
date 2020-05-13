@@ -2,8 +2,8 @@ extern crate pbd;
 extern crate actix_web;
 
 use pbd::dsg::{PrivacyGuard, PrivacySecurityGuard, TransferSet};
-use actix_web::{web, http, Error, App, HttpServer, HttpRequest, HttpResponse};
-use futures::{Future, Stream};
+use futures::{StreamExt};
+use actix_web::{web, http, App, Error, HttpServer, HttpResponse};
 use std::io::prelude::*;
 use std::fs::File;
 
@@ -15,52 +15,53 @@ fn get_priv_pem() -> Vec<u8> {
     priv_pem
 }
 
-fn index(body: web::Payload, _req: HttpRequest) -> impl Future<Item = HttpResponse, Error = Error>  {
-    body.map_err(Error::from)
-    .fold(web::BytesMut::new(), move |mut body, chunk| {
-        body.extend_from_slice(&chunk);
-        Ok::<_, Error>(body)
-     })
-     .and_then(|body| {
-        let transset = match TransferSet::from_serialized(&String::from_utf8(body.to_vec()).unwrap()) {
-            Ok(ts) => ts,
-            Err(e) => {
-                return HttpResponse::BadRequest()
+/// extract binary data from request
+async fn index(mut body: web::Payload) -> Result<HttpResponse, Error> {
+    let mut bytes = web::BytesMut::new();
+
+    while let Some(item) = body.next().await {
+        bytes.extend_from_slice(&item?);
+    }
+
+    let transset = match TransferSet::from_serialized(&String::from_utf8(bytes.to_vec()).unwrap()) {
+        Ok(ts) => ts,
+        Err(e) => {
+            return Ok(HttpResponse::BadRequest()
                         .header(http::header::CONTENT_TYPE, "plain/text")
-                        .body(format!("{}",e))
-            },
-        } ;
+                        .body(format!("{}",e)))
+        },
+    };
 
-        let guard = PrivacyGuard {};
-        let priv_pem = get_priv_pem();
+    let guard = PrivacyGuard {};
+    let priv_pem = get_priv_pem();
 
-        match guard.data_from_tranfer(priv_pem,transset) {
-            Ok(msg) => {
-                println!("Message Received: {}", String::from_utf8(msg).unwrap());
-
-                HttpResponse::Ok()
-                    .header(http::header::CONTENT_TYPE, "plain/text")
-                    .body(r#"Hello World!"#)
-            },
-            Err(e) => {
-                return HttpResponse::BadRequest()
+    match guard.data_from_tranfer(priv_pem,transset) {
+        Ok(msg) => {
+            println!("Message Received: {}", String::from_utf8(msg).unwrap());
+            return Ok(HttpResponse::Ok()
                         .header(http::header::CONTENT_TYPE, "plain/text")
-                        .body(format!("{}",e))
-            }
+                        .body(r#"Hello World!"#))
+        },
+        Err(e) => {
+            return Ok(HttpResponse::BadRequest()
+                        .header(http::header::CONTENT_TYPE, "plain/text")
+                        .body(format!("{}",e)))
         }
-     })
+    }
 }
 
-fn main() {
+#[actix_rt::main]
+async fn main() -> std::io::Result<()> {
+    println!("Starting service on localhost:8088 ...");
     HttpServer::new(
         || App::new()
             .service(
                 web::resource("/")
-                    .route(web::get().to_async(index))
+                    .route(web::get().to(index))
             )
     )
     .bind("localhost:8088")
     .unwrap()
     .run()
-    .unwrap();
+    .await
 }

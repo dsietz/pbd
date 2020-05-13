@@ -3,17 +3,14 @@
 //! ---
 //! 
 //! Example 
-//! ```
+//! ```rust,no_run
 //! extern crate pbd;
 //! extern crate actix_web;
 //! 
-//! use pbd::dua::DUA_HEADER;
 //! use pbd::dua::extractor::actix::*;
-//! use actix_web::{web, http, test, App, HttpRequest, HttpResponse};
-//! use actix_web::http::{StatusCode};
-//! use actix_web::dev::Service;
+//! use actix_web::{web, http, App, HttpRequest, HttpResponse, HttpServer};
 //!
-//! fn index_extract_dua(duas: DUAs, _req: HttpRequest) -> HttpResponse {
+//! async fn index(duas: DUAs, _req: HttpRequest) -> HttpResponse {
 //!     for dua in duas.vec().iter() {
 //!         println!("{:?}", dua);
 //!     }
@@ -23,15 +20,14 @@
 //!         .body(format!("{}", duas))
 //! }
 //! 
-//! fn main () {
-//!     let mut app = test::init_service(App::new().route("/", web::get().to(index_extract_dua)));
-//!     let req = test::TestRequest::get().uri("/")
-//!         .header("content-type", "application/json")
-//!         .header(DUA_HEADER, r#"[{"agreement_name":"billing","location":"www.dua.org/billing.pdf","agreed_dtm": 1553988607},{"agreement_name":"shipping","location":"www.dua.org/shipping.pdf","agreed_dtm": 1553988607}]"#)
-//!         .to_request();
-//!     let resp = test::block_on(app.call(req)).unwrap();
-//!     
-//!     assert_eq!(resp.status(), StatusCode::OK);
+//! #[actix_rt::main]
+//! async fn main() -> std::io::Result<()> {
+//!     HttpServer::new(|| App::new().service(
+//!         web::resource("/").to(index))
+//!     )
+//!         .bind("127.0.0.1:8080")?
+//!         .run()
+//!         .await
 //! }
 //! ```
 
@@ -42,6 +38,7 @@ use std::fmt;
 use actix_web::{FromRequest, HttpRequest};
 use json::JsonValue;
 use actix_web::http::header::HeaderValue;
+use futures::future::{ok, Ready};
 
 // 
 // The Data Usage Agreement Extractor
@@ -134,11 +131,11 @@ impl DUAs {
 
 impl FromRequest for DUAs {
     type Config = ();
-    type Future = Result<Self, Self::Error>;
+    type Future = Ready<Result<Self, Self::Error>>;
     type Error = LocalError;
     // convert request to future self
     fn from_request(req: &HttpRequest, _payload: &mut actix_web::dev::Payload) -> Self::Future {
-        Ok(DUAs::from_request(req))
+        ok(DUAs::from_request(req))
     }
 }
 
@@ -146,7 +143,6 @@ impl FromRequest for DUAs {
 mod tests {
     use super::*;
     use actix_web::{test, web, http, App, HttpRequest, HttpResponse};
-    use actix_web::dev::Service;
     use actix_web::http::{StatusCode};
 
     // supporting functions
@@ -168,26 +164,26 @@ mod tests {
         assert_eq!(DUA_HEADER, "Data-Usage-Agreement");
     }
 
-    #[test]
-    fn test_dua_extractor_good() {
-        let mut app = test::init_service(App::new().route("/", web::get().to(index_extract_dua)));
+    #[actix_rt::test]
+    async fn test_dua_extractor_good() {
+        let mut app = test::init_service(App::new().route("/", web::get().to(index_extract_dua))).await;
         let req = test::TestRequest::get().uri("/")
             .header("content-type", "application/json")
             .header(DUA_HEADER, r#"[{"agreement_name":"billing","location":"www.dua.org/billing.pdf","agreed_dtm": 1553988607}]"#)
             .to_request();
-        let resp = test::block_on(app.call(req)).unwrap();
+        let resp = test::call_service(&mut app, req).await;
         assert_eq!(resp.status(), StatusCode::OK);
     }
-    #[test]
-    fn test_dua_extractor_missing() {
-        let mut app = test::init_service(App::new().route("/", web::get().to(index_extract_dua)));
+    #[actix_rt::test]
+    async fn test_dua_extractor_missing() {
+        let mut app = test::init_service(App::new().route("/", web::get().to(index_extract_dua))).await;
         let req = test::TestRequest::get().uri("/")
             .header("content-type", "application/json")
             .to_request();
-        let resp = test::call_service(&mut app, req);
+        let resp = test::call_service(&mut app, req).await;
         assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
         // read response
-        let bdy = test::read_body(resp);
-        assert_eq!(&bdy[..], actix_web::web::Bytes::from_static(b"Malformed or missing one or more Data Usage Agreements"));
+        let body = test::read_body(resp).await;
+        assert_eq!(body, actix_web::web::Bytes::from_static(b"Malformed or missing one or more Data Usage Agreements"));
     }
 }

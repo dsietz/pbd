@@ -37,10 +37,10 @@ extern crate json;
 // Modules
 #[cfg(feature = "dua")]
 pub mod dua;
-#[cfg(feature = "dsg")]
-pub mod dsg;
 #[cfg(feature = "dtc")]
 pub mod dtc;
+#[cfg(feature = "dsg")]
+pub mod dsg;
 
 // Unit Tests
 #[cfg(test)]

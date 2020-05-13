@@ -5,7 +5,7 @@ use pbd::dtc::Tracker;
 use pbd::dtc::middleware::actix::*;
 use actix_web::{web, http, App, HttpServer, HttpRequest, HttpResponse};
 
-fn index(tracker: Tracker, _req: HttpRequest) -> HttpResponse  {
+async fn index(tracker: Tracker, _req: HttpRequest) -> HttpResponse  {
     println!("{}", tracker.serialize());
     
     HttpResponse::Ok()
@@ -13,7 +13,9 @@ fn index(tracker: Tracker, _req: HttpRequest) -> HttpResponse  {
         .body(r#"Hello World!"#)   
 }
 
-fn main() {
+#[actix_rt::main]
+async fn main() -> std::io::Result<()> {
+    println!("Starting service on localhost:8088 ...");
     HttpServer::new(
         || App::new()
             .wrap(DTCEnforcer::default())
@@ -21,5 +23,5 @@ fn main() {
     .bind("localhost:8088")
     .unwrap()
     .run()
-    .unwrap();
+    .await
 }

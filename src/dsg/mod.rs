@@ -48,7 +48,7 @@
 //! 
 //! Use the `secure_for_tranfer()` and `data_from_tranfer()` methods, we can safely trasnfer the private data.
 //! 
-//! ```
+//! ```rust
 //! extern crate pbd;
 //! extern crate openssl;
 //!
@@ -74,6 +74,10 @@
 //!     assert_eq!(original_message, message_received);
 //! }
 //! ```
+//!
+//! For a further example, run the command `cargo run --example data-security-guard`. 
+//! There are example service calls for POSTMAN (pbd.postman_collection.json) in the `examples` directory of the source code package.  
+//!
 use crate::dsg::error::*;
 use rand::Rng; 
 use rand::distributions::Alphanumeric;
@@ -108,7 +112,7 @@ impl TransferSet {
     /// 
     /// #Example
     ///
-    /// ```
+    /// ```rust
     /// extern crate pbd; 
     ///
     /// use pbd::dsg::TransferSet;
@@ -149,7 +153,7 @@ impl TransferSet {
     /// 
     /// #Example
     ///
-    /// ```
+    /// ```rust
     /// extern crate pbd; 
     ///
     /// use pbd::dsg::TransferSet;
