@@ -8,44 +8,59 @@
 //! 
 //! Example 
 //!
-//! ```
+//! ```rust,no_run
 //! extern crate pbd;
 //! extern crate actix_web;
 //!
 //! use pbd::dua::middleware::actix::*;
-//! use actix_web::{web, App};
+//! use actix_web::{web, App, HttpServer, Responder};
 //! 
-//! fn main () {
-//!     let app = App::new()
-//!                 .wrap(DUAEnforcer::default())
-//!                 .service(
-//!                     web::resource("/")
-//!                     .route(web::get().to(|| "Got Data Usage Agreement?"))
-//!                 );
+//! async fn index() -> impl Responder {
+//!    "Got Data Usage Agreement?"
+//! }
+//! 
+//! #[actix_rt::main]
+//! async fn main() -> std::io::Result<()> {
+//!     HttpServer::new(|| App::new()
+//!         .wrap(DUAEnforcer::default())
+//!         .service(
+//!             web::resource("/").to(index))
+//!         )
+//!             .bind("127.0.0.1:8080")?
+//!             .run()
+//!             .await
 //! }
 //! ```
 //!
 //! To set the level of validation, use `new()` and pass the validation level constant
 //!
-//! ```
+//! ```rust,no_run
 //! extern crate pbd;
 //! extern crate actix_web;
 //!
-//! use pbd::dua::middleware::{VALIDATION_HIGH};
 //! use pbd::dua::middleware::actix::*;
-//! use actix_web::{web, App};
+//! use pbd::dua::middleware::{VALIDATION_HIGH};
+//! use actix_web::{web, App, HttpServer, Responder};
 //! 
-//! fn main () {
-//!     let app = App::new()
-//!                 .wrap(DUAEnforcer::new(VALIDATION_HIGH))
-//!                 .service(
-//!                     web::resource("/")
-//!                     .route(web::get().to(|| "Got Data Usage Agreement?"))
-//!                 );
+//! async fn index() -> impl Responder {
+//!    "Got Data Usage Agreement?"
+//! }
+//! 
+//! #[actix_rt::main]
+//! async fn main() -> std::io::Result<()> {
+//!     HttpServer::new(|| App::new()
+//!         .wrap(DUAEnforcer::new(VALIDATION_HIGH))
+//!         .service(
+//!             web::resource("/").to(index))
+//!         )
+//!             .bind("127.0.0.1:8080")?
+//!             .run()
+//!             .await
 //! }
 //! ```
 //!
-//! For futher examples run `cargo run --example data-usage-agreement`. There are example service calls for POSTMAN in the `examples` directory of the source code package.  
+//! For a further example, run the command `cargo run --example data-usage-agreement`. 
+//! There are example service calls for POSTMAN (pbd.postman_collection.json) in the `examples` directory of the source code package.  
 //!
 
 use super::*;
@@ -199,7 +214,6 @@ where
 mod tests {
     use super::*;
     use actix_web::{test, web, http, App, HttpRequest, HttpResponse};
-    use actix_web::dev::Service;
     use actix_web::http::{StatusCode};
 
     // supporting functions
@@ -207,7 +221,7 @@ mod tests {
         HttpResponse::Ok()
             .header(http::header::CONTENT_TYPE, "application/json")
             .body(r#"{"status":"Ok"}"#)
-    }    
+    }
 
     #[test]
     fn test_add_middleware() {
@@ -221,7 +235,7 @@ mod tests {
           assert!(true);
     }
 
-    #[test]
+    #[actix_rt::test]
     async fn test_dua_none_missing() {
         let mut app = test::init_service(
             App::new()
@@ -235,7 +249,7 @@ mod tests {
         assert_eq!(resp.status(), StatusCode::OK);
     }
 
-    #[test]
+    #[actix_rt::test]
     async fn test_dua_default_ok() {
         let mut app = test::init_service(
             App::new()
@@ -251,7 +265,7 @@ mod tests {
         assert_eq!(resp.status(), StatusCode::OK);
     } 
 
-    #[test]
+    #[actix_rt::test]
     async fn test_dua_default_empty() {
         let mut app = test::init_service(
             App::new()
@@ -267,7 +281,7 @@ mod tests {
         assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
     } 
 
-    #[test]
+    #[actix_rt::test]
     async fn test_dua_default_invalid() {
         let mut app = test::init_service(
             App::new()
@@ -283,7 +297,7 @@ mod tests {
         assert_eq!(resp.status(), StatusCode::OK);
     } 
 
-    #[test]
+    #[actix_rt::test]
     async fn test_dua_default_missing() {
         let mut app = test::init_service(
             App::new()
@@ -297,7 +311,7 @@ mod tests {
         assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
     }     
 
-    #[test]
+    #[actix_rt::test]
     async fn test_dua_valid_high_ok() {
         let mut app = test::init_service(
             App::new()
@@ -313,7 +327,7 @@ mod tests {
         assert_eq!(resp.status(), StatusCode::OK);
     } 
 
-    #[test]
+    #[actix_rt::test]
     async fn test_dua_valid_high_empty() {
         let mut app = test::init_service(
             App::new()
@@ -329,7 +343,7 @@ mod tests {
         assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
     } 
 
-    #[test]
+    #[actix_rt::test]
     async fn test_dua_valid_high_invalid() {
         let mut app = test::init_service(
             App::new()
@@ -345,7 +359,7 @@ mod tests {
         assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
     } 
 
-    #[test]
+    #[actix_rt::test]
     async fn test_dua_high_missing() {
         let mut app = test::init_service(
             App::new()
@@ -359,7 +373,7 @@ mod tests {
         assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
     } 
 
-    #[test]
+    #[actix_rt::test]
     async fn test_dua_low_ok() {
         let mut app = test::init_service(
             App::new()
@@ -375,7 +389,7 @@ mod tests {
         assert_eq!(resp.status(), StatusCode::OK);
     } 
 
-    #[test]
+    #[actix_rt::test]
     async fn test_dua_low_empty() {
         let mut app = test::init_service(
             App::new()
@@ -391,7 +405,7 @@ mod tests {
         assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
     } 
 
-    #[test]
+    #[actix_rt::test]
     async fn test_dua_low_invalid() {
         let mut app = test::init_service(
             App::new()
@@ -407,7 +421,7 @@ mod tests {
         assert_eq!(resp.status(), StatusCode::OK);
     } 
 
-    #[test]
+    #[actix_rt::test]
     async fn test_dua_low_missing() {
         let mut app = test::init_service(
             App::new()

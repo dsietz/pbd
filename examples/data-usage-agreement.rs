@@ -5,7 +5,7 @@ use pbd::dua::extractor::actix::*;
 use pbd::dua::middleware::actix::*;
 use actix_web::{web, http, App, HttpServer, HttpRequest, HttpResponse};
 
-fn index(duas: DUAs, _req: HttpRequest) -> HttpResponse  {
+async fn index(duas: DUAs, _req: HttpRequest) -> HttpResponse  {
     for dua in duas.vec().iter() {
         println!("{:?}", dua);
     }
@@ -15,7 +15,9 @@ fn index(duas: DUAs, _req: HttpRequest) -> HttpResponse  {
         .body(r#"Hello World!"#)   
 }
 
-fn main() {
+#[actix_rt::main]
+async fn main() -> std::io::Result<()> {
+    println!("Starting service on localhost:8088 ...");
     HttpServer::new(
         || App::new()
             .wrap(DUAEnforcer::default())
@@ -23,5 +25,5 @@ fn main() {
     .bind("localhost:8088")
     .unwrap()
     .run()
-    .await;
+    .await
 }

@@ -221,7 +221,7 @@ mod tests {
         assert!(true);
     }
 
-    #[test]
+    #[actix_rt::test]
     async fn test_dtc_none_missing() {
         let mut app = test::init_service(
             App::new()
@@ -235,7 +235,7 @@ mod tests {
         assert_eq!(resp.status(), StatusCode::OK);
     }
 
-    #[test]
+    #[actix_rt::test]
     async fn test_dtc_default_ok() {
         let mut app = test::init_service(
             App::new()
@@ -251,7 +251,7 @@ mod tests {
         assert_eq!(resp.status(), StatusCode::OK);
     } 
 
-    #[test]
+    #[actix_rt::test]
     async fn test_dtc_default_empty() {
         let mut app = test::init_service(
             App::new()
@@ -267,7 +267,7 @@ mod tests {
         assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
     } 
 
-    #[test]
+    #[actix_rt::test]
     async fn test_dtc_default_invalid() {
         let mut app = test::init_service(
             App::new()
@@ -283,7 +283,7 @@ mod tests {
         assert_eq!(resp.status(), StatusCode::OK);
     } 
 
-    #[test]
+    #[actix_rt::test]
     async fn test_dtc_default_missing() {
         let mut app = test::init_service(
             App::new()
@@ -297,7 +297,7 @@ mod tests {
         assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
     }     
 
-    #[test]
+    #[actix_rt::test]
     async fn test_dtc_valid_high_ok() {
         let mut app = test::init_service(
             App::new()
@@ -313,7 +313,7 @@ mod tests {
         assert_eq!(resp.status(), StatusCode::OK);
     } 
 
-    #[test]
+    #[actix_rt::test]
     async fn test_dtc_high_empty() {
         let mut app = test::init_service(
             App::new()
@@ -329,7 +329,7 @@ mod tests {
         assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
     } 
 
-    #[test]
+    #[actix_rt::test]
     async fn test_dtc_high_invalid() {
         let mut app = test::init_service(
             App::new()
@@ -345,7 +345,7 @@ mod tests {
         assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
     } 
 
-    #[test]
+    #[actix_rt::test]
     async fn test_dtc_high_missing() {
         let mut app = test::init_service(
             App::new()
@@ -359,7 +359,7 @@ mod tests {
         assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
     } 
 
-    #[test]
+    #[actix_rt::test]
     async fn test_dtc_low_ok() {
         let mut app = test::init_service(
             App::new()
@@ -375,7 +375,7 @@ mod tests {
         assert_eq!(resp.status(), StatusCode::OK);
     } 
 
-    #[test]
+    #[actix_rt::test]
     async fn test_dtc_low_empty() {
         let mut app = test::init_service(
             App::new()
@@ -391,7 +391,7 @@ mod tests {
         assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
     } 
 
-    #[test]
+    #[actix_rt::test]
     async fn test_dtc_low_invalid() {
         let mut app = test::init_service(
             App::new()
@@ -407,7 +407,7 @@ mod tests {
         assert_eq!(resp.status(), StatusCode::OK);
     } 
 
-    #[test]
+    #[actix_rt::test]
     async fn test_dtc_low_missing() {
         let mut app = test::init_service(
             App::new()

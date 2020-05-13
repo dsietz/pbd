@@ -135,6 +135,7 @@ mod tests {
     use actix_web::{test, web, http, App, HttpRequest, HttpResponse};
     use actix_web::dev::Service;
     use actix_web::http::{StatusCode};
+    use bytes::Bytes;
 
     // supporting functions
     fn get_dtc_header() -> String{
@@ -159,7 +160,7 @@ mod tests {
         assert_eq!(DTC_HEADER, "Data-Tracker-Chain");
     }
 
-    #[test]
+    #[actix_rt::test]
     async fn test_dtc_extractor_good() {
         let mut app = test::init_service(
             App::new()
@@ -174,7 +175,7 @@ mod tests {
         assert_eq!(resp.status(), StatusCode::OK);
     }
 
-    #[test]
+    #[actix_rt::test]
     async fn test_dtc_extractor_missing() {
         let mut app = test::init_service(
             App::new()
@@ -187,11 +188,11 @@ mod tests {
         let resp = test::call_service(&mut app, req).await;
         assert_eq!(resp.status(), StatusCode::INTERNAL_SERVER_ERROR);
         // read response
-        let bdy = test::read_body(resp);
-        assert_eq!(String::from_utf8(bdy[..].to_vec()).unwrap(), actix_web::web::Bytes::from_static(b"Missing Data Tracker Chain"));
+        let body = test::read_body(resp);
+        assert_eq!(String::from_utf8(body[..].to_vec()).unwrap(), Bytes::from_static(b"Missing Data Tracker Chain"));
     }
 
-    #[test]
+    #[actix_rt::test]
     async fn test_without_extractor() {
         let mut app = test::init_service(
             App::new()
@@ -205,7 +206,7 @@ mod tests {
         assert_eq!(resp.status(), StatusCode::OK);
     }
 
-    #[test]
+    #[actix_rt::test]
     async fn test_dtc_extractor_no_base64() {
         let mut app = test::init_service(
             App::new()
@@ -219,8 +220,7 @@ mod tests {
         let resp = test::call_service(&mut app, req).await;
         assert_eq!(resp.status(), StatusCode::INTERNAL_SERVER_ERROR);
         // read response
-        //let bdy = test::read_body(resp);
-        let bdy = resp.take_body();
-        assert_eq!(String::from_utf8(bdy[..].to_vec()).unwrap(), actix_web::web::Bytes::from_static(b"Corrupt or invalid Data Tracker Chain"));
+        let body = test::read_body(resp);
+        assert_eq!(String::from_utf8(body[..].to_vec()).unwrap(), actix_web::web::Bytes::from_static(b"Corrupt or invalid Data Tracker Chain"));
     }
 }
