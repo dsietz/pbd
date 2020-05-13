@@ -27,7 +27,7 @@ maintenance = {status = "actively-developed"}
 [features]
 default = ["dua", "dtc", "dsg"]
 dua = ["actix-rt", "actix-web", "actix-service", "futures", "rayon", "reqwest"] # Data Usage Agreement funcitonality
-dtc =["pow_sha256", "base64"] # Data Tracker Chain functionality
+dtc =["actix-rt", "actix-web", "actix-service", "pow_sha256", "base64"] # Data Tracker Chain functionality
 dsg =["bytes", "openssl", "rand"] # Data Security Guard functionality
 
 [dependencies]
