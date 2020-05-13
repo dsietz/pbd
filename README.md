@@ -24,7 +24,14 @@ For software development teams who implement Privacy by Design practices, this P
 
 Here's whats new in 0.2.0:
 
-We added a `Data Security Guard` (dsg) module that makes it easy to prepare data for transfer and simply read it when received. An example has been added for this feature.
+We've upgraded to more current versions of our crate's dependencies
+- actix-rt to 1.1
+- actix-web to 2.0
+- actix-service to 1.0
+- base64 to 0.12
+- futures to 0.3
+- json to 0.12
+- rayon to 1.3
 
 ## Features
 

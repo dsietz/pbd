@@ -52,6 +52,7 @@ async fn index(mut body: web::Payload) -> Result<HttpResponse, Error> {
 
 #[actix_rt::main]
 async fn main() -> std::io::Result<()> {
+    println!("Starting service on localhost:8088 ...");
     HttpServer::new(
         || App::new()
             .service(
