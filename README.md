@@ -22,16 +22,13 @@ For software development teams who implement Privacy by Design practices, this P
 
 ## What's New
 
-Here's whats new in 0.2.0:
+Here's whats new in 0.3.0:
 
 We've upgraded to more current versions of our crate's dependencies
+- actix-web to 3.0
+
+Move the following dependent crates to only be included during development (`dev-dependencies`):
 - actix-rt to 1.1
-- actix-web to 2.0
-- actix-service to 1.0
-- base64 to 0.12
-- futures to 0.3
-- json to 0.12
-- rayon to 1.3
 
 ## Features
 
