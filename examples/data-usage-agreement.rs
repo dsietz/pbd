@@ -15,7 +15,7 @@ async fn index(duas: DUAs, _req: HttpRequest) -> HttpResponse  {
         .body(r#"Hello World!"#)   
 }
 
-#[actix_rt::main]
+#[actix_web::main]
 async fn main() -> std::io::Result<()> {
     println!("Starting service on localhost:8088 ...");
     HttpServer::new(
