@@ -11,7 +11,7 @@
 //! These features can be specified in Cargo.toml as a dependency.
 //!
 //! >[dependencies.pbd]
-//! >version = "0.0.5"
+//! >version = "0.3"
 //! >default-features = false
 //! >features = ["dua"]
 //!  
@@ -20,6 +20,7 @@
 //! 
 //! | Feature              | Package  | Default | Descripotion                                 | 
 //! | :------------------- | :------: | :-----: | :------------------------------------------- |
+//! | Data Privacy Inspector | dpi    | true    | Inspects data to determine if it contains sensative content and requires data privacy handling |
 //! | Data Tracker Chain   | dtc      | true    | Auditing of the data lineage                 |
 //! | Data Security Guard  | dsg      | true    | Encryption and decryption of the data        |
 //! | Data Usage Agreement | dua      | true    | Management of how data is allowed to be used |
@@ -41,6 +42,8 @@ pub mod dua;
 pub mod dtc;
 #[cfg(feature = "dsg")]
 pub mod dsg;
+#[cfg(feature = "dpi")]
+pub mod dpi;
 
 // Unit Tests
 #[cfg(test)]

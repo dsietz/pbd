@@ -1,6 +1,6 @@
 [package]
 name = "pbd"
-version = "0.3.0"
+version = "0.3.1"
 authors = ["dsietz <davidsietz@yahoo.com>"]
 edition = "2018"
 readme = "README.md"
@@ -25,10 +25,11 @@ path = "src/lib.rs"
 maintenance = {status = "actively-developed"}
 
 [features]
-default = ["dua", "dtc", "dsg"]
-dua = ["actix-web", "actix-service", "futures", "rayon", "reqwest"] # Data Usage Agreement funcitonality
+default = ["dua", "dtc", "dsg", "dpi"]
+dua = ["actix-web", "actix-service", "futures", "rayon", "reqwest"] # Data Usage Agreement functionality
 dtc =["actix-web", "actix-service", "pow_sha256", "base64"] # Data Tracker Chain functionality
 dsg =["bytes", "openssl", "rand"] # Data Security Guard functionality
+dpi =[] # Data Privacy Inspector functionality
 
 [dependencies]
 env_logger = "0.7"
