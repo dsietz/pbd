@@ -11,14 +11,18 @@
 //! 
 //! 
 
+extern crate regex;
+
+// use regex::Regex;
+
 type KeyWordList = Vec<String>;
 type KeyPatternList = Vec<String>;
 
 /// Represents a Data Provacy Inspector (DPI)
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct DPI {
-    key_words: KeyWordList,
-    key_patterns: KeyPatternList,
+    pub key_words: Option<KeyWordList>,
+    pub key_patterns: Option<KeyPatternList>,
 }
 
 impl DPI {
@@ -26,7 +30,8 @@ impl DPI {
     /// 
     /// # Arguments
     /// 
-    /// * parameter1: String - The ....</br>
+    /// * words: Option<KeyWordList> - A vector of words that are known identifiers for private data.</br>
+    /// * patterns: Option<KeyPatternList> - A vector of Regex patterns that are known identifiers for private data.</br>
     /// 
     /// #Example
     ///
@@ -36,18 +41,17 @@ impl DPI {
     /// use pbd::dpi::DPI;
     ///
     /// fn main() {
-    ///     let dpi = DPI::new();
+    ///     let words = Some(vec!["ssn".to_string()]);
+    ///     let patterns = Some(vec!["^(?!666|000|9\\d{2})\\d{3}-(?!00)\\d{2}-(?!0{4})\\d{4}$".to_string()]);
+    ///     let dpi = DPI::new(words, patterns);
     ///     
-    ///     match dpi.agreement_name.as_ref() {
-    ///         "For Billing Purpose" => println!("We can use the data for sending a bill."),
-    ///         _ => println!("Oops: We can't use the data this way!")
-    ///     }
+    ///     println!("Using {} words and {} patterns for learning.", dpi.key_words.unwrap().len(), dpi.key_patterns.unwrap().len());
     /// }
     /// ```
-    pub fn new(agreement: String, uri: String, agreed_on: u64) -> DPI {
+    pub fn new(words: Option<KeyWordList>, patterns: Option<KeyWordList>) -> DPI {
         DPI {
-            key_words: Vec::new(),
-            key_patterns: Vec::new(),
+            key_words: words,
+            key_patterns: patterns,
         }
     }
 
@@ -65,10 +69,10 @@ impl DPI {
     /// use pbd::dpi::DPI;
     ///
     /// fn main() {
-    ///     let serialized = r#"{ "agreement_name": "billing", "location": "www.dua.org/billing.pdf", "agreed_dtm": 1553988607 }"#;
-    ///     let usage_agreement = DUA::from_serialized(&serialized);
+    ///     let serialized = r#"{"key_words":["ssn"],"key_patterns":["^(?!666|000|9\\d{2})\\d{3}-(?!00)\\d{2}-(?!0{4})\\d{4}$"]}"#;
+    ///     let dpi = DPI::from_serialized(&serialized);
     ///     
-    ///     println!("{:?}", usage_agreement);
+    ///     println!("{:?}", dpi);
     /// }
     /// ```
     pub fn from_serialized(serialized: &str) -> DPI {
@@ -89,16 +93,12 @@ impl DPI {
     /// use pbd::dpi::DPI;
     ///
     /// fn main() {
-    ///     let serialized = r#"{ "agreement_name": "billing", "location": "www.dua.org/billing.pdf", "agreed_dtm": 1553988607 }"#;
     ///     let mut dpi = DPI {
-    ///         agreement_name: "billing".to_string(),
-    ///         location: "www.dua.org/billing.pdf".to_string(),
-    ///         agreed_dtm: 1553988607,
+    ///         key_words: Some(vec!["ssn".to_string()]),
+    ///         key_patterns: Some(vec!["^(?!666|000|9\\d{2})\\d{3}-(?!00)\\d{2}-(?!0{4})\\d{4}$".to_string()]),
     ///     };
-    ///
-    ///     let data_privacy_inspector = dpi.serialize();
     ///     
-    ///     println!("{:?}", data_privacy_inspector);
+    ///     println!("{:?}", dpi.serialize());
     /// }
     /// ```
     pub fn serialize(&mut self) -> String {
@@ -118,24 +118,24 @@ mod tests {
     fn get_dpi() -> Vec<DPI>{
         let mut v = Vec::new();
         v.push( DPI {
-                    agreement_name: "billing".to_string(),
-                    location: "www.dua.org/billing.pdf".to_string(),
-                    agreed_dtm: 1553988607,
+                    key_words: Some(vec!["ssn".to_string()]),
+                    key_patterns: Some(vec!["^(?!666|000|9\\d{2})\\d{3}-(?!00)\\d{2}-(?!0{4})\\d{4}$".to_string()]),
                 });
         v
     }
 
     #[test]
-    fn test_dua_from_serialized_ok() {
-        let serialized = r#"{"agreement_name":"billing","location":"www.dua.org/billing.pdf","agreed_dtm":1553988607}"#;
+    fn test_dpi_from_serialized_ok() {
+        let serialized = r#"{"key_words":["ssn"],"key_patterns":["^(?!666|000|9\\d{2})\\d{3}-(?!00)\\d{2}-(?!0{4})\\d{4}$"]}"#;
         let dpi = DPI::from_serialized(serialized);
 
-        assert_eq!(dpi.agreement_name, "billing".to_string());
+        assert_eq!(dpi.key_words.unwrap().len(), 1);
+        assert_eq!(dpi.key_patterns.unwrap().len(), 1);
     }
 
     #[test]
     fn test_dpi_serialize_ok() {
-        let serialized = r#"{"agreement_name":"billing","location":"www.dua.org/billing.pdf","agreed_dtm":1553988607}"#;
+        let serialized = r#"{"key_words":["ssn"],"key_patterns":["^(?!666|000|9\\d{2})\\d{3}-(?!00)\\d{2}-(?!0{4})\\d{4}$"]}"#;
         let dpi = &mut get_dpi()[0];
 
         assert_eq!(dpi.serialize(), serialized);

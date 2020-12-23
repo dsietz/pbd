@@ -29,7 +29,7 @@ default = ["dua", "dtc", "dsg", "dpi"]
 dua = ["actix-web", "actix-service", "futures", "rayon", "reqwest"] # Data Usage Agreement functionality
 dtc =["actix-web", "actix-service", "pow_sha256", "base64"] # Data Tracker Chain functionality
 dsg =["bytes", "openssl", "rand"] # Data Security Guard functionality
-dpi =[] # Data Privacy Inspector functionality
+dpi =["regex"] # Data Privacy Inspector functionality
 
 [dependencies]
 env_logger = "0.7"
@@ -50,6 +50,7 @@ base64 = { version = "0.12", optional = true }
 rand = { version = "0.7", optional = true }
 openssl = { version = "0.10", optional = true }
 bytes = { version = "0.5", optional = true }
+regex = { version = "1.4", optional = true }
 
 [dev-dependencies]
 actix-rt = "1.1"
