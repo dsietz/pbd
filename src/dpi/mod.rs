@@ -18,12 +18,30 @@ extern crate regex;
 type KeyWordList = Vec<String>;
 type KeyPatternList = Vec<String>;
 
+trait Tokenizer {
+    fn tokenize(text: &str) -> Vec<&str> {
+        text.split(Self::is_match)
+            .filter(|s| !s.is_empty())
+            .collect()
+    }
+
+    fn is_match(c: char) -> bool {
+        match c {
+            ' ' | ',' | '.' | '!' | '?' | ';' | '\'' |  '"'
+            | ':' | '\t' | '\n' | '(' | ')' | '{' | '}' => true,
+            _ => false
+        }
+    }
+}
+
 /// Represents a Data Provacy Inspector (DPI)
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct DPI {
     pub key_words: Option<KeyWordList>,
     pub key_patterns: Option<KeyPatternList>,
 }
+
+impl Tokenizer for DPI {}
 
 impl DPI {
     /// Constructs a DPI object
@@ -122,6 +140,15 @@ mod tests {
                     key_patterns: Some(vec!["^(?!666|000|9\\d{2})\\d{3}-(?!00)\\d{2}-(?!0{4})\\d{4}$".to_string()]),
                 });
         v
+    }
+
+    #[test]
+    fn test_tokenizer_tokenize() {
+        struct Tknzr;
+        impl Tokenizer for Tknzr {}
+
+        assert_eq!(Tknzr::tokenize("My personal data"), vec!["My","personal","data"]);
+        assert_eq!(Tknzr::tokenize(r#"{"ssn":"003-08-5546"}"#), vec!["ssn","003-08-5546"]);
     }
 
     #[test]
