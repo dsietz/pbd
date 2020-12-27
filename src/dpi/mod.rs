@@ -773,13 +773,12 @@ impl DPI {
     pub fn train_for_key_words(&mut self, tokens: Vec<&str>) {
       tokens.par_iter()
         .filter(|t| {
-          println!("Token: {}",t);
           self.key_words.as_ref().unwrap().iter().any(|w| w.to_lowercase() == t.to_lowercase())
         })
         .for_each(|t| {
-          println!("Matching Token: {}",t);
-          &self.add_to_score_points(t.to_string(), KEY_WORD_PNTS);
+          self.add_to_score_points(t.to_string(), KEY_WORD_PNTS);
         });
+
     }
 
     pub fn train_from_keys(&mut self, text: String) {
