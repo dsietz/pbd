@@ -15,8 +15,12 @@
 extern crate eddie;
 extern crate regex;
 
+use crate::dpi::error::*;
 use std::collections::BTreeMap;
 use regex::Regex;
+
+const KEY_PATTERN: u8 = 10;
+const KEY_WORD: u8 = 20;
 
 type KeyWordList = Vec<String>;
 type KeyPatternList = Vec<String>;
@@ -557,17 +561,108 @@ impl PatternDefinition {
   }
 }
 
-/// Represents a Data Provacy Inspector (DPI)
+/// Represents a Score
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct Score {
+    pub key_type: u8,
+    pub key_value: String,
+    pub points: f64, 
+}
+
+/// Represents a ScoreCard
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct ScoreCard {
+  pub scores: Vec<Score>, 
+}
+
+impl ScoreCard {
+  /// Constructs a ScoreCard object
+  /// 
+  /// #Example
+  ///
+  /// ```
+  /// extern crate pbd;
+  ///
+  /// use pbd::dpi::ScoreCard;
+  ///
+  /// fn main() {
+  ///     let card = ScoreCard::new();
+  /// }
+  /// ```
+  pub fn new() -> ScoreCard {
+    ScoreCard {
+      scores: Vec::new(),
+    }
+  }
+
+  pub fn insert(&mut self, score: Score) {
+    self.scores.push(score);
+  }
+
+  pub fn find(&mut self, kvalue: String) -> Result<usize,Error> {
+    for (idx, score) in self.scores.iter().enumerate() {
+      if score.key_value == kvalue {
+        return Ok(idx)
+      }
+    }
+    
+    Err(Error::UnknownScore)
+  }
+
+  pub fn get(&mut self, kvalue: String) -> Result<&Score,Error> {
+    match self.scores.iter().find(|&s|s.key_value == kvalue) {
+      Some(s) => Ok(s),
+      None => Err(Error::UnknownScore),
+    }
+  }
+
+  pub fn upsert(&mut self, score: Score) {
+    match self.find(score.key_value.clone()) {
+      Ok(idx) => {
+        // update
+        self.scores[idx] = score;
+      },
+      Err(_err) => {
+        // insert
+        self.insert(score);
+      },
+    }
+  }
+}
+
+/// Represents a Data Privacy Inspector (DPI)
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct DPI {
     pub key_words: Option<KeyWordList>,
     pub key_patterns: Option<KeyPatternList>,
+    pub scores: ScoreCard,
 }
 
 impl Tokenizer for DPI {}
 
 impl DPI {
-    /// Constructs a DPI object
+    /// Constructs a DPI object without using any predefined set of key words or patterns to learn from
+    /// 
+    /// #Example
+    ///
+    /// ```
+    /// extern crate pbd;
+    ///
+    /// use pbd::dpi::DPI;
+    ///
+    /// fn main() {
+    ///     let dpi = DPI::new();
+    /// }
+    /// ```
+    pub fn new() -> DPI {
+      DPI {
+          key_words: None,
+          key_patterns: None,
+          scores: ScoreCard::new(),
+      }
+    }
+
+    /// Constructs a DPI object using a predefined set of key words and patterns to learn from
     /// 
     /// # Arguments
     /// 
@@ -584,17 +679,74 @@ impl DPI {
     /// fn main() {
     ///     let words = Some(vec!["ssn".to_string()]);
     ///     let patterns = Some(vec!["^(?!666|000|9\\d{2})\\d{3}-(?!00)\\d{2}-(?!0{4})\\d{4}$".to_string()]);
-    ///     let dpi = DPI::new(words, patterns);
+    ///     let dpi = DPI::with(words, patterns);
     ///     
     ///     println!("Using {} words and {} patterns for learning.", dpi.key_words.unwrap().len(), dpi.key_patterns.unwrap().len());
     /// }
     /// ```
-    pub fn new(words: Option<KeyWordList>, patterns: Option<KeyWordList>) -> DPI {
+    pub fn with(words: Option<KeyWordList>, patterns: Option<KeyWordList>) -> DPI {
         DPI {
             key_words: words,
             key_patterns: patterns,
+            scores: ScoreCard::new(),
         }
     }
+
+    /// Constructs a DPI object using a predefined set of key patterns to learn from
+    /// 
+    /// # Arguments
+    /// 
+    /// * patterns: KeyPatternList - A vector of Regex patterns that are known identifiers for private data.</br>
+    /// 
+    /// #Example
+    ///
+    /// ```
+    /// extern crate pbd;
+    ///
+    /// use pbd::dpi::DPI;
+    ///
+    /// fn main() {
+    ///     let patterns = vec!["^(?!666|000|9\\d{2})\\d{3}-(?!00)\\d{2}-(?!0{4})\\d{4}$".to_string()];
+    ///     let dpi = DPI::with_key_patterns(patterns);
+    ///     
+    ///     println!("Using {} patterns for learning.", dpi.key_patterns.unwrap().len());
+    /// }
+    /// ```
+    pub fn with_key_patterns(patterns: KeyWordList) -> DPI {
+      DPI {
+          key_words: None,
+          key_patterns: Some(patterns),
+          scores: ScoreCard::new(),
+      }
+  }
+
+    /// Constructs a DPI object using a predefined set of key words to learn from
+    /// 
+    /// # Arguments
+    /// 
+    /// * words: KeyWordList - A vector of words that are known identifiers for private data.</br>
+    /// 
+    /// #Example
+    ///
+    /// ```
+    /// extern crate pbd;
+    ///
+    /// use pbd::dpi::DPI;
+    ///
+    /// fn main() {
+    ///     let words = vec!["ssn".to_string()];
+    ///     let dpi = DPI::with_key_words(words);
+    ///     
+    ///     println!("Using {} words for learning.", dpi.key_words.unwrap().len());
+    /// }
+    /// ```
+    pub fn with_key_words(words: KeyWordList) -> DPI {
+      DPI {
+          key_words: Some(words),
+          key_patterns: None,
+          scores: ScoreCard::new(),
+      }
+  }
 
     /// Constructs a DPI object from a serialized string
     /// 
@@ -610,7 +762,7 @@ impl DPI {
     /// use pbd::dpi::DPI;
     ///
     /// fn main() {
-    ///     let serialized = r#"{"key_words":["ssn"],"key_patterns":["^(?!666|000|9\\d{2})\\d{3}-(?!00)\\d{2}-(?!0{4})\\d{4}$"]}"#;
+    ///     let serialized = r#"{"key_words":["ssn"],"key_patterns":["^(?!666|000|9\\d{2})\\d{3}-(?!00)\\d{2}-(?!0{4})\\d{4}$"],"scores":{"scores":[]}}"#;
     ///     let dpi = DPI::from_serialized(&serialized);
     ///     
     ///     println!("{:?}", dpi);
@@ -631,19 +783,23 @@ impl DPI {
     /// ```
     /// extern crate pbd;
     ///
-    /// use pbd::dpi::DPI;
+    /// use pbd::dpi::{DPI, ScoreCard};
     ///
     /// fn main() {
-    ///     let mut dpi = DPI {
-    ///         key_words: Some(vec!["ssn".to_string()]),
-    ///         key_patterns: Some(vec!["^(?!666|000|9\\d{2})\\d{3}-(?!00)\\d{2}-(?!0{4})\\d{4}$".to_string()]),
-    ///     };
+    ///     let mut dpi = DPI::with(
+    ///         Some(vec!["ssn".to_string()]),
+    ///         Some(vec!["^(?!666|000|9\\d{2})\\d{3}-(?!00)\\d{2}-(?!0{4})\\d{4}$".to_string()])
+    ///       );
     ///     
     ///     println!("{:?}", dpi.serialize());
     /// }
     /// ```
     pub fn serialize(&mut self) -> String {
 		  serde_json::to_string(&self).unwrap()
+    }
+
+    pub fn train_from_keys(&mut self, text: String) {
+      let tokens = Self::tokenize(&text);
     }
 }
 
@@ -661,8 +817,42 @@ mod tests {
         v.push( DPI {
                     key_words: Some(vec!["ssn".to_string()]),
                     key_patterns: Some(vec!["^(?!666|000|9\\d{2})\\d{3}-(?!00)\\d{2}-(?!0{4})\\d{4}$".to_string()]),
+                    scores: ScoreCard::new(),
                 });
         v
+    }
+
+    #[test]
+    fn test_dpi_new() {
+      let dpi = DPI::new();
+
+      assert!(dpi.key_words.is_none());
+      assert!(dpi.key_patterns.is_none());
+    }    
+
+    #[test]
+    fn test_dpi_with() {
+      let words = Some(vec!["ssn".to_string()]);
+      let patterns = Some(vec!["^(?!666|000|9\\d{2})\\d{3}-(?!00)\\d{2}-(?!0{4})\\d{4}$".to_string()]);
+      let dpi = DPI::with(words, patterns);
+
+      assert_eq!(dpi.key_words.unwrap().len(),1);
+    }
+
+    #[test]
+    fn test_dpi_with_keypatterns() {
+      let patterns = vec!["^(?!666|000|9\\d{2})\\d{3}-(?!00)\\d{2}-(?!0{4})\\d{4}$".to_string()];
+      let dpi = DPI::with_key_patterns(patterns);
+      
+      assert_eq!(dpi.key_patterns.unwrap().len(),1);
+    }
+
+    #[test]
+    fn test_dpi_with_keywords() {
+      let words = vec!["ssn".to_string()];
+      let dpi = DPI::with_key_words(words);
+      
+      assert_eq!(dpi.key_words.unwrap().len(),1);
     }
 
     #[test]
@@ -758,7 +948,7 @@ mod tests {
 
     #[test]
     fn test_dpi_from_serialized_ok() {
-        let serialized = r#"{"key_words":["ssn"],"key_patterns":["^(?!666|000|9\\d{2})\\d{3}-(?!00)\\d{2}-(?!0{4})\\d{4}$"]}"#;
+        let serialized = r#"{"key_words":["ssn"],"key_patterns":["^(?!666|000|9\\d{2})\\d{3}-(?!00)\\d{2}-(?!0{4})\\d{4}$"],"scores":{"scores":[]}}"#;
         let dpi = DPI::from_serialized(serialized);
 
         assert_eq!(dpi.key_words.unwrap().len(), 1);
@@ -767,7 +957,7 @@ mod tests {
 
     #[test]
     fn test_dpi_serialize_ok() {
-        let serialized = r#"{"key_words":["ssn"],"key_patterns":["^(?!666|000|9\\d{2})\\d{3}-(?!00)\\d{2}-(?!0{4})\\d{4}$"]}"#;
+        let serialized = r#"{"key_words":["ssn"],"key_patterns":["^(?!666|000|9\\d{2})\\d{3}-(?!00)\\d{2}-(?!0{4})\\d{4}$"],"scores":{"scores":[]}}"#;
         let dpi = &mut get_dpi()[0];
 
         assert_eq!(dpi.serialize(), serialized);
