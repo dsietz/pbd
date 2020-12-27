@@ -18,14 +18,22 @@ extern crate regex;
 use crate::dpi::error::*;
 use std::collections::BTreeMap;
 use regex::Regex;
+use rayon::prelude::*;
 
-const KEY_PATTERN: u8 = 10;
-const KEY_WORD: u8 = 20;
+const KEY_PATTERN_PNTS: f64 = 80 as f64;
+const KEY_WORD_PNTS: f64 = 100 as f64;
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub enum ScoreKey {
+  KeyPattern = 10,
+  KeyWord = 20,
+}
 
 type KeyWordList = Vec<String>;
 type KeyPatternList = Vec<String>;
 type SoundexWord = Vec<char>;
-type PatternMap  = BTreeMap<String, char>;
+type PatternMap = BTreeMap<String, char>;
+type ScoreCard = BTreeMap<String, Score>;
 
 /// The collection of methods that enable a structure to convert text to ngrams
 pub trait Phonetic {
@@ -564,68 +572,17 @@ impl PatternDefinition {
 /// Represents a Score
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Score {
-    pub key_type: u8,
+    pub key_type: ScoreKey,
     pub key_value: String,
     pub points: f64, 
 }
 
-/// Represents a ScoreCard
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct ScoreCard {
-  pub scores: Vec<Score>, 
-}
-
-impl ScoreCard {
-  /// Constructs a ScoreCard object
-  /// 
-  /// #Example
-  ///
-  /// ```
-  /// extern crate pbd;
-  ///
-  /// use pbd::dpi::ScoreCard;
-  ///
-  /// fn main() {
-  ///     let card = ScoreCard::new();
-  /// }
-  /// ```
-  pub fn new() -> ScoreCard {
-    ScoreCard {
-      scores: Vec::new(),
-    }
-  }
-
-  pub fn insert(&mut self, score: Score) {
-    self.scores.push(score);
-  }
-
-  pub fn find(&mut self, kvalue: String) -> Result<usize,Error> {
-    for (idx, score) in self.scores.iter().enumerate() {
-      if score.key_value == kvalue {
-        return Ok(idx)
-      }
-    }
-    
-    Err(Error::UnknownScore)
-  }
-
-  pub fn get(&mut self, kvalue: String) -> Result<&Score,Error> {
-    match self.scores.iter().find(|&s|s.key_value == kvalue) {
-      Some(s) => Ok(s),
-      None => Err(Error::UnknownScore),
-    }
-  }
-
-  pub fn upsert(&mut self, score: Score) {
-    match self.find(score.key_value.clone()) {
-      Ok(idx) => {
-        // update
-        self.scores[idx] = score;
-      },
-      Err(_err) => {
-        // insert
-        self.insert(score);
-      },
+impl Score {
+  pub fn new(ktype: ScoreKey, kvalue: String, pnts: f64) -> Score {
+    Score {
+      key_type: ktype,
+      key_value: kvalue,
+      points: pnts, 
     }
   }
 }
@@ -762,7 +719,7 @@ impl DPI {
     /// use pbd::dpi::DPI;
     ///
     /// fn main() {
-    ///     let serialized = r#"{"key_words":["ssn"],"key_patterns":["^(?!666|000|9\\d{2})\\d{3}-(?!00)\\d{2}-(?!0{4})\\d{4}$"],"scores":{"scores":[]}}"#;
+    ///     let serialized = r#"{"key_words":["ssn"],"key_patterns":["^(?!666|000|9\\d{2})\\d{3}-(?!00)\\d{2}-(?!0{4})\\d{4}$"],"scores":{}}"#;
     ///     let dpi = DPI::from_serialized(&serialized);
     ///     
     ///     println!("{:?}", dpi);
@@ -783,7 +740,7 @@ impl DPI {
     /// ```
     /// extern crate pbd;
     ///
-    /// use pbd::dpi::{DPI, ScoreCard};
+    /// use pbd::dpi::{DPI};
     ///
     /// fn main() {
     ///     let mut dpi = DPI::with(
@@ -798,8 +755,42 @@ impl DPI {
 		  serde_json::to_string(&self).unwrap()
     }
 
+    pub fn get_score(&mut self, key: String) -> Score {
+      match self.scores.get_mut(&key) {
+        Some(s) => s.clone(),
+        None => {
+          Score::new(ScoreKey::KeyWord, key, 0 as f64).clone()
+        },
+      }
+    }
+
+    pub fn add_to_score_points(mut self, key: String, pnts: f64) {
+      let mut score = self.get_score(key);
+      score.points += pnts;
+      &self.upsert_score(score.clone());
+    }
+
+    pub fn train_for_key_words(&mut self, tokens: Vec<&str>) {
+      tokens.par_iter()
+        .filter(|t| {
+          println!("Token: {}",t);
+          self.key_words.as_ref().unwrap().iter().any(|w| w.to_lowercase() == t.to_lowercase())
+        })
+        .for_each(|t| {
+          println!("Matching Token: {}",t);
+          &self.add_to_score_points(t.to_string(), KEY_WORD_PNTS);
+        });
+    }
+
     pub fn train_from_keys(&mut self, text: String) {
       let tokens = Self::tokenize(&text);
+      //let tokens = Self::tokenize(&text).iter().map(|x| String::from(*x)).collect();
+      //tokens.iter().map(|x| String::from(*x));
+      self.train_for_key_words(tokens);
+    }
+
+    pub fn upsert_score(&mut self, score: Score) {
+      self.scores.insert(score.key_value.clone(), score);
     }
 }
 
@@ -820,6 +811,10 @@ mod tests {
                     scores: ScoreCard::new(),
                 });
         v
+    }
+
+    fn get_text() -> String {
+      String::from(r#"Here is my ssn that you requested: 003-75-9876."#)
     }
 
     #[test]
@@ -948,7 +943,7 @@ mod tests {
 
     #[test]
     fn test_dpi_from_serialized_ok() {
-        let serialized = r#"{"key_words":["ssn"],"key_patterns":["^(?!666|000|9\\d{2})\\d{3}-(?!00)\\d{2}-(?!0{4})\\d{4}$"],"scores":{"scores":[]}}"#;
+        let serialized = r#"{"key_words":["ssn"],"key_patterns":["^(?!666|000|9\\d{2})\\d{3}-(?!00)\\d{2}-(?!0{4})\\d{4}$"],"scores":{}}"#;
         let dpi = DPI::from_serialized(serialized);
 
         assert_eq!(dpi.key_words.unwrap().len(), 1);
@@ -957,9 +952,17 @@ mod tests {
 
     #[test]
     fn test_dpi_serialize_ok() {
-        let serialized = r#"{"key_words":["ssn"],"key_patterns":["^(?!666|000|9\\d{2})\\d{3}-(?!00)\\d{2}-(?!0{4})\\d{4}$"],"scores":{"scores":[]}}"#;
+        let serialized = r#"{"key_words":["ssn"],"key_patterns":["^(?!666|000|9\\d{2})\\d{3}-(?!00)\\d{2}-(?!0{4})\\d{4}$"],"scores":{}}"#;
         let dpi = &mut get_dpi()[0];
 
         assert_eq!(dpi.serialize(), serialized);
+    }
+
+    #[test]
+    fn test_dpi_train_for_key_words() {
+      let dpi = &mut get_dpi()[0];
+      dpi.train_from_keys(get_text());
+      println!("{:?}", dpi.serialize());
+      assert!(false);
     }
 }
