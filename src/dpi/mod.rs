@@ -654,11 +654,13 @@ impl DPI {
     /// }
     /// ```
     pub fn new() -> DPI {
-      DPI {
+      let mut dpi = DPI {
           key_words: None,
           key_patterns: None,
           scores: ScoreCard::new(),
-      }
+      };
+      dpi.init();
+      dpi
     }
 
     /// Constructs a DPI object using a predefined set of key words and patterns to learn from
@@ -684,11 +686,13 @@ impl DPI {
     /// }
     /// ```
     pub fn with(words: Option<KeyWordList>, patterns: Option<KeyWordList>) -> DPI {
-        DPI {
-            key_words: words,
-            key_patterns: patterns,
-            scores: ScoreCard::new(),
-        }
+      let mut dpi = DPI {
+          key_words: words,
+          key_patterns: patterns,
+          scores: ScoreCard::new(),
+      };
+      dpi.init();
+      dpi
     }
 
     /// Constructs a DPI object using a predefined set of key patterns to learn from
@@ -712,12 +716,14 @@ impl DPI {
     /// }
     /// ```
     pub fn with_key_patterns(patterns: KeyWordList) -> DPI {
-      DPI {
+      let mut dpi = DPI {
           key_words: None,
           key_patterns: Some(patterns),
           scores: ScoreCard::new(),
-      }
-  }
+      };
+      dpi.init();
+      dpi
+    }
 
     /// Constructs a DPI object using a predefined set of key words to learn from
     /// 
@@ -740,12 +746,41 @@ impl DPI {
     /// }
     /// ```
     pub fn with_key_words(words: KeyWordList) -> DPI {
-      DPI {
+      let mut dpi = DPI {
           key_words: Some(words),
           key_patterns: None,
           scores: ScoreCard::new(),
+      };
+      dpi.init();
+      dpi
+    }
+
+    fn init(&mut self) {
+      self.init_keys();
+      self.init_patterns();
+    }
+
+    fn init_keys(&mut self) {
+      match &self.key_words.clone() {
+        Some(keys) => {
+          for key in keys.iter() {
+            &self.add_to_score_points(key.to_string(), KEY_WORD_PNTS);
+          }
+        },
+        None => {},
       }
-  }
+    }
+
+    fn init_patterns(&mut self) {
+      match &self.key_patterns.clone() {
+        Some(pttrns) => {
+          for pttrn in pttrns.iter() {
+            &self.add_to_score_points(pttrn.to_string(), KEY_PATTERN_PNTS);
+          }
+        },
+        None => {},
+      }
+    }
 
     /// Constructs a DPI object from a serialized string
     /// 
@@ -882,7 +917,7 @@ impl DPI {
     /// 
     ///   dpi.train_for_key_words(tokens);
     ///     
-    ///   assert_eq!(dpi.get_score("ssn".to_string()).points, 100.0);
+    ///   assert_eq!(dpi.get_score("ssn".to_string()).points, 200.0);
     /// }
     /// ```
     pub fn train_for_key_words(&mut self, tokens: Vec<&str>) {
@@ -920,7 +955,7 @@ impl DPI {
     /// 
     ///   dpi.train_using_keys(text);
     ///     
-    ///   assert_eq!(dpi.get_score("ssn".to_string()).points, 100.0);
+    ///   assert_eq!(dpi.get_score("ssn".to_string()).points, 200.0);
     /// }
     /// ```
     pub fn train_using_keys(&mut self, text: String) {
@@ -1035,7 +1070,7 @@ mod tests {
         
       dpi.train_for_key_words(tokens);
 
-      assert_eq!(dpi.get_score("ssn".to_string()).points, 100.0);
+      assert_eq!(dpi.get_score("ssn".to_string()).points, 200.0);
     }
 
     #[test]
@@ -1046,7 +1081,7 @@ mod tests {
     
       dpi.train_using_keys(text);
         
-      assert_eq!(dpi.get_score("ssn".to_string()).points, 100.0);
+      assert_eq!(dpi.get_score("ssn".to_string()).points, 200.0);
     } 
 
     #[test]
