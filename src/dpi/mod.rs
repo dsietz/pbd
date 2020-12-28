@@ -23,10 +23,11 @@
 extern crate eddie;
 extern crate regex;
 
-use crate::dpi::error::*;
 use std::collections::BTreeMap;
 use regex::Regex;
 use rayon::prelude::*;
+use std::sync::mpsc::channel;
+use std::thread;
 
 
 const KEY_PATTERN_PNTS: f64 = 80 as f64;
@@ -265,6 +266,38 @@ pub trait Phonetic {
       }
     }
     chars_no_vowels
+  }
+}
+
+pub trait Tfidf {
+  fn frequency_counts<'a>(mut tokens: Vec<&'a str>) -> BTreeMap<String, u64>{
+    let mut counts: BTreeMap<String, u64> = BTreeMap::new();
+    //let mut threads = vec![];
+    let mut chunks = tokens.chunks_mut(10);
+    let (tx, rx) = channel();
+
+    for chunk in chunks {
+      let tx = tx.clone();
+      //threads.push(
+      //  thread::spawn(move|| {
+          let total = chunk.len();
+          for token in chunk.iter_mut() {
+            if let Some(cnt) = counts.get_mut(&token.to_string()) {
+              *cnt += 1;
+            }
+            else {
+              counts.insert(token.to_string(), 1);
+            }
+          } 
+          tx.send(total).unwrap();
+       // })
+      //);
+    }
+
+    //thread.join()
+    rx.recv().unwrap();
+
+    counts
   }
 }
 
@@ -1214,5 +1247,15 @@ mod tests {
 
         assert_eq!(Prcsr::tokenize("My personal data"), vec!["My","personal","data"]);
         assert_eq!(Prcsr::tokenize(r#"{"ssn":"003-08-5546"}"#), vec!["ssn","003-08-5546"]);
+    }
+
+    #[test]
+    fn test_tfidf_frequency_counts() {
+      struct FreqCnt {}
+      impl Tfidf for FreqCnt {}
+      let tokens = vec!["Hello","my","name","is","John","what","is","your","name","A","name","is","a","personal","identifier","Never","share","your","name"];
+
+      println!("{:?}", FreqCnt::frequency_counts(tokens));
+      assert!(false);
     }
 }
