@@ -10,7 +10,15 @@
 //!
 //! ### Usage
 //! 
-//! 
+
+/*
+** LOGIC
+** 1. Words that appear infrequently across multiple documents but frequently in a few documents are relevant (TF-IDF)
+**    (https://crates.io/crates/rust-tfidf)
+**    Use map reduce to multi-process the tokens for frequency counts.
+** 2. Patterns of words that appear within NGram of key words are relevant
+** 3. Words that are simalar (Sounds like or Levenstein distince) are slightly relevant
+*/
 
 extern crate eddie;
 extern crate regex;
@@ -1075,11 +1083,10 @@ mod tests {
 
     #[test]
     fn test_dpi_train_using_keys() {
-      let text = "My ssn is 003-76-0098".to_string();
       let words = vec!["ssn".to_string()];
       let mut dpi = DPI::with_key_words(words);
     
-      dpi.train_using_keys(text);
+      dpi.train_using_keys(get_text());
         
       assert_eq!(dpi.get_score("ssn".to_string()).points, 200.0);
     } 
