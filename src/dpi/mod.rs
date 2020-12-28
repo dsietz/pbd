@@ -20,6 +20,7 @@ use std::collections::BTreeMap;
 use regex::Regex;
 use rayon::prelude::*;
 
+
 const KEY_PATTERN_PNTS: f64 = 80 as f64;
 const KEY_WORD_PNTS: f64 = 100 as f64;
 
@@ -764,27 +765,28 @@ impl DPI {
       }
     }
 
-    pub fn add_to_score_points(mut self, key: String, pnts: f64) {
+    pub fn add_to_score_points(&mut self, key: String, pnts: f64) {
       let mut score = self.get_score(key);
       score.points += pnts;
-      &self.upsert_score(score.clone());
+      &self.upsert_score(score);
     }
 
     pub fn train_for_key_words(&mut self, tokens: Vec<&str>) {
-      tokens.par_iter()
+      let kwords = self.key_words.clone();
+      
+      let list: Vec<&&str> = tokens.par_iter()
         .filter(|t| {
-          self.key_words.as_ref().unwrap().iter().any(|w| w.to_lowercase() == t.to_lowercase())
-        })
+          kwords.as_ref().unwrap().iter().any(|w| w.to_lowercase() == t.to_lowercase())
+        }).collect();
+
+      list.iter()
         .for_each(|t| {
           self.add_to_score_points(t.to_string(), KEY_WORD_PNTS);
         });
-
     }
 
     pub fn train_from_keys(&mut self, text: String) {
       let tokens = Self::tokenize(&text);
-      //let tokens = Self::tokenize(&text).iter().map(|x| String::from(*x)).collect();
-      //tokens.iter().map(|x| String::from(*x));
       self.train_for_key_words(tokens);
     }
 
@@ -959,9 +961,11 @@ mod tests {
 
     #[test]
     fn test_dpi_train_for_key_words() {
+      let serialized = r#"{"key_words":["ssn"],"key_patterns":["^(?!666|000|9\\d{2})\\d{3}-(?!00)\\d{2}-(?!0{4})\\d{4}$"],"scores":{"ssn":{"key_type":"KeyWord","key_value":"ssn","points":100.0}}}"#;
       let dpi = &mut get_dpi()[0];
+      
       dpi.train_from_keys(get_text());
-      println!("{:?}", dpi.serialize());
-      assert!(false);
+
+      assert_eq!(dpi.serialize(), serialized);
     }
 }
