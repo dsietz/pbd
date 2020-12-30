@@ -26,9 +26,8 @@ extern crate regex;
 use std::collections::BTreeMap;
 use regex::Regex;
 use rayon::prelude::*;
-use std::sync::mpsc::channel;
+use std::sync::{Arc, Mutex};
 use std::thread;
-
 
 const KEY_PATTERN_PNTS: f64 = 80 as f64;
 const KEY_WORD_PNTS: f64 = 100 as f64;
@@ -270,35 +269,75 @@ pub trait Phonetic {
 }
 
 pub trait Tfidf {
-  fn frequency_counts<'a>(mut tokens: Vec<&'a str>) -> BTreeMap<String, u64>{
+  /*
+  fn frequency_counts(tokens: Vec<&str>) -> BTreeMap<String, u64>{
     let mut counts: BTreeMap<String, u64> = BTreeMap::new();
-    //let mut threads = vec![];
-    let mut chunks = tokens.chunks_mut(10);
-    let (tx, rx) = channel();
+    let jobs = Vec::new();
+    let chunks = tokens.chunks(10);
 
     for chunk in chunks {
-      let tx = tx.clone();
-      //threads.push(
-      //  thread::spawn(move|| {
-          let total = chunk.len();
-          for token in chunk.iter_mut() {
-            if let Some(cnt) = counts.get_mut(&token.to_string()) {
-              *cnt += 1;
-            }
-            else {
-              counts.insert(token.to_string(), 1);
-            }
-          } 
-          tx.send(total).unwrap();
-       // })
-      //);
+      let job = thread::spawn(move || {
+        let mut sub_counts: BTreeMap<String, u64> = BTreeMap::new();
+
+        for token in chunk.iter() {
+          if let Some(cnt) = sub_counts.get_mut(&token.to_string()) {
+            *cnt += 1;
+          }
+          else {
+            sub_counts.insert(token.to_string(), 1);
+          }
+        } 
+
+        sub_counts
+      });
+
+      jobs.push(job);
     }
 
-    //thread.join()
-    rx.recv().unwrap();
+    for job in jobs {
+      let intermediate_counts = job.join().unwrap();
+    }
 
     counts
   }
+  */
+  /*
+  fn frequency_counts(tokens: Vec<&str>) -> BTreeMap<String, u64>{
+    println!("TOKENS: {:?}",tokens);
+    let counts: Arc<Mutex<BTreeMap<String, u64>>> = Arc::new(Mutex::new(BTreeMap::new()));
+    
+    tokens.par_iter().for_each(|t| {
+      let cnt: u64 = match &counts.lock().unwrap().get(&t.to_string()) {
+        Some(c) => {
+          let x = c.clone() + 1;
+          x
+        },
+        None => 1,
+      };
+
+      &counts.lock().unwrap().insert(t.to_string(), cnt);
+    }); 
+   
+    let x = counts.lock().unwrap(); 
+    x.clone()
+  }
+  */
+  
+  fn frequency_counts(tokens: Vec<&str>) -> BTreeMap<String, u64>{
+    let mut counts: BTreeMap<String, u64> = BTreeMap::new();
+    
+    for token in tokens.iter() {
+      if let Some(cnt) = counts.get_mut(&token.to_string()) {
+        *cnt += 1;
+      }
+      else {
+        counts.insert(token.to_string(), 1);
+      }
+    } 
+
+    counts
+  }
+  
 }
 
 /// The collection of methods that enable a structure to tokenize and convert text to ngrams
@@ -1254,8 +1293,8 @@ mod tests {
       struct FreqCnt {}
       impl Tfidf for FreqCnt {}
       let tokens = vec!["Hello","my","name","is","John","what","is","your","name","A","name","is","a","personal","identifier","Never","share","your","name"];
+      let counts = r#"{"A": 1, "Hello": 1, "John": 1, "Never": 1, "a": 1, "identifier": 1, "is": 3, "my": 1, "name": 4, "personal": 1, "share": 1, "what": 1, "your": 2}"#;
 
-      println!("{:?}", FreqCnt::frequency_counts(tokens));
-      assert!(false);
+      assert_eq!(format!("{:?}", FreqCnt::frequency_counts(tokens)), counts);
     }
 }
