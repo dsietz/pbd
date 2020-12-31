@@ -26,8 +26,8 @@ extern crate regex;
 use std::collections::BTreeMap;
 use regex::Regex;
 use rayon::prelude::*;
-use std::sync::{Arc, Mutex};
-use std::thread;
+use multimap::MultiMap;
+use std::cmp::Ordering;
 
 const KEY_PATTERN_PNTS: f64 = 80 as f64;
 const KEY_WORD_PNTS: f64 = 100 as f64;
@@ -269,75 +269,38 @@ pub trait Phonetic {
 }
 
 pub trait Tfidf {
-  /*
-  fn frequency_counts(tokens: Vec<&str>) -> BTreeMap<String, u64>{
-    let mut counts: BTreeMap<String, u64> = BTreeMap::new();
-    let jobs = Vec::new();
-    let chunks = tokens.chunks(10);
+  fn frequency_counts_lcase(tokens: Vec<&str>) -> BTreeMap<String, usize>{
+    let mut counts: BTreeMap<String, usize> = BTreeMap::new();
 
-    for chunk in chunks {
-      let job = thread::spawn(move || {
-        let mut sub_counts: BTreeMap<String, u64> = BTreeMap::new();
+    // MapReduce
+    // Map input collection.
+    let mapped: Vec<_> = tokens.into_par_iter()
+        .map(|s| s.to_lowercase().chars()
+            //.filter(|c| c.is_alphabetic()).collect::<String>())
+            .collect::<String>())
+        .map(|s| (s, ()))
+        .collect();
+    // Group by key.
+    let shuffled = mapped.into_iter().collect::<MultiMap<_,_>>()
+            .into_iter().collect::<Vec<_>>();
+    // Reduce by key.
+    let mut reduced: Vec<_> = shuffled.into_par_iter()
+        .map(|kv| (kv.0, kv.1.len())) // Only using count of values
+        .collect();
 
-        for token in chunk.iter() {
-          if let Some(cnt) = sub_counts.get_mut(&token.to_string()) {
-            *cnt += 1;
-          }
-          else {
-            sub_counts.insert(token.to_string(), 1);
-          }
-        } 
+    // Post processing descending sort
+    reduced.sort_by(|a,b| match a.1.cmp(&b.1).reverse() {
+        Ordering::Equal => a.0.cmp(&b.0),
+        other_ordering => other_ordering
+    });
 
-        sub_counts
-      });
-
-      jobs.push(job);
-    }
-
-    for job in jobs {
-      let intermediate_counts = job.join().unwrap();
+    // Collect results
+    for (word, count) in reduced.into_iter().take(50) {
+        counts.insert(word, count);
     }
 
     counts
   }
-  */
-  /*
-  fn frequency_counts(tokens: Vec<&str>) -> BTreeMap<String, u64>{
-    println!("TOKENS: {:?}",tokens);
-    let counts: Arc<Mutex<BTreeMap<String, u64>>> = Arc::new(Mutex::new(BTreeMap::new()));
-    
-    tokens.par_iter().for_each(|t| {
-      let cnt: u64 = match &counts.lock().unwrap().get(&t.to_string()) {
-        Some(c) => {
-          let x = c.clone() + 1;
-          x
-        },
-        None => 1,
-      };
-
-      &counts.lock().unwrap().insert(t.to_string(), cnt);
-    }); 
-   
-    let x = counts.lock().unwrap(); 
-    x.clone()
-  }
-  */
-  
-  fn frequency_counts(tokens: Vec<&str>) -> BTreeMap<String, u64>{
-    let mut counts: BTreeMap<String, u64> = BTreeMap::new();
-    
-    for token in tokens.iter() {
-      if let Some(cnt) = counts.get_mut(&token.to_string()) {
-        *cnt += 1;
-      }
-      else {
-        counts.insert(token.to_string(), 1);
-      }
-    } 
-
-    counts
-  }
-  
 }
 
 /// The collection of methods that enable a structure to tokenize and convert text to ngrams
@@ -1289,12 +1252,12 @@ mod tests {
     }
 
     #[test]
-    fn test_tfidf_frequency_counts() {
+    fn test_tfidf_frequency_counts_lcase() {
       struct FreqCnt {}
       impl Tfidf for FreqCnt {}
-      let tokens = vec!["Hello","my","name","is","John","what","is","your","name","A","name","is","a","personal","identifier","Never","share","your","name"];
-      let counts = r#"{"A": 1, "Hello": 1, "John": 1, "Never": 1, "a": 1, "identifier": 1, "is": 3, "my": 1, "name": 4, "personal": 1, "share": 1, "what": 1, "your": 2}"#;
+      let tokens = vec!["Hello","my","name","is","John","What","is","your","name","A","name","is","a","personal","identifier","Never","share","your","name","My","ssn","is","003-67-0998"];
+      let counts = r#"{"003-67-0998": 1, "a": 2, "hello": 1, "identifier": 1, "is": 4, "john": 1, "my": 2, "name": 4, "never": 1, "personal": 1, "share": 1, "ssn": 1, "what": 1, "your": 2}"#;
 
-      assert_eq!(format!("{:?}", FreqCnt::frequency_counts(tokens)), counts);
+      assert_eq!(format!("{:?}", FreqCnt::frequency_counts_lcase(tokens)), counts);
     }
 }
