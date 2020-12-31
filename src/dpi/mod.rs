@@ -28,6 +28,7 @@ use regex::Regex;
 use rayon::prelude::*;
 use multimap::MultiMap;
 use std::cmp::Ordering;
+use tfidf::{TfIdf, TfIdfDefault};
 
 const KEY_PATTERN_PNTS: f64 = 80 as f64;
 const KEY_WORD_PNTS: f64 = 100 as f64;
@@ -269,17 +270,25 @@ pub trait Phonetic {
 }
 
 pub trait Tfidf {
-  fn frequency_counts_lcase(tokens: Vec<&str>) -> BTreeMap<String, usize>{
-    let mut counts: BTreeMap<String, usize> = BTreeMap::new();
+
+  // determine how important a term is in a document compared to other documents
+  fn tfidf(docs: Vec<Vec<(&str, usize)>>) -> f64{
+    TfIdfDefault::tfidf("c", &docs[0], docs.iter())
+  }
+
+  fn frequency_counts(tokens: Vec<&str>) -> Vec<(String, usize)>{
+    let mut counts: Vec<(String, usize)> = Vec::new();
 
     // MapReduce
     // Map input collection.
-    let mapped: Vec<_> = tokens.into_par_iter()
-        .map(|s| s.to_lowercase().chars()
+    let mapped: Vec<_> = 
+        tokens.into_par_iter()
+        .map(|s| s.chars()
             //.filter(|c| c.is_alphabetic()).collect::<String>())
             .collect::<String>())
         .map(|s| (s, ()))
         .collect();
+
     // Group by key.
     let shuffled = mapped.into_iter().collect::<MultiMap<_,_>>()
             .into_iter().collect::<Vec<_>>();
@@ -295,8 +304,8 @@ pub trait Tfidf {
     });
 
     // Collect results
-    for (word, count) in reduced.into_iter().take(50) {
-        counts.insert(word, count);
+    for (word, count) in reduced.into_iter() {
+        counts.push((word, count));
     }
 
     counts
@@ -545,7 +554,16 @@ impl PatternDefinition {
 
     pttrn
   }
-  
+/*
+  pub fn analyze_tokens(&mut self, tokens: Vec<&str>) -> Vec<&str> {
+    let pttrns: Vec<_> = tokens.into_par_iter()
+        .map(|t| &self.analyze(t).as_str())
+        //.map(|t| *t)
+        .collect();
+      
+    pttrns
+  }
+*/  
   /// This function returns a pattern symbol that represents the type of character 
   /// 
   /// # Example
@@ -1252,12 +1270,12 @@ mod tests {
     }
 
     #[test]
-    fn test_tfidf_frequency_counts_lcase() {
+    fn test_tfidf_frequency_counts() {
       struct FreqCnt {}
       impl Tfidf for FreqCnt {}
       let tokens = vec!["Hello","my","name","is","John","What","is","your","name","A","name","is","a","personal","identifier","Never","share","your","name","My","ssn","is","003-67-0998"];
-      let counts = r#"{"003-67-0998": 1, "a": 2, "hello": 1, "identifier": 1, "is": 4, "john": 1, "my": 2, "name": 4, "never": 1, "personal": 1, "share": 1, "ssn": 1, "what": 1, "your": 2}"#;
+      let counts = r#"[("is", 4), ("name", 4), ("your", 2), ("003-67-0998", 1), ("A", 1), ("Hello", 1), ("John", 1), ("My", 1), ("Never", 1), ("What", 1), ("a", 1), ("identifier", 1), ("my", 1), ("personal", 1), ("share", 1), ("ssn", 1)]"#;
 
-      assert_eq!(format!("{:?}", FreqCnt::frequency_counts_lcase(tokens)), counts);
+      assert_eq!(format!("{:?}", FreqCnt::frequency_counts(tokens)), counts);
     }
 }
