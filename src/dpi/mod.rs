@@ -526,7 +526,7 @@ impl PatternDefinition {
     }
   }	
 
-  /// This function converts an entity (&str) into a tuplet (String, Vec<Fact>)</br>
+  /// This function converts an entity into a pattern String</br>
   ///
   /// # Arguments
   ///
@@ -545,7 +545,7 @@ impl PatternDefinition {
   ///     assert_eq!(rslt, "CvccvSCvccc");
   /// }
   /// ```
-  pub fn analyze(&mut self, entity: &str) -> String {
+  pub fn analyze(self, entity: &str) -> String {
     let mut pttrn = String::new();
 
     for c in entity.chars() {
@@ -554,16 +554,46 @@ impl PatternDefinition {
 
     pttrn
   }
-/*
-  pub fn analyze_tokens(&mut self, tokens: Vec<&str>) -> Vec<&str> {
-    let pttrns: Vec<_> = tokens.into_par_iter()
-        .map(|t| &self.analyze(t).as_str())
-        //.map(|t| *t)
-        .collect();
+
+  /// This function converts a list of entities into a vector of pattern Strings</br>
+  ///
+  /// # Arguments
+  ///
+  /// * `entities: Vec<&str>` - The list of textual str of the value to anaylze.</br>
+  ///
+  /// # Example
+  ///
+  /// ```rust
+  /// extern crate pbd;
+  ///
+  /// use pbd::dpi::PatternDefinition;
+  ///
+  /// fn main() {
+  ///   let entities = vec!["Hello","my","name","is","John","What","is","your","name","A","name","is","a","personal","identifier","Never","share","your","name","My","ssn","is","003-67-0998"];
+  ///   let mut pttrn_def = PatternDefinition::new();
+  ///   let rslt = pttrn_def.analyze_entities(entities);
+  ///   let pttrns = vec!["Cvccv", "cc", "cvcv", "vc", "Cvcc", "Ccvc", "vc", "cvvc", "cvcv", "V", "cvcv", "vc", "v", "cvccvcvc", "vcvccvcvvc", "Cvcvc", "ccvcv", "cvvc", "cvcv", "Cc", "ccc", "vc", "###@##@####"];
+  ///   
+  ///   assert_eq!(rslt, pttrns);
+  /// }
+  /// ```
+  pub fn analyze_entities(self, entities: Vec<&str>) -> Vec<String> {
+    let pttrns: Vec<_> = entities.into_par_iter()
+        .map(|e| {
+          //self.analyze(t).as_str()
+          let mut pttrn = String::new();
+
+          for c in e.chars() {
+            pttrn.push(self.symbolize_char(c));
+          }
       
+          pttrn
+        })
+        .collect();
+
     pttrns
   }
-*/  
+  
   /// This function returns a pattern symbol that represents the type of character 
   /// 
   /// # Example
@@ -1073,6 +1103,12 @@ mod tests {
       String::from(r#"Here is my ssn that you requested: 003-75-9876."#)
     }
 
+    fn get_tokens() -> Vec<&'static str>{
+      let v = vec!["Hello","my","name","is","John","What","is","your","name","A","name","is","a","personal","identifier","Never","share","your","name","My","ssn","is","003-67-0998"];
+      v.par_iter().map(|t| t.to_string());
+      v
+    }
+
     #[test]
     fn test_dpi_new() {
       let dpi = DPI::new();
@@ -1198,6 +1234,16 @@ mod tests {
     }
 
     #[test]
+    fn test_pattern_analyze_entities() {
+      let entities = get_tokens();
+      let mut pttrn_def = PatternDefinition::new();
+      let rslt = pttrn_def.analyze_entities(entities);
+      let pttrns = vec!["Cvccv", "cc", "cvcv", "vc", "Cvcc", "Ccvc", "vc", "cvvc", "cvcv", "V", "cvcv", "vc", "v", "cvccvcvc", "vcvccvcvvc", "Cvcvc", "ccvcv", "cvvc", "cvcv", "Cc", "ccc", "vc", "###@##@####"];
+
+      assert_eq!(rslt, pttrns);
+    }
+
+    #[test]
     fn test_phonetic_char_digit() {
         struct Prcsr;
         impl Phonetic for Prcsr {}
@@ -1273,7 +1319,7 @@ mod tests {
     fn test_tfidf_frequency_counts() {
       struct FreqCnt {}
       impl Tfidf for FreqCnt {}
-      let tokens = vec!["Hello","my","name","is","John","What","is","your","name","A","name","is","a","personal","identifier","Never","share","your","name","My","ssn","is","003-67-0998"];
+      let tokens = get_tokens();
       let counts = r#"[("is", 4), ("name", 4), ("your", 2), ("003-67-0998", 1), ("A", 1), ("Hello", 1), ("John", 1), ("My", 1), ("Never", 1), ("What", 1), ("a", 1), ("identifier", 1), ("my", 1), ("personal", 1), ("share", 1), ("ssn", 1)]"#;
 
       assert_eq!(format!("{:?}", FreqCnt::frequency_counts(tokens)), counts);
