@@ -31,6 +31,7 @@ use std::cmp::Ordering;
 use tfidf::{TfIdf, TfIdfDefault};
 
 const KEY_PATTERN_PNTS: f64 = 80 as f64;
+const KEY_REGEX_PNTS: f64 = 90 as f64;
 const KEY_WORD_PNTS: f64 = 100 as f64;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -39,8 +40,9 @@ pub enum ScoreKey {
   KeyWord = 20,
 }
 
-type KeyWordList = Vec<String>;
 type KeyPatternList = Vec<String>;
+type KeyRegexList = Vec<String>;
+type KeyWordList = Vec<String>;
 type SoundexWord = Vec<char>;
 type PatternMap = BTreeMap<String, char>;
 type ScoreCard = BTreeMap<String, Score>;
@@ -56,16 +58,12 @@ pub trait Phonetic {
   /// #Example
   ///
   /// ```rust
-  /// extern crate pbd;
-  ///
   /// use pbd::dpi::Phonetic;
-  ///
-  /// fn main() {
-  ///   struct Prcsr;
-  ///   impl Phonetic for Prcsr {}
   ///   
-  ///   assert_eq!(Prcsr::add_more_zeros(vec!['h','4','0']), vec!['h','4','0','0']);
-  /// }
+  /// struct Prcsr;
+  /// impl Phonetic for Prcsr {}
+  ///   
+  /// assert_eq!(Prcsr::add_more_zeros(vec!['h','4','0']), vec!['h','4','0','0']);
   /// ```
   fn add_more_zeros(chars: Vec<char>) -> Vec<char> {
     (0..4).map( |idx| { 
@@ -87,16 +85,12 @@ pub trait Phonetic {
   /// #Example
   ///
   /// ```rust
-  /// extern crate pbd;
-  ///
   /// use pbd::dpi::Phonetic;
   ///
-  /// fn main() {
-  ///   struct Prcsr;
-  ///   impl Phonetic for Prcsr {}
+  /// struct Prcsr;
+  /// impl Phonetic for Prcsr {}
   ///   
-  ///   assert_eq!(Prcsr::fix_length(vec!['h','4','0']).len(), 4);
-  /// }
+  /// assert_eq!(Prcsr::fix_length(vec!['h','4','0']).len(), 4);
   /// ```
   fn fix_length(mut chars: Vec<char>) -> Vec<char> {
     match chars.len() {
@@ -115,22 +109,18 @@ pub trait Phonetic {
   /// #Example
   ///
   /// ```rust
-  /// extern crate pbd;
-  ///
   /// use pbd::dpi::Phonetic;
   ///
-  /// fn main() {
-  ///   struct Prcsr;
-  ///   impl Phonetic for Prcsr {}
+  /// struct Prcsr;
+  /// impl Phonetic for Prcsr {}
   ///   
-  ///   assert_eq!(Prcsr::get_char_digit('p'),'1');
-  ///   assert_eq!(Prcsr::get_char_digit('g'),'2');
-  ///   assert_eq!(Prcsr::get_char_digit('d'),'3');
-  ///   assert_eq!(Prcsr::get_char_digit('n'),'5');
-  ///   assert_eq!(Prcsr::get_char_digit('r'),'6');
-  ///   assert_eq!(Prcsr::get_char_digit('w'),'9');
-  ///   assert_eq!(Prcsr::get_char_digit('e'),'0');
-  /// }
+  /// assert_eq!(Prcsr::get_char_digit('p'),'1');
+  /// assert_eq!(Prcsr::get_char_digit('g'),'2');
+  /// assert_eq!(Prcsr::get_char_digit('d'),'3');
+  /// assert_eq!(Prcsr::get_char_digit('n'),'5');
+  /// assert_eq!(Prcsr::get_char_digit('r'),'6');
+  /// assert_eq!(Prcsr::get_char_digit('w'),'9');
+  /// assert_eq!(Prcsr::get_char_digit('e'),'0');
   /// ```
   fn get_char_digit(c: char) -> char {
     match c {
@@ -154,16 +144,12 @@ pub trait Phonetic {
   /// #Example
   ///
   /// ```rust
-  /// extern crate pbd;
-  ///
   /// use pbd::dpi::Phonetic;
   ///
-  /// fn main() {
-  ///   struct Prcsr;
-  ///   impl Phonetic for Prcsr {}
+  /// struct Prcsr;
+  /// impl Phonetic for Prcsr {}
   ///   
-  ///   assert_eq!(Prcsr::soundex_encoding(vec!['h','e','l','l','o']),vec!['h', '4', '0', '0']);
-  /// }
+  /// assert_eq!(Prcsr::soundex_encoding(vec!['h','e','l','l','o']),vec!['h', '4', '0', '0']);
   /// ```
   fn soundex_encoding(chars: Vec<char>) -> SoundexWord {
     Self::fix_length(Self::strip_similar_chars(chars))
@@ -178,16 +164,12 @@ pub trait Phonetic {
   /// #Example
   ///
   /// ```rust
-  /// extern crate pbd;
-  ///
   /// use pbd::dpi::Phonetic;
   ///
-  /// fn main() {
-  ///   struct Prcsr;
-  ///   impl Phonetic for Prcsr {}
+  /// struct Prcsr;
+  /// impl Phonetic for Prcsr {}
   ///   
-  ///   assert_eq!(Prcsr::soundex_word("hello"), vec!['h', '4', '0', '0']);
-  /// }
+  /// assert_eq!(Prcsr::soundex_word("hello"), vec!['h', '4', '0', '0']);
   /// ```
   fn soundex_word(word: &str) -> SoundexWord {
     let mut chars: Vec<char> = Vec::new();
@@ -211,16 +193,12 @@ pub trait Phonetic {
   /// #Example
   ///
   /// ```rust
-  /// extern crate pbd;
-  ///
   /// use pbd::dpi::Phonetic;
   ///
-  /// fn main() {
-  ///   struct Prcsr;
-  ///   impl Phonetic for Prcsr {}
+  /// struct Prcsr;
+  /// impl Phonetic for Prcsr {}
   ///   
-  ///   assert!(Prcsr::sounds_like("rupert","robert"));
-  /// }
+  /// assert!(Prcsr::sounds_like("rupert","robert"));
   /// ```
   fn sounds_like(word1: &str, word2: &str) -> bool {
     Self::soundex_word(word1) == Self::soundex_word(word2)
@@ -235,16 +213,12 @@ pub trait Phonetic {
   /// #Example
   ///
   /// ```rust
-  /// extern crate pbd;
-  ///
   /// use pbd::dpi::Phonetic;
   ///
-  /// fn main() {
-  ///   struct Prcsr;
-  ///   impl Phonetic for Prcsr {}
+  /// struct Prcsr;
+  /// impl Phonetic for Prcsr {}
   ///   
-  ///   assert_eq!(Prcsr::strip_similar_chars(vec!['h', 'e', 'l', 'l', 'o']), vec!['h', '4']);
-  /// }
+  /// assert_eq!(Prcsr::strip_similar_chars(vec!['h', 'e', 'l', 'l', 'o']), vec!['h', '4']);
   /// ```
   fn strip_similar_chars(chars: Vec<char>) -> Vec<char> {
     let mut enc_chars = Vec::new();
@@ -325,19 +299,15 @@ pub trait Tokenizer {
   /// #Example
   ///
   /// ```rust
-  /// extern crate pbd;
-  ///
   /// use pbd::dpi::Tokenizer;
   ///
-  /// fn main() {
-  ///   struct Prcsr;
-  ///   impl Tokenizer for Prcsr {}
+  /// struct Prcsr;
+  /// impl Tokenizer for Prcsr {}
   ///
-  ///   assert_eq!(
-  ///     Prcsr::ngram("This is my private data", 2, "----"), 
-  ///     vec![["----", "This"], ["This", "is"], ["is", "my"], ["my", "private"], ["private", "data"], ["data", "----"]]
-  ///   );
-  /// }
+  /// assert_eq!(
+  ///   Prcsr::ngram("This is my private data", 2, "----"), 
+  ///   vec![["----", "This"], ["This", "is"], ["is", "my"], ["my", "private"], ["private", "data"], ["data", "----"]]
+  /// );
   /// ```
   fn ngram<'a>(text: &'a str, n: usize, pad: &'a str) -> Vec<Vec<&'a str>> {
     let mut tokenized_sequence = Self::tokenize(text);
@@ -393,16 +363,12 @@ pub trait Tokenizer {
   /// #Example
   ///
   /// ```rust
-  /// extern crate pbd;
-  ///
   /// use pbd::dpi::Tokenizer;
   ///
-  /// fn main() {
-  ///     struct Tknzr;
-  ///     impl Tokenizer for Tknzr {}
+  /// struct Tknzr;
+  /// impl Tokenizer for Tknzr {}
   ///     
-  ///     assert_eq!(Tknzr::tokenize("My personal data"), vec!["My","personal","data"]);
-  /// }
+  /// assert_eq!(Tknzr::tokenize("My personal data"), vec!["My","personal","data"]);
   /// ```
   fn tokenize(text: &str) -> Vec<&str> {
       text.split(Self::is_match)
@@ -419,16 +385,12 @@ pub trait Tokenizer {
   /// #Example
   ///
   /// ```rust
-  /// extern crate pbd;
-  ///
   /// use pbd::dpi::Tokenizer;
   ///
-  /// fn main() {
-  ///     struct Tknzr;
-  ///     impl Tokenizer for Tknzr {}
+  /// struct Tknzr;
+  /// impl Tokenizer for Tknzr {}
   ///     
-  ///     assert_eq!(Tknzr::is_match(' '), true);
-  /// }
+  /// assert_eq!(Tknzr::is_match(' '), true);
   /// ```
   fn is_match(c: char) -> bool {
       match c {
@@ -463,13 +425,8 @@ impl Default for Pattern {
   /// #Example
   ///
   /// ```rust
-  /// extern crate pbd;
-  ///
   /// use pbd::dpi::Pattern;
-  ///
-  /// fn main() {
-  ///     let pattern = Pattern::default();
-  /// }
+  /// let pattern = Pattern::default();
   /// ```
   fn default() -> Self {
       Pattern {
@@ -498,13 +455,8 @@ impl PatternDefinition {
   /// # Example
   /// 
   /// ```rust
-  /// extern crate pbd;
-  ///
   /// use pbd::dpi::PatternDefinition;
-  ///	
-  /// fn main() {
-  /// 	let pttrn_def = PatternDefinition::new();
-  /// }
+  ///	let pttrn_def = PatternDefinition::new();
   /// ```
   pub fn new() -> PatternDefinition {	
     let symbols: [char; 9] = ['@','C','c','V','v','#','~','S','p'];
@@ -535,15 +487,12 @@ impl PatternDefinition {
   /// # Example
   ///
   /// ```rust
-  /// extern crate pbd;
-  ///
   /// use pbd::dpi::PatternDefinition;
   ///
-  /// fn main() {
-  ///		let mut pttrn_def = PatternDefinition::new();
-  ///     let rslt = pttrn_def.analyze("Hello World");
-  ///     assert_eq!(rslt, "CvccvSCvccc");
-  /// }
+  /// let mut pttrn_def = PatternDefinition::new();
+  /// let rslt = pttrn_def.analyze("Hello World");
+  /// 
+  /// assert_eq!(rslt, "CvccvSCvccc");
   /// ```
   pub fn analyze(self, entity: &str) -> String {
     let mut pttrn = String::new();
@@ -564,18 +513,14 @@ impl PatternDefinition {
   /// # Example
   ///
   /// ```rust
-  /// extern crate pbd;
-  ///
   /// use pbd::dpi::PatternDefinition;
   ///
-  /// fn main() {
-  ///   let entities = vec!["Hello","my","name","is","John","What","is","your","name","A","name","is","a","personal","identifier","Never","share","your","name","My","ssn","is","003-67-0998"];
-  ///   let mut pttrn_def = PatternDefinition::new();
-  ///   let rslt = pttrn_def.analyze_entities(entities);
-  ///   let pttrns = vec!["Cvccv", "cc", "cvcv", "vc", "Cvcc", "Ccvc", "vc", "cvvc", "cvcv", "V", "cvcv", "vc", "v", "cvccvcvc", "vcvccvcvvc", "Cvcvc", "ccvcv", "cvvc", "cvcv", "Cc", "ccc", "vc", "###@##@####"];
+  /// let entities = vec!["Hello","my","name","is","John","What","is","your","name","A","name","is","a","personal","identifier","Never","share","your","name","My","ssn","is","003-67-0998"];
+  /// let mut pttrn_def = PatternDefinition::new();
+  /// let rslt = pttrn_def.analyze_entities(entities);
+  /// let pttrns = vec!["Cvccv", "cc", "cvcv", "vc", "Cvcc", "Ccvc", "vc", "cvvc", "cvcv", "V", "cvcv", "vc", "v", "cvccvcvc", "vcvccvcvvc", "Cvcvc", "ccvcv", "cvvc", "cvcv", "Cc", "ccc", "vc", "###@##@####"];
   ///   
-  ///   assert_eq!(rslt, pttrns);
-  /// }
+  /// assert_eq!(rslt, pttrns);
   /// ```
   pub fn analyze_entities(self, entities: Vec<&str>) -> Vec<String> {
     let pttrns: Vec<_> = entities.into_par_iter()
@@ -599,14 +544,10 @@ impl PatternDefinition {
   /// # Example
   ///
   /// ```rust
-  /// extern crate pbd;
-  ///
   /// use pbd::dpi::PatternDefinition;
   ///	
-  /// fn main() {
-  /// 	let pttrn_def = PatternDefinition::new();
-  ///     println!("Upper case vowel symbol: {:?}", pttrn_def.get(&"VowelUpper".to_string()));
-  /// }
+  /// let pttrn_def = PatternDefinition::new();
+  /// println!("Upper case vowel symbol: {:?}", pttrn_def.get(&"VowelUpper".to_string()));
   /// ```
   pub fn get(&self, key: &str) -> char {
     *self.pattern_map.get(key).unwrap()
@@ -617,18 +558,14 @@ impl PatternDefinition {
   /// # Example
   ///
   /// ```rust
-  /// extern crate pbd;
-  ///
   /// use pbd::dpi::PatternDefinition;
   ///
-  /// fn main() {
-  /// 	let pttrn_def = PatternDefinition::new();
-  /// 	println!("The pattern symbol for 'A' is {:?}", pttrn_def.symbolize_char('A'));
-  ///     // The pattern symbol for 'A' is V
-  /// }
+  /// let pttrn_def = PatternDefinition::new();
+  /// println!("The pattern symbol for 'A' is {:?}", pttrn_def.symbolize_char('A'));
+  /// // The pattern symbol for 'A' is V
   /// ```
   pub fn symbolize_char(&self, c: char) -> char {
-      // if you have to escape regex special characters: &*regex::escape(&*$c.to_string())
+    // if you have to escape regex special characters: &*regex::escape(&*$c.to_string())
     let mut symbol = self.pattern_map.get("Unknown");
       let mut found = false;
       
@@ -699,14 +636,8 @@ impl Score {
   /// #Example
   ///
   /// ```rust
-  /// extern crate pbd;
-  ///
-  /// use pbd::dpi::Score;
-  /// use pbd::dpi::ScoreKey;
-  ///
-  /// fn main() {
-  ///     let score = Score::new(ScoreKey::KeyWord,"dob".to_string(),25.0);
-  /// }
+  /// use pbd::dpi::{Score, ScoreKey};
+  /// let score = Score::new(ScoreKey::KeyWord,"dob".to_string(),25.0);
   /// ```
   pub fn new(ktype: ScoreKey, kvalue: String, pnts: f64) -> Score {
     Score {
@@ -720,10 +651,12 @@ impl Score {
 /// Represents a Data Privacy Inspector (DPI)
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct DPI {
-  /// A list of predefined words that identify private data
-  pub key_words: Option<KeyWordList>,
   /// A list of predefined patterns that identify private data
   pub key_patterns: Option<KeyPatternList>,
+  /// A list of predefined regular expressions that identify private data
+  pub key_regexs: Option<KeyRegexList>,
+  /// A list of predefined words that identify private data
+  pub key_words: Option<KeyWordList>,
   /// A list of Scores identified by keys
   pub scores: ScoreCard,
 }
@@ -736,18 +669,14 @@ impl DPI {
     /// #Example
     ///
     /// ```rust
-    /// extern crate pbd;
-    ///
     /// use pbd::dpi::DPI;
-    ///
-    /// fn main() {
-    ///     let dpi = DPI::new();
-    /// }
+    /// let dpi = DPI::new();
     /// ```
     pub fn new() -> DPI {
       let mut dpi = DPI {
-          key_words: None,
           key_patterns: None,
+          key_regexs: None,
+          key_words: None,
           scores: ScoreCard::new(),
       };
       dpi.init();
@@ -759,27 +688,27 @@ impl DPI {
     /// # Arguments
     /// 
     /// * words: Option<KeyWordList> - A vector of words that are known identifiers for private data.</br>
-    /// * patterns: Option<KeyPatternList> - A vector of Regex patterns that are known identifiers for private data.</br>
+    /// * regexs: Option<KeyRegexList> - A vector of regular expressions that are known identifiers for private data.</br>
+    /// * patterns: Option<KeyPatternList> - A vector of patterns that are known identifiers for private data.</br>
     /// 
     /// #Example
     ///
     /// ```rust
-    /// extern crate pbd;
-    ///
     /// use pbd::dpi::DPI;
+    /// use pbd::dpi::reference::Lib;
     ///
-    /// fn main() {
-    ///     let words = Some(vec!["ssn".to_string()]);
-    ///     let patterns = Some(vec!["^(?!666|000|9\\d{2})\\d{3}-(?!00)\\d{2}-(?!0{4})\\d{4}$".to_string()]);
-    ///     let dpi = DPI::with(words, patterns);
+    /// let words = Some(vec![Lib::TEXT_SSN_ABBR.to_string()]);
+    /// let regexs = Some(vec![Lib::REGEX_SSN_DASHES.to_string()]);
+    /// let patterns = Some(vec![Lib::PTTRN_SSN_DASHES.to_string()]);
+    /// let dpi = DPI::with(words, regexs, patterns);
     ///     
-    ///     println!("Using {} words and {} patterns for learning.", dpi.key_words.unwrap().len(), dpi.key_patterns.unwrap().len());
-    /// }
+    /// println!("Using {} words and {} patterns for learning.", dpi.key_words.unwrap().len(), dpi.key_patterns.unwrap().len());
     /// ```
-    pub fn with(words: Option<KeyWordList>, patterns: Option<KeyWordList>) -> DPI {
+    pub fn with(words: Option<KeyWordList>, regexs: Option<KeyWordList>, patterns: Option<KeyWordList>) -> DPI {
       let mut dpi = DPI {
-          key_words: words,
           key_patterns: patterns,
+          key_regexs: regexs,
+          key_words: words,
           scores: ScoreCard::new(),
       };
       dpi.init();
@@ -790,26 +719,52 @@ impl DPI {
     /// 
     /// # Arguments
     /// 
-    /// * patterns: KeyPatternList - A vector of Regex patterns that are known identifiers for private data.</br>
+    /// * patterns: KeyPatternList - A vector of patterns that are known identifiers for private data.</br>
     /// 
     /// #Example
     ///
     /// ```rust
-    /// extern crate pbd;
-    ///
     /// use pbd::dpi::DPI;
+    /// use pbd::dpi::reference::Lib;
     ///
-    /// fn main() {
-    ///     let patterns = vec!["^(?!666|000|9\\d{2})\\d{3}-(?!00)\\d{2}-(?!0{4})\\d{4}$".to_string()];
-    ///     let dpi = DPI::with_key_patterns(patterns);
+    /// let patterns = vec![Lib::PTTRN_SSN_DASHES.to_string()];
+    /// let dpi = DPI::with_key_patterns(patterns);
     ///     
-    ///     println!("Using {} patterns for learning.", dpi.key_patterns.unwrap().len());
-    /// }
+    /// println!("Using {} patterns for learning.", dpi.key_patterns.unwrap().len());
     /// ```
-    pub fn with_key_patterns(patterns: KeyWordList) -> DPI {
+    pub fn with_key_patterns(patterns: KeyPatternList) -> DPI {
       let mut dpi = DPI {
-          key_words: None,
           key_patterns: Some(patterns),
+          key_regexs: None,
+          key_words: None,
+          scores: ScoreCard::new(),
+      };
+      dpi.init();
+      dpi
+    }
+
+    /// Constructs a DPI object using a predefined set of key regular expressions to learn from
+    /// 
+    /// # Arguments
+    /// 
+    /// * regexs: KeyRegexList - A vector of Regex patterns that are known identifiers for private data.</br>
+    /// 
+    /// #Example
+    ///
+    /// ```rust
+    /// use pbd::dpi::DPI;
+    /// use pbd::dpi::reference::Lib;
+    ///
+    /// let regexs = vec![Lib::REGEX_SSN_DASHES.to_string()];
+    /// let dpi = DPI::with_key_regexs(regexs);
+    ///     
+    /// println!("Using {} regexs for learning.", dpi.key_regexs.unwrap().len());
+    /// ```
+    pub fn with_key_regexs(regexs: KeyRegexList) -> DPI {
+      let mut dpi = DPI {
+          key_patterns: None,
+          key_regexs: Some(regexs),
+          key_words: None,
           scores: ScoreCard::new(),
       };
       dpi.init();
@@ -828,30 +783,35 @@ impl DPI {
     /// extern crate pbd;
     ///
     /// use pbd::dpi::DPI;
+    /// use pbd::dpi::reference::Lib;
     ///
-    /// fn main() {
-    ///     let words = vec!["ssn".to_string()];
-    ///     let dpi = DPI::with_key_words(words);
+    /// let words = vec![Lib::TEXT_SSN_ABBR.to_string()];
+    /// let dpi = DPI::with_key_words(words);
     ///     
-    ///     println!("Using {} words for learning.", dpi.key_words.unwrap().len());
-    /// }
+    /// println!("Using {} words for learning.", dpi.key_words.unwrap().len());
     /// ```
     pub fn with_key_words(words: KeyWordList) -> DPI {
       let mut dpi = DPI {
-          key_words: Some(words),
           key_patterns: None,
+          key_regexs: None,
+          key_words: Some(words),
           scores: ScoreCard::new(),
       };
       dpi.init();
       dpi
     }
 
+    // Private funciton that initiates the DPI attributes 
+    // Call this function from within the constructor functions
     fn init(&mut self) {
-      self.init_keys();
+      self.init_words();
       self.init_patterns();
+      self.init_regexs();
     }
 
-    fn init_keys(&mut self) {
+    // Private functon that initiates the DPI key_words attribute 
+    // Call this function from within the init function
+    fn init_words(&mut self) {
       match &self.key_words.clone() {
         Some(keys) => {
           for key in keys.iter() {
@@ -862,11 +822,26 @@ impl DPI {
       }
     }
 
+    // Private function that initiates the DPI key_patterns attribute 
+    // Call this function from within the init function
     fn init_patterns(&mut self) {
       match &self.key_patterns.clone() {
         Some(pttrns) => {
           for pttrn in pttrns.iter() {
             &self.add_to_score_points(pttrn.to_string(), KEY_PATTERN_PNTS);
+          }
+        },
+        None => {},
+      }
+    }
+
+    // Private function that initiates the DPI key_regexs attribute 
+    // Call this function from within the init function
+    fn init_regexs(&mut self) {
+      match &self.key_regexs.clone() {
+        Some(regexs) => {
+          for regex in regexs.iter() {
+            &self.add_to_score_points(regex.to_string(), KEY_REGEX_PNTS);
           }
         },
         None => {},
@@ -882,16 +857,12 @@ impl DPI {
     /// #Example
     ///
     /// ```rust
-    /// extern crate pbd;
-    ///
     /// use pbd::dpi::DPI;
     ///
-    /// fn main() {
-    ///     let serialized = r#"{"key_words":["ssn"],"key_patterns":["^(?!666|000|9\\d{2})\\d{3}-(?!00)\\d{2}-(?!0{4})\\d{4}$"],"scores":{}}"#;
-    ///     let dpi = DPI::from_serialized(&serialized);
+    /// let serialized = r#"{"key_words":["ssn"],"key_patterns":["^(?!666|000|9\\d{2})\\d{3}-(?!00)\\d{2}-(?!0{4})\\d{4}$"],"scores":{}}"#;
+    /// let dpi = DPI::from_serialized(&serialized);
     ///     
-    ///     println!("{:?}", dpi);
-    /// }
+    /// println!("{:?}", dpi);
     /// ```
     pub fn from_serialized(serialized: &str) -> DPI {
         serde_json::from_str(&serialized).unwrap()
@@ -906,18 +877,15 @@ impl DPI {
     /// #Example
     ///
     /// ```rust
-    /// extern crate pbd;
+    /// use pbd::dpi::DPI;
     ///
-    /// use pbd::dpi::{DPI};
-    ///
-    /// fn main() {
-    ///     let mut dpi = DPI::with(
-    ///         Some(vec!["ssn".to_string()]),
-    ///         Some(vec!["^(?!666|000|9\\d{2})\\d{3}-(?!00)\\d{2}-(?!0{4})\\d{4}$".to_string()])
-    ///       );
-    ///     
-    ///     println!("{:?}", dpi.serialize());
-    /// }
+    /// let mut dpi = DPI::with(
+    ///     Some(vec!["ssn".to_string()]),
+    ///     Some(vec!["^(?!b(d)1+-(d)1+-(d)1+b)(?!123-45-6789|219-09-9999|078-05-1120)(?!666|000|9d{2})d{3}-(?!00)d{2}-(?!0{4})d{4}$".to_string()]),
+    ///     Some(vec!["###p##p####".to_string()])
+    ///   );
+    /// 
+    /// println!("{:?}", dpi.serialize());
     /// ```
     pub fn serialize(&mut self) -> String {
 		  serde_json::to_string(&self).unwrap()
@@ -932,20 +900,16 @@ impl DPI {
     /// #Example
     ///
     /// ```rust
-    /// extern crate pbd;
-    ///
     /// use pbd::dpi::{DPI, Score, ScoreKey};
     ///
-    /// fn main() {
-    ///   let score = Score::new(ScoreKey::KeyWord, "ssn".to_string(), 25.0);
-    ///   let mut dpi = DPI::new();
-    /// 
-    ///   dpi.upsert_score(score);
-    /// 
-    ///   let returned_score = dpi.get_score("ssn".to_string());
-    ///     
-    ///   assert_eq!(returned_score.points, 25.0);
-    /// }
+    /// let score = Score::new(ScoreKey::KeyWord, "ssn".to_string(), 25.0);
+    /// let mut dpi = DPI::new();
+    ///
+    /// dpi.upsert_score(score);
+    ///
+    /// let returned_score = dpi.get_score("ssn".to_string());
+    ///   
+    /// assert_eq!(returned_score.points, 25.0);
     /// ```
     pub fn get_score(&mut self, key: String) -> Score {
       match self.scores.get_mut(&key) {
@@ -966,21 +930,17 @@ impl DPI {
     /// #Example
     ///
     /// ```rust
-    /// extern crate pbd;
-    ///
     /// use pbd::dpi::{DPI, Score, ScoreKey};
     ///
-    /// fn main() {
-    ///   let score = Score::new(ScoreKey::KeyWord, "ssn".to_string(), 25.0);
-    ///   let mut dpi = DPI::new();
-    /// 
-    ///   dpi.upsert_score(score);
-    ///   dpi.add_to_score_points("ssn".to_string(), 5.5);
-    /// 
-    ///   let returned_score = dpi.get_score("ssn".to_string());
-    ///     
-    ///   assert_eq!(returned_score.points, 30.5);
-    /// }
+    /// let score = Score::new(ScoreKey::KeyWord, "ssn".to_string(), 25.0);
+    /// let mut dpi = DPI::new();
+    ///
+    /// dpi.upsert_score(score);
+    /// dpi.add_to_score_points("ssn".to_string(), 5.5);
+    ///
+    /// let returned_score = dpi.get_score("ssn".to_string());
+    ///   
+    /// assert_eq!(returned_score.points, 30.5);
     /// ```
     pub fn add_to_score_points(&mut self, key: String, pnts: f64) {
       let mut score = self.get_score(key);
@@ -988,6 +948,62 @@ impl DPI {
       &self.upsert_score(score);
     }
 
+    /// Trains the DPI object using its key regular expressions against a the list of words provided as the sample content
+    /// 
+    /// # Arguments
+    /// 
+    /// * tokens: Vec<&str> - The list of words that is sample content.</br>
+    /// 
+    /// #Example
+    ///
+    /// ```rust
+    /// use pbd::dpi::DPI;
+    /// use pbd::dpi::reference::Lib;
+    ///
+    /// let tokens = vec!["My","ssn","is","003-76-0098"];
+    /// let regexs = vec![Lib::REGEX_SSN_DASHES.to_string()];
+    /// let mut dpi = DPI::with_key_regexs(regexs);
+    /// 
+    /// //dpi.train_for_key_regexs(tokens);
+    ///   
+    /// //assert_eq!(dpi.get_score(Lib::REGEX_SSN_DASHES.to_string()).points, 200.0);
+    /// ```
+    pub fn train_for_key_regexs(&mut self, tokens: Vec<&str>) {
+      let kpttrns = self.key_patterns.clone();
+      
+      let list: Vec<&&str> = tokens.par_iter()
+        .filter(|t| {
+          kpttrns.as_ref().unwrap().iter().any(|p| {
+            let re = Regex::new(p).unwrap();
+            re.is_match(t)
+          })
+        })
+        .collect();
+
+      list.iter()
+        .for_each(|t| {
+          self.add_to_score_points(t.to_string(), KEY_PATTERN_PNTS);
+        });
+    } 
+/*
+    pub fn train_for_key_pattern_definitions(&mut self, tokens: Vec<&str>) {
+      let kpttrns = self.key_patterns.clone();
+      
+      let list: Vec<&&str> = tokens.par_iter()
+        .filter(|t| {
+          kpttrns.as_ref().unwrap().iter().any(|w| {
+            let pttrn_def = PatternDefinition::new();
+            pttrn_def.analyze(w).to_string() == t.to_string()
+          })
+        })
+        .collect();
+
+      list.iter()
+        .for_each(|t| {
+          self.add_to_score_points(t.to_string(), KEY_PATTERN_PNTS);
+        });
+    }    
+*/
     /// Trains the DPI object using its key words against a the list of words provided as the sample content
     /// 
     /// # Arguments
@@ -997,19 +1013,15 @@ impl DPI {
     /// #Example
     ///
     /// ```rust
-    /// extern crate pbd;
-    ///
     /// use pbd::dpi::{DPI};
     ///
-    /// fn main() {
-    ///   let tokens = vec!["My","ssn","is","003-76-0098"];
-    ///   let words = vec!["ssn".to_string()];
-    ///   let mut dpi = DPI::with_key_words(words);
+    /// let tokens = vec!["My","ssn","is","003-76-0098"];
+    /// let words = vec!["ssn".to_string()];
+    /// let mut dpi = DPI::with_key_words(words);
     /// 
-    ///   dpi.train_for_key_words(tokens);
+    /// dpi.train_for_key_words(tokens);
     ///     
-    ///   assert_eq!(dpi.get_score("ssn".to_string()).points, 200.0);
-    /// }
+    /// assert_eq!(dpi.get_score("ssn".to_string()).points, 200.0);
     /// ```
     pub fn train_for_key_words(&mut self, tokens: Vec<&str>) {
       let kwords = self.key_words.clone();
@@ -1035,19 +1047,15 @@ impl DPI {
     /// #Example
     ///
     /// ```rust
-    /// extern crate pbd;
-    ///
     /// use pbd::dpi::{DPI};
     ///
-    /// fn main() {
-    ///   let text = "My ssn is 003-76-0098".to_string();
-    ///   let words = vec!["ssn".to_string()];
-    ///   let mut dpi = DPI::with_key_words(words);
+    /// let text = "My ssn is 003-76-0098".to_string();
+    /// let words = vec!["ssn".to_string()];
+    /// let mut dpi = DPI::with_key_words(words);
     /// 
-    ///   dpi.train_using_keys(text);
+    /// dpi.train_using_keys(text);
     ///     
-    ///   assert_eq!(dpi.get_score("ssn".to_string()).points, 200.0);
-    /// }
+    /// assert_eq!(dpi.get_score("ssn".to_string()).points, 200.0);
     /// ```
     pub fn train_using_keys(&mut self, text: String) {
       let tokens = Self::tokenize(&text);
@@ -1063,17 +1071,13 @@ impl DPI {
     /// #Example
     ///
     /// ```rust
-    /// extern crate pbd;
-    ///
     /// use pbd::dpi::{DPI, Score, ScoreKey};
     ///
-    /// fn main() {
-    ///   let score = Score::new(ScoreKey::KeyWord, "ssn".to_string(), 25.0);
-    ///   let mut dpi = DPI::new();
-    ///   dpi.upsert_score(score);
+    /// let score = Score::new(ScoreKey::KeyWord, "ssn".to_string(), 25.0);
+    /// let mut dpi = DPI::new();
+    /// dpi.upsert_score(score);
     ///     
-    ///   assert_eq!(dpi.get_score("ssn".to_string()).points, 25.0);
-    /// }
+    /// assert_eq!(dpi.get_score("ssn".to_string()).points, 25.0);
     /// ```
     pub fn upsert_score(&mut self, score: Score) {
       self.scores.insert(score.key_value.clone(), score);
@@ -1081,8 +1085,7 @@ impl DPI {
 }
 
 pub mod error;
-//pub mod extractor;
-//pub mod middleware;
+pub mod reference;
 
 // Unit Tests
 #[cfg(test)]
@@ -1092,8 +1095,9 @@ mod tests {
     fn get_dpi() -> Vec<DPI>{
         let mut v = Vec::new();
         v.push( DPI {
+                    key_patterns: Some(vec!["###p##p####".to_string()]),
+                    key_regexs: Some(vec![r"^(?!b(d)1+-(d)1+-(d)1+b)(?!123-45-6789|219-09-9999|078-05-1120)(?!666|000|9d{2})d{3}-(?!00)d{2}-(?!0{4})d{4}$".to_string()]),
                     key_words: Some(vec!["ssn".to_string()]),
-                    key_patterns: Some(vec!["^(?!666|000|9\\d{2})\\d{3}-(?!00)\\d{2}-(?!0{4})\\d{4}$".to_string()]),
                     scores: ScoreCard::new(),
                 });
         v
@@ -1153,12 +1157,23 @@ mod tests {
 
     #[test]
     fn test_dpi_serialize_ok() {
-        let serialized = r#"{"key_words":["ssn"],"key_patterns":["^(?!666|000|9\\d{2})\\d{3}-(?!00)\\d{2}-(?!0{4})\\d{4}$"],"scores":{}}"#;
+        let serialized = "{\"key_patterns\":[\"###p##p####\"],\"key_regexs\":[\"^(?!b(d)1+-(d)1+-(d)1+b)(?!123-45-6789|219-09-9999|078-05-1120)(?!666|000|9d{2})d{3}-(?!00)d{2}-(?!0{4})d{4}$\"],\"key_words\":[\"ssn\"],\"scores\":{}}";
         let dpi = &mut get_dpi()[0];
 
         assert_eq!(dpi.serialize(), serialized);
     }
-
+/*
+    #[test]
+    fn test_dpi_train_for_key_regexs() {
+      let tokens = vec!["My","ssn","is","003-76-0098"];
+      let patterns = vec![r"^(?!b(d)1+-(d)1+-(d)1+b)(?!123-45-6789|219-09-9999|078-05-1120)(?!666|000|9d{2})d{3}-(?!00)d{2}-(?!0{4})d{4}$".to_string()];
+      let mut dpi = DPI::with_key_patterns(patterns);
+    
+      dpi.train_for_key_regexs(tokens);
+        
+      assert_eq!(dpi.get_score("ssn".to_string()).points, 200.0);
+    }
+*/
     #[test]
     fn test_dpi_train_for_key_words() {
       let tokens = vec!["My","ssn","is","003-76-0098"];
@@ -1183,8 +1198,9 @@ mod tests {
     #[test]
     fn test_dpi_with() {
       let words = Some(vec!["ssn".to_string()]);
-      let patterns = Some(vec!["^(?!666|000|9\\d{2})\\d{3}-(?!00)\\d{2}-(?!0{4})\\d{4}$".to_string()]);
-      let dpi = DPI::with(words, patterns);
+      let patterns = Some(vec!["###p##p####".to_string()]);
+      let regexs = Some(vec!["^(?!666|000|9\\d{2})\\d{3}-(?!00)\\d{2}-(?!0{4})\\d{4}$".to_string()]);
+      let dpi = DPI::with(words, regexs, patterns);
 
       assert_eq!(dpi.key_words.unwrap().len(),1);
     }
