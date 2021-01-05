@@ -34,6 +34,13 @@ extern crate serde_json;
 extern crate derive_more;
 extern crate json;
 
+fn add(u: usize, i: i8) -> usize {
+    if i.is_negative() {
+        u - i.wrapping_abs() as u8 as usize
+    } else {
+        u + i as usize
+    }
+}
 
 // Modules
 #[cfg(feature = "dua")]
@@ -48,4 +55,12 @@ pub mod dpi;
 // Unit Tests
 #[cfg(test)]
 mod tests {
+    use super::*;
+
+    #[test]
+    fn test_add() {
+        let x: usize = 2;
+        let y: i8 = -1; 
+        assert_eq!(add(x,y), 1);
+    }
 }

@@ -23,7 +23,8 @@
 extern crate eddie;
 extern crate regex;
 
-use std::collections::BTreeMap;
+use super::*;
+use std::collections::{BTreeMap, HashMap};
 use regex::Regex;
 use rayon::prelude::*;
 use multimap::MultiMap;
@@ -246,11 +247,11 @@ pub trait Phonetic {
 pub trait Tfidf {
 
   // determine how important a term is in a document compared to other documents
-  fn tfidf(docs: Vec<Vec<(&str, usize)>>) -> f64{
-    TfIdfDefault::tfidf("c", &docs[0], docs.iter())
+  fn tfidf(term: &str, doc_idx: usize, docs: Vec<Vec<(&str, usize)>>) -> f64{
+    TfIdfDefault::tfidf(term, &docs[doc_idx], docs.iter())
   }
 
-  fn frequency_counts(tokens: Vec<&str>) -> Vec<(String, usize)>{
+  fn frequency_counts_as_vec(tokens: Vec<&str>) -> Vec<(String, usize)>{
     let mut counts: Vec<(String, usize)> = Vec::new();
 
     // MapReduce
@@ -283,6 +284,18 @@ pub trait Tfidf {
     }
 
     counts
+  }
+
+  fn frequency_counts(tokens: Vec<&str>) -> BTreeMap<String, usize>{
+    let mut counts: Vec<(String, usize)> = Self::frequency_counts_as_vec(tokens);
+
+    // Convert to BTreeMap
+    let mut list = BTreeMap::new();
+    for count in counts.iter() {
+      list.insert(count.0.clone(), count.1);
+    }
+
+    list
   }
 }
 
@@ -395,7 +408,7 @@ pub trait Tokenizer {
   fn is_match(c: char) -> bool {
       match c {
           ' ' | ',' | '.' | '!' | '?' | ';' | '\'' |  '"'
-          | ':' | '\t' | '\n' | '(' | ')' | '{' | '}' => true,
+          | ':' | '\t' | '\n' | '\r' | '(' | ')' | '{' | '}' => true,
           _ => false
       }
   }
@@ -967,6 +980,87 @@ impl DPI {
       &self.upsert_score(score);
     }
 
+    /// Determines how many times a pattern appears in a list of tokens
+    /// 
+    /// # Arguments
+    /// 
+    /// * pattern: &str - The pattern to search for in the list of tokens.</br>
+    /// * tokens: Vec<&str> - The list of tokens to search through for the pattern.</br>
+    /// 
+    /// #Example
+    ///
+    /// ```rust
+    /// use pbd::dpi::DPI;
+    /// use pbd::dpi::reference::Lib;
+    ///
+    /// let tokens = vec!["My","ssn","is","003-76-0098","Let","me","know","if","you","need","my","son's","ssn"];
+    ///     
+    /// assert_eq!(DPI::contains_key_pattern(Lib::PTTRN_SSN_DASHES.as_str().unwrap(), tokens), 1);
+    /// ```
+    pub fn contains_key_pattern(pattern: &str, tokens: Vec<&str>) -> usize {
+      tokens.par_iter()
+      .filter(|t| {
+        let pttrn_def = PatternDefinition::new();
+        pttrn_def.analyze(t) == pattern
+      })
+      .collect::<Vec<&&str>>()
+      .len()
+    }
+
+    /// Determines how many times a regular expression appears in a list of tokens
+    /// 
+    /// # Arguments
+    /// 
+    /// * regex: &str - The regular expression to search for in the list of tokens.</br>
+    /// * tokens: Vec<&str> - The list of tokens to search through for the regular expression.</br>
+    /// 
+    /// #Example
+    ///
+    /// ```rust
+    /// use pbd::dpi::DPI;
+    /// use pbd::dpi::reference::Lib;
+    ///
+    /// let tokens = vec!["My","ssn","is","003-76-0098","Let","me","know","if","you","need","my","son's","ssn"];
+    ///     
+    /// assert_eq!(DPI::contains_key_regex(Lib::REGEX_SSN_DASHES.as_str().unwrap(), tokens), 1);
+    /// ```
+    pub fn contains_key_regex(regex: &str, tokens: Vec<&str>) -> usize {
+      let re = Regex::new(regex).unwrap();
+
+      tokens.par_iter()
+      .filter(|t| {
+        re.is_match(t)
+      })
+      .collect::<Vec<&&str>>()
+      .len()
+    }
+
+    /// Determines how many times a word appears in a list of tokens
+    /// 
+    /// # Arguments
+    /// 
+    /// * word: &str - The word to search for in the list of tokens.</br>
+    /// * tokens: Vec<&str> - The list of tokens to search through for the word.</br>
+    /// 
+    /// #Example
+    ///
+    /// ```rust
+    /// use pbd::dpi::DPI;
+    /// use pbd::dpi::reference::Lib;
+    ///
+    /// let tokens = vec!["My","ssn","is","003-76-0098","Let","me","know","if","you","need","my","son's","ssn"];
+    ///     
+    /// assert_eq!(DPI::contains_key_word(Lib::TEXT_SSN_ABBR.as_str().unwrap(), tokens), 2);
+    /// ```
+    pub fn contains_key_word(word: &str, tokens: Vec<&str>) -> usize {
+      tokens.par_iter()
+      .filter(|t| {
+        t.to_lowercase() == word.to_lowercase()
+      })
+      .collect::<Vec<&&str>>()
+      .len()
+    }
+
     /// Trains the DPI object using its key patterns against a the list of words provided as the sample content
     /// 
     /// # Arguments
@@ -1072,85 +1166,37 @@ impl DPI {
        });  
     }
 
-    /// Determines how many times a pattern appears in a list of tokens
-    /// 
-    /// # Arguments
-    /// 
-    /// * pattern: &str - The pattern to search for in the list of tokens.</br>
-    /// * tokens: Vec<&str> - The list of tokens to search through for the pattern.</br>
-    /// 
-    /// #Example
-    ///
-    /// ```rust
-    /// use pbd::dpi::DPI;
-    /// use pbd::dpi::reference::Lib;
-    ///
-    /// let tokens = vec!["My","ssn","is","003-76-0098","Let","me","know","if","you","need","my","son's","ssn"];
-    ///     
-    /// assert_eq!(DPI::contains_key_pattern(Lib::PTTRN_SSN_DASHES.as_str().unwrap(), tokens), 1);
-    /// ```
-    pub fn contains_key_pattern(pattern: &str, tokens: Vec<&str>) -> usize {
-      tokens.par_iter()
-      .filter(|t| {
-        let pttrn_def = PatternDefinition::new();
-        pttrn_def.analyze(t) == pattern
-      })
-      .collect::<Vec<&&str>>()
-      .len()
-    }
+    fn suggest_for_key_words(word: &str, tokens: Vec<&str>) -> HashMap<String,i8> {
+      let mut suggestions = HashMap::new();
+      struct Tknzr {}
+      impl Tfidf for Tknzr {}
+      let total_count = tokens.len();
+      let freq_counts = Tknzr::frequency_counts(tokens.clone());
 
-    /// Determines how many times a regular expression appears in a list of tokens
-    /// 
-    /// # Arguments
-    /// 
-    /// * regex: &str - The regular expression to search for in the list of tokens.</br>
-    /// * tokens: Vec<&str> - The list of tokens to search through for the regular expression.</br>
-    /// 
-    /// #Example
-    ///
-    /// ```rust
-    /// use pbd::dpi::DPI;
-    /// use pbd::dpi::reference::Lib;
-    ///
-    /// let tokens = vec!["My","ssn","is","003-76-0098","Let","me","know","if","you","need","my","son's","ssn"];
-    ///     
-    /// assert_eq!(DPI::contains_key_regex(Lib::REGEX_SSN_DASHES.as_str().unwrap(), tokens), 1);
-    /// ```
-    pub fn contains_key_regex(regex: &str, tokens: Vec<&str>) -> usize {
-      let re = Regex::new(regex).unwrap();
+      for (idx, tkn) in tokens.iter().enumerate() {
+        match tkn.to_lowercase() == word.to_lowercase() {
+          true => {
+            let idx_scope: Vec<i8> = vec![-2, -1, 1, 2];
 
-      tokens.par_iter()
-      .filter(|t| {
-        re.is_match(t)
-      })
-      .collect::<Vec<&&str>>()
-      .len()
-    }
+            for i in &idx_scope {              
+              let cnt = freq_counts.get(&tokens[add(idx, *i)].to_string()).unwrap();
 
-    /// Determines how many times a word appears in a list of tokens
-    /// 
-    /// # Arguments
-    /// 
-    /// * word: &str - The word to search for in the list of tokens.</br>
-    /// * tokens: Vec<&str> - The list of tokens to search through for the word.</br>
-    /// 
-    /// #Example
-    ///
-    /// ```rust
-    /// use pbd::dpi::DPI;
-    /// use pbd::dpi::reference::Lib;
-    ///
-    /// let tokens = vec!["My","ssn","is","003-76-0098","Let","me","know","if","you","need","my","son's","ssn"];
-    ///     
-    /// assert_eq!(DPI::contains_key_word(Lib::TEXT_SSN_ABBR.as_str().unwrap(), tokens), 2);
-    /// ```
-    pub fn contains_key_word(word: &str, tokens: Vec<&str>) -> usize {
-      tokens.par_iter()
-      .filter(|t| {
-        t.to_lowercase() == word.to_lowercase()
-      })
-      .collect::<Vec<&&str>>()
-      .len()
+              if (cnt / total_count ) <= 0.15 as usize {
+                suggestions.insert(tokens[add(idx, *i)].to_string(), -2);
+              }
+            } 
+          },
+          false => {},
+        }
+      }
+
+      /* 
+      ** Suggested Token Frequency
+      ** If infrequent = important
+      ** If frequent and spaced out = important
+      ** else = not important
+      */
+      suggestions
     }
 
     /// Trains the DPI object using its key words against a String as the sample content
@@ -1253,6 +1299,7 @@ pub mod reference;
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::fs;
     use crate::dpi::reference::Lib;
 
     fn get_dpi() -> Vec<DPI>{
@@ -1343,6 +1390,67 @@ mod tests {
         let dpi = &mut get_dpi()[0];
 
         assert_eq!(dpi.serialize(), serialized);
+    }
+
+    #[test]
+    fn test_suggested_key_words() {
+      struct Tknzr;
+      impl Tokenizer for Tknzr {}
+
+      let word = "account";
+      let files = vec!["acme_payment_notification.txt","renewal_notification.txt","statement_ready_notification.txt"];      
+      let mut rslts: BTreeMap<String, i8> = BTreeMap::new();
+
+      for file in files.iter() {
+        let content = fs::read_to_string(format!("./tests/dpi/{}",file)).expect("File could not be read.");
+        let hash_map = DPI::suggest_for_key_words(word, Tknzr::tokenize(&content));
+        
+        for (key, val) in hash_map.iter() {
+          rslts.insert(key.to_string(), *val);
+        }
+      }
+      
+      for (k,v) in rslts.iter() {
+        println!("Key: {} val: {}",k,v);
+      }
+
+      assert!(false);
+      /*
+      struct Tknzr;
+      impl Tokenizer for Tknzr {}
+      struct TfIdfzr;
+      impl Tfidf for TfIdfzr{}
+
+      let files = vec!["acme_payment_notification.txt","renewal_notification.txt","statement_ready_notification.txt"];
+      let mut docs: Vec<Vec<(&str, usize)>> = Vec::new();
+      let mut token_list: Vec<Vec<&str>> = Vec::new();
+      let mut rslts: BTreeMap<String, i8> = BTreeMap::new();
+
+      for file in files.iter() {
+        let content = fs::read_to_string(format!("./tests/dpi/{}",file)).expect("File could not be read.");
+        let tkns = Tknzr::tokenize(&content);
+        token_list.push(tkns.clone());
+        let feq_cnts = TfIdfzr::frequency_counts_as_vec(tkns);
+        let freq = feq_cnts.iter().map(|x| (x.0.as_str(),x.1) ).collect();
+        docs.push(freq);
+      }
+
+      for (t, tokens) in token_list.iter().enumerate() {
+        let hash_map = DPI::suggest_for_key_words("account", tokens.to_vec());
+        
+        for (key, val) in hash_map.iter() {
+          let n: f64 = TfIdfzr::tfidf(key, t, docs.clone());
+          println!("TfIdf => key: {} n: {}",key,n);
+          rslts.insert(key.to_string(), *val);
+        }
+      }
+
+      for (k,v) in rslts.iter() {
+        println!("Key: {} val: {}",k,v);
+      }
+
+      assert!(false);
+      */
     }
 
     #[test]
@@ -1557,7 +1665,7 @@ mod tests {
       struct FreqCnt {}
       impl Tfidf for FreqCnt {}
       let tokens = get_tokens();
-      let counts = r#"[("is", 4), ("name", 4), ("your", 2), ("003-67-0998", 1), ("A", 1), ("Hello", 1), ("John", 1), ("My", 1), ("Never", 1), ("What", 1), ("a", 1), ("identifier", 1), ("my", 1), ("personal", 1), ("share", 1), ("ssn", 1)]"#;
+      let counts = r#"{"003-67-0998": 1, "A": 1, "Hello": 1, "John": 1, "My": 1, "Never": 1, "What": 1, "a": 1, "identifier": 1, "is": 4, "my": 1, "name": 4, "personal": 1, "share": 1, "ssn": 1, "your": 2}"#;
 
       assert_eq!(format!("{:?}", FreqCnt::frequency_counts(tokens)), counts);
     }
