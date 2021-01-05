@@ -48,11 +48,13 @@ lib_codes! {
     /// 15001 Social Security Number abbreviated
     (15001, TEXT_SSN_ABBR, r"SSN");
     /// 25000 Social Security Number with dashes
-    (25000, REGEX_SSN_DASHES, r"^(?!b(d)1+-(d)1+-(d)1+b)(?!123-45-6789|219-09-9999|078-05-1120)(?!666|000|9d{2})d{3}-(?!00)d{2}-(?!0{4})d{4}$");
+    //(25000, REGEX_SSN_DASHES, r"^(?!b(d)1+-(d)1+-(d)1+b)(?!123-45-6789|219-09-9999|078-05-1120)(?!666|000|9d{2})d{3}-(?!00)d{2}-(?!0{4})d{4}$");
+    (25000, REGEX_SSN_DASHES, r"^\d{3}-\d{2}-\d{4}$");
     /// 25000 Social Security Number without dashes
-    (25001, REGEX_SSN_NODASHES, r"^(?!b(d)1+b)(?!123456789|219099999|078051120)(?!666|000|9d{2})d{3}(?!00)d{2}(?!0{4})d{4}$");
+    //(25001, REGEX_SSN_NODASHES, r"^(?!b(d)1+b)(?!123456789|219099999|078051120)(?!666|000|9d{2})d{3}(?!00)d{2}(?!0{4})d{4}$");
+    (25001, REGEX_SSN_NODASHES, r"^\d{9}$");
     /// 35000 Social Security Number with dashes
-    (35000, PTTRN_SSN_DASHES, r"###p##p####");
+    (35000, PTTRN_SSN_DASHES, r"###@##@####");
     /// 35001 Social Security Number without dahses
     (35001, PTTRN_SSN_NODASHES, r"#########");
 }
