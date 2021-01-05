@@ -93,6 +93,23 @@ impl Error for InvalidCode {}
 /// 35xxx = Pattern Definitions for NPPI
 /// 
 impl Lib{
+    /// Returns a &str representation of the `Code`
+    ///
+    /// The return value representation of the code. 
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use pbd::dpi::reference::Lib;
+    ///     
+    /// let code = Lib::TEXT_SSN_ABBR;
+    /// assert_eq!(code.as_str(), Some("SSN"));
+    /// ```
+    #[inline]
+    pub fn as_str(&self) -> Option<&str> {
+        get_value(self.0.get())
+    }
+
     /// Returns the `u16` corresponding to this `Code`.
     ///
     /// # Note
@@ -277,6 +294,12 @@ impl TryFrom<u16> for Lib {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_as_str() {
+        let code = Lib::TEXT_SSN_ABBR;
+        assert_eq!(code.as_str(), Some("SSN"));
+    }
 
     #[test]
     fn test_as_u16() {

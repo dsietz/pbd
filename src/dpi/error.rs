@@ -18,6 +18,4 @@ impl ResponseError for Error{}
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
 }
