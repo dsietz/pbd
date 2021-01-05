@@ -251,7 +251,7 @@ pub trait Tfidf {
     TfIdfDefault::tfidf(term, &docs[doc_idx], docs.iter())
   }
 
-  fn frequency_counts_as_vec(tokens: Vec<&str>) -> Vec<(String, usize)>{
+  fn frequency_counts_as_vec(tokens: Vec<&str>) -> Vec<(&str, usize)>{
     let mut counts: Vec<(String, usize)> = Vec::new();
 
     // MapReduce
@@ -283,11 +283,11 @@ pub trait Tfidf {
         counts.push((word, count));
     }
 
-    counts
+    counts.iter().map(|x| (x.0.as_str(),x.1)).collect()
   }
 
-  fn frequency_counts(tokens: Vec<&str>) -> BTreeMap<String, usize>{
-    let mut counts: Vec<(String, usize)> = Self::frequency_counts_as_vec(tokens);
+  fn frequency_counts(tokens: Vec<&str>) -> BTreeMap<&str, usize>{
+    let mut counts: Vec<(&str, usize)> = Self::frequency_counts_as_vec(tokens);
 
     // Convert to BTreeMap
     let mut list = BTreeMap::new();
@@ -1179,7 +1179,7 @@ impl DPI {
             let idx_scope: Vec<i8> = vec![-2, -1, 1, 2];
 
             for i in &idx_scope {              
-              let cnt = freq_counts.get(&tokens[add(idx, *i)].to_string()).unwrap();
+              let cnt = freq_counts.get(&tokens[add(idx, *i)]).unwrap();
 
               if (cnt / total_count ) <= 0.15 as usize {
                 suggestions.insert(tokens[add(idx, *i)].to_string(), -2);
@@ -1396,14 +1396,21 @@ mod tests {
     fn test_suggested_key_words() {
       struct Tknzr;
       impl Tokenizer for Tknzr {}
+      
+      struct TfIdfzr;
+      impl Tfidf for TfIdfzr{}
 
       let word = "account";
       let files = vec!["acme_payment_notification.txt","renewal_notification.txt","statement_ready_notification.txt"];      
       let mut rslts: BTreeMap<String, i8> = BTreeMap::new();
+      //let mut docs: Vec<Vec<(&str, usize)>> = Vec::new();
 
       for file in files.iter() {
         let content = fs::read_to_string(format!("./tests/dpi/{}",file)).expect("File could not be read.");
-        let hash_map = DPI::suggest_for_key_words(word, Tknzr::tokenize(&content));
+        let tokens = Tknzr::tokenize(&content);
+        //let feq_cnts = TfIdfzr::frequency_counts_as_vec(tokens.clone());
+        //docs.push(feq_cnts.clone());
+        let hash_map = DPI::suggest_for_key_words(word, tokens);
         
         for (key, val) in hash_map.iter() {
           rslts.insert(key.to_string(), *val);
