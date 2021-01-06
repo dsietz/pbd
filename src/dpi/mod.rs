@@ -24,7 +24,7 @@ extern crate eddie;
 extern crate regex;
 
 use super::*;
-use std::collections::{BTreeMap, HashMap};
+use std::collections::{BTreeMap};
 use regex::Regex;
 use rayon::prelude::*;
 use multimap::MultiMap;
@@ -1166,8 +1166,8 @@ impl DPI {
        });  
     }
 
-    fn suggest_for_key_words(word: &str, tokens: Vec<&str>) -> HashMap<String,i8> {
-      let mut suggestions = HashMap::new();
+    fn suggest_rom_key_word<'a>(word: &str, tokens: Vec<&'a str>) -> Vec<(&'a str, i8)> {
+      let mut suggestions: Vec<(&str, i8)> = Vec::new();
       struct Tknzr {}
       impl Tfidf for Tknzr {}
       let total_count = tokens.len();
@@ -1182,7 +1182,7 @@ impl DPI {
               let cnt = freq_counts.get(&tokens[add(idx, *i)]).unwrap();
 
               if (cnt / total_count ) <= 0.15 as usize {
-                suggestions.insert(tokens[add(idx, *i)].to_string(), -2);
+                suggestions.push(( tokens[add(idx, *i)], *i) );
               }
             } 
           },
@@ -1190,12 +1190,6 @@ impl DPI {
         }
       }
 
-      /* 
-      ** Suggested Token Frequency
-      ** If infrequent = important
-      ** If frequent and spaced out = important
-      ** else = not important
-      */
       suggestions
     }
 
@@ -1313,6 +1307,17 @@ mod tests {
         v
     }
 
+    fn get_files() -> Vec<String>{
+      let files = vec!["acme_payment_notification.txt","renewal_notification.txt","statement_ready_notification.txt"];      
+      let mut docs: Vec<String> = Vec::new();
+
+      for file in files.iter() {
+        docs.push(fs::read_to_string(format!("./tests/dpi/{}",file)).expect("File could not be read."));
+      }
+
+      docs
+    }
+
     fn get_text() -> String {
       String::from(r#"Here is my ssn that you requested: 003-75-9876."#)
     }
@@ -1401,27 +1406,34 @@ mod tests {
       impl Tfidf for TfIdfzr{}
 
       let word = "account";
-      let files = vec!["acme_payment_notification.txt","renewal_notification.txt","statement_ready_notification.txt"];      
-      let mut rslts: BTreeMap<String, i8> = BTreeMap::new();
-      //let mut docs: Vec<Vec<(&str, usize)>> = Vec::new();
+      let files = get_files();      
+      let mut rslts: BTreeMap<String, f64> = BTreeMap::new();
+      let mut docs: Vec<Vec<(&str, usize)>> = Vec::new();
 
-      for file in files.iter() {
-        let content = fs::read_to_string(format!("./tests/dpi/{}",file)).expect("File could not be read.");
+      for content in files.iter() {
         let tokens = Tknzr::tokenize(&content);
-        //let feq_cnts = TfIdfzr::frequency_counts_as_vec(tokens.clone());
-        //docs.push(feq_cnts);
-        let hash_map = DPI::suggest_for_key_words(word, tokens);
+        let feq_cnts = TfIdfzr::frequency_counts_as_vec(tokens.clone());
+        docs.push(feq_cnts);
+        let suggestions = DPI::suggest_rom_key_word(word, tokens);
         
-        for (key, val) in hash_map.iter() {
-          rslts.insert(key.to_string(), *val);
+        for (key, _val) in suggestions.iter() {
+          let mut n: f64 = 0.00;
+          for doc_idx in 0..docs.len() {
+            n = n + TfIdfzr::tfidf(key, doc_idx, docs.clone());
+            
+          }
+          //println!("tfidf for {} is {}",key,(n/docs.len() as f64));
+          if (n/docs.len() as f64) >= 0.30 as f64 {
+            rslts.insert(key.to_string(), n/docs.len() as f64 * KEY_WORD_PNTS);
+          }
         }
       }
       
-      for (k,v) in rslts.iter() {
-        println!("Key: {} val: {}",k,v);
-      }
+      //for (k,v) in rslts.iter() {
+      //  println!("Key: {} val: {}",k,v);
+      //}
 
-      assert!(true);
+      assert_eq!(*rslts.get("statement").unwrap(), 67.13741764082893 as f64);
     }
 
     #[test]
