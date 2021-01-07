@@ -1061,112 +1061,8 @@ impl DPI {
       .len()
     }
 
-    /// Trains the DPI object using its key patterns against a the list of words provided as the sample content
-    /// 
-    /// # Arguments
-    /// 
-    /// * tokens: Vec<&str> - The list of words that is sample content.</br>
-    /// 
-    /// #Example
-    ///
-    /// ```rust
-    /// use pbd::dpi::DPI;
-    /// use pbd::dpi::reference::Lib;
-    ///
-    /// let tokens = vec!["My","ssn","is","003-76-0098"];
-    /// let patterns = vec![Lib::PTTRN_SSN_DASHES.to_string()];
-    /// let mut dpi = DPI::with_key_patterns(patterns);
-    /// 
-    /// dpi.train_for_key_patterns(tokens);
-    ///   
-    /// assert_eq!(dpi.get_score(Lib::PTTRN_SSN_DASHES.to_string()).points, 160.0);
-    /// ```
-    pub fn train_for_key_patterns(&mut self, tokens: Vec<&str>) {
-      let kpttrns = self.key_patterns.clone();
-      
-      let list: Vec<&String> = kpttrns.as_ref().unwrap().par_iter()
-        .filter(|x| {
-          DPI::contains_key_pattern(x, tokens.clone()) > 0
-        })
-        .collect();
-      
-      list.iter()
-        .for_each(|p| {
-          self.add_to_score_points(p.to_string(), KEY_PATTERN_PNTS);
-        });
-    }    
 
-    /// Trains the DPI object using its key regular expressions against a the list of words provided as the sample content
-    /// 
-    /// # Arguments
-    /// 
-    /// * tokens: Vec<&str> - The list of words that is sample content.</br>
-    /// 
-    /// #Example
-    ///
-    /// ```rust
-    /// use pbd::dpi::DPI;
-    /// use pbd::dpi::reference::Lib;
-    ///
-    /// let tokens = vec!["My","ssn","is","003-76-0098"];
-    /// let regexs = vec![Lib::REGEX_SSN_DASHES.to_string()];
-    /// let mut dpi = DPI::with_key_regexs(regexs);
-    /// 
-    /// dpi.train_for_key_regexs(tokens);
-    ///   
-    /// assert_eq!(dpi.get_score(Lib::REGEX_SSN_DASHES.to_string()).points, 180.0);
-    /// ```
-    pub fn train_for_key_regexs(&mut self, tokens: Vec<&str>) {
-      let kregexs = self.key_regexs.clone();
-
-      let list: Vec<&String> = kregexs.as_ref().unwrap().par_iter()
-        .filter(|x| {
-          DPI::contains_key_regex(x, tokens.clone()) > 0
-        })
-        .collect();
-      
-      list.iter()
-        .for_each(|t| {
-          self.add_to_score_points(t.to_string(), KEY_REGEX_PNTS);
-        });
-    } 
-
-    /// Trains the DPI object using its key words against a the list of words provided as the sample content
-    /// 
-    /// # Arguments
-    /// 
-    /// * tokens: Vec<&str> - The list of words that is sample content.</br>
-    /// 
-    /// #Example
-    ///
-    /// ```rust
-    /// use pbd::dpi::DPI;
-    /// use pbd::dpi::reference::Lib;
-    ///
-    /// let tokens = vec!["My","ssn","is","003-76-0098"];
-    /// let words = vec![Lib::TEXT_SSN_ABBR.to_string()];
-    /// let mut dpi = DPI::with_key_words(words);
-    /// 
-    /// dpi.train_for_key_words(tokens);
-    ///     
-    /// assert_eq!(dpi.get_score(Lib::TEXT_SSN_ABBR.to_string()).points, 200.0);
-    /// ```
-    pub fn train_for_key_words(&mut self, tokens: Vec<&str>) {
-      let kwords = self.key_words.clone();
-      
-      let list: Vec<&String> = kwords.as_ref().unwrap().par_iter()
-       .filter(|w| {
-          DPI::contains_key_word(w, tokens.clone()) > 0
-       })
-       .collect();
-    
-      list.iter()
-       .for_each(|w| {
-         self.add_to_score_points(w.to_string(), KEY_WORD_PNTS);
-       });  
-    }
-
-    fn suggest_rom_key_word<'a>(word: &str, tokens: Vec<&'a str>) -> Vec<(&'a str, i8)> {
+    fn suggest_from_key_word<'a>(word: &str, tokens: Vec<&'a str>) -> Vec<(&'a str, i8)> {
       let mut suggestions: Vec<(&str, i8)> = Vec::new();
       struct Tknzr {}
       impl Tfidf for Tknzr {}
@@ -1191,6 +1087,156 @@ impl DPI {
       }
 
       suggestions
+    }    
+
+    /// Trains the DPI object using key patterns against a the list of words provided as the sample content and 
+    /// returns a list of found patterns and points slices
+    /// 
+    /// # Arguments
+    /// 
+    /// * pttrns: Vec<String> - The list of patterns to use for training.</br>
+    /// * tokens: Vec<&str> - The list of words that is sample content.</br>
+    /// 
+    /// #Example
+    ///
+    /// ```rust
+    /// use pbd::dpi::DPI;
+    /// use pbd::dpi::reference::Lib;
+    ///
+    /// let tokens = vec!["My","ssn","is","003-76-0098"];
+    /// let patterns = vec![Lib::PTTRN_SSN_DASHES.to_string()];
+    /// let mut dpi = DPI::with_key_patterns(patterns);
+    ///   
+    /// println!("{:?}", DPI::train_for_key_patterns(dpi.key_patterns.clone().unwrap(), tokens));
+    /// ```
+    pub fn train_for_key_patterns(pttrns: Vec<String>, tokens: Vec<&str>) -> Vec<(String, f64)> {
+      pttrns.par_iter()
+        .filter(|p| {
+          DPI::contains_key_pattern(p, tokens.clone()) > 0
+        })
+        .map(|p| {
+          (p.to_string(), KEY_PATTERN_PNTS)
+        })
+        .collect()
+    }    
+
+    /// Trains the DPI object using key regular expressions against a the list of words provided as the sample content and 
+    /// returns a list of found regular expressions and points slices
+    /// 
+    /// # Arguments
+    /// 
+    /// * regexs: Vec<String> - The list of regular expressions to use for training.</br>
+    /// * tokens: Vec<&str> - The list of words that is sample content.</br>
+    /// 
+    /// #Example
+    ///
+    /// ```rust
+    /// use pbd::dpi::DPI;
+    /// use pbd::dpi::reference::Lib;
+    ///
+    /// let tokens = vec!["My","ssn","is","003-76-0098"];
+    /// let regexs = vec![Lib::REGEX_SSN_DASHES.to_string()];
+    /// let mut dpi = DPI::with_key_regexs(regexs);
+    ///   
+    /// println!("{:?}", DPI::train_for_key_regexs(dpi.key_regexs.clone().unwrap(), tokens));
+    /// ```
+    pub fn train_for_key_regexs(regexs: Vec<String>, tokens: Vec<&str>) -> Vec<(String, f64)>{
+      regexs.par_iter()
+        .filter(|x| {
+          DPI::contains_key_regex(x, tokens.clone()) > 0
+        })
+        .map(|x| {
+          (x.to_string(), KEY_REGEX_PNTS)
+        })
+        .collect()
+    } 
+
+    /// Trains the DPI object using key words against a the list of words provided as the sample content and 
+    /// returns a list of found word and points slices
+    /// 
+    /// # Arguments
+    /// 
+    /// * words: Vec<String> - The list of words to use for training.</br>
+    /// * tokens: Vec<&str> - The list of words that is sample content.</br>
+    /// 
+    /// #Example
+    ///
+    /// ```rust
+    /// use pbd::dpi::DPI;
+    /// use pbd::dpi::reference::Lib;
+    ///
+    /// let tokens = vec!["My","ssn","is","003-76-0098"];
+    /// let words = vec![Lib::TEXT_SSN_ABBR.to_string()];
+    /// let dpi = DPI::with_key_words(words);
+    /// 
+    /// println!("{:?}", DPI::train_for_key_words(dpi.key_words.clone().unwrap(), tokens));
+    /// ```
+    pub fn train_for_key_words(words: Vec<String>, tokens: Vec<&str>) -> Vec<(String, f64)>{  
+      //let kwords = words.clone();    
+      words.par_iter()
+       .filter(|w| {
+          DPI::contains_key_word(w, tokens.clone()) > 0
+       })
+       .map(|w| {
+         (w.to_string(), KEY_WORD_PNTS)
+       })
+       .collect()
+    }
+
+    /// Trains the DPI object using its key words against a list of Strings as the sample content
+    /// 
+    /// # Arguments
+    /// 
+    /// * text: String - The text that is sample content.</br>
+    /// 
+    /// #Example
+    ///
+    /// ```rust
+    /// use pbd::dpi::DPI;
+    /// use pbd::dpi::reference::Lib;
+    /// ```
+    pub fn train(&mut self, docs: Vec<String>) {
+      docs.iter().for_each(|text| {
+        self.train_from_doc(text.clone());
+      });
+
+      /*
+      struct Tknzr;
+      impl Tokenizer for Tknzr {}
+      
+      struct TfIdfzr;
+      impl Tfidf for TfIdfzr{}
+
+      let word = "account";
+      let files = get_files();      
+      let mut rslts: BTreeMap<String, f64> = BTreeMap::new();
+      let mut docs: Vec<Vec<(&str, usize)>> = Vec::new();
+
+      for content in files.iter() {
+        let tokens = Tknzr::tokenize(&content);
+        let feq_cnts = TfIdfzr::frequency_counts_as_vec(tokens.clone());
+        docs.push(feq_cnts);
+        let suggestions = DPI::suggest_from_key_word(word, tokens);
+        
+        for (key, _val) in suggestions.iter() {
+          let mut n: f64 = 0.00;
+          for doc_idx in 0..docs.len() {
+            n = n + TfIdfzr::tfidf(key, doc_idx, docs.clone());
+            
+          }
+          //println!("tfidf for {} is {}",key,(n/docs.len() as f64));
+          if (n/docs.len() as f64) >= 0.30 as f64 {
+            rslts.insert(key.to_string(), n/docs.len() as f64 * KEY_WORD_PNTS);
+          }
+        }
+      }
+      
+      //for (k,v) in rslts.iter() {
+      //  println!("Key: {} val: {}",k,v);
+      //}
+
+      assert_eq!(*rslts.get("statement").unwrap(), 67.13741764082893 as f64);
+      */
     }
 
     /// Trains the DPI object using its key words against a String as the sample content
@@ -1211,17 +1257,29 @@ impl DPI {
     /// let patterns = Some(vec![Lib::PTTRN_SSN_DASHES.to_string()]);
     /// let mut dpi = DPI::with(words, regexs, patterns);
     /// 
-    /// dpi.train_using_keys(text);
+    /// dpi.train_from_doc(text);
     ///     
     /// assert_eq!(dpi.get_score(Lib::TEXT_SSN_ABBR.to_string()).points, 200.0);
     /// assert_eq!(dpi.get_score(Lib::REGEX_SSN_DASHES.to_string()).points, 180.0);
     /// assert_eq!(dpi.get_score(Lib::PTTRN_SSN_DASHES.to_string()).points, 160.0);
     /// ```
-    pub fn train_using_keys(&mut self, text: String) {
+    pub fn train_from_doc(&mut self, text: String) {
       let tokens = Self::tokenize(&text);
-      self.train_for_key_patterns(tokens.clone());
-      self.train_for_key_regexs(tokens.clone());
-      self.train_for_key_words(tokens);
+
+      let tpttrns = Self::train_for_key_patterns(self.key_patterns.clone().unwrap(), tokens.clone());
+      tpttrns.iter().for_each(|t|{
+        self.add_to_score_points(t.0.to_string(), t.1);
+      });
+
+      let tregexs = Self::train_for_key_regexs(self.key_regexs.clone().unwrap(), tokens.clone());
+      tregexs.iter().for_each(|t|{
+        self.add_to_score_points(t.0.to_string(), t.1);
+      });
+      
+      let twords = Self::train_for_key_words(self.key_words.clone().unwrap(), tokens);
+      twords.iter().for_each(|t|{
+        self.add_to_score_points(t.0.to_string(), t.1);
+      });
     }
 
     /// Update (if not exits then inserts) a Score object
@@ -1414,7 +1472,7 @@ mod tests {
         let tokens = Tknzr::tokenize(&content);
         let feq_cnts = TfIdfzr::frequency_counts_as_vec(tokens.clone());
         docs.push(feq_cnts);
-        let suggestions = DPI::suggest_rom_key_word(word, tokens);
+        let suggestions = DPI::suggest_from_key_word(word, tokens);
         
         for (key, _val) in suggestions.iter() {
           let mut n: f64 = 0.00;
@@ -1440,22 +1498,22 @@ mod tests {
     fn test_dpi_train_for_key_regexs() {
       let tokens = vec!["My","ssn","is","003-76-0098"];
       let regexs = vec![Lib::REGEX_SSN_DASHES.to_string()];
-      let mut dpi = DPI::with_key_regexs(regexs);
+      let dpi = DPI::with_key_regexs(regexs);
     
-      dpi.train_for_key_regexs(tokens);
+      let rslts = DPI::train_for_key_regexs(dpi.key_regexs.clone().unwrap(), tokens);
         
-      assert_eq!(dpi.get_score(Lib::REGEX_SSN_DASHES.to_string()).points, 180.0);
+      assert_eq!(rslts[0].1, 90.0);
     }
 
     #[test]
     fn test_dpi_train_for_key_words() {
       let tokens = vec!["My","ssn","is","003-76-0098"];
       let words = vec!["ssn".to_string()];
-      let mut dpi = DPI::with_key_words(words);
+      let dpi = DPI::with_key_words(words);
         
-      dpi.train_for_key_words(tokens);
+      let rslts = DPI::train_for_key_words(dpi.key_words.clone().unwrap(), tokens);
 
-      assert_eq!(dpi.get_score("ssn".to_string()).points, 200.0);
+      assert_eq!(rslts[0].1, 100.0);
     }
 
     #[test]
@@ -1466,8 +1524,8 @@ mod tests {
       let patterns = Some(vec![Lib::PTTRN_SSN_DASHES.to_string()]);
       let mut dpi = DPI::with(words, regexs, patterns);
       
-      dpi.train_using_keys(text);
-
+      dpi.train_from_doc(text);
+      
       assert_eq!(dpi.get_score(Lib::TEXT_SSN_ABBR.to_string()).points, 200.0);
       assert_eq!(dpi.get_score(Lib::REGEX_SSN_DASHES.to_string()).points, 180.0);
       assert_eq!(dpi.get_score(Lib::PTTRN_SSN_DASHES.to_string()).points, 160.0);
