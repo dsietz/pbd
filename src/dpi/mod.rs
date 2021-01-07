@@ -30,6 +30,8 @@ use rayon::prelude::*;
 use multimap::MultiMap;
 use std::cmp::Ordering;
 use tfidf::{TfIdf, TfIdfDefault};
+use std::sync::mpsc::{Sender, Receiver};
+use std::sync::mpsc;
 
 const KEY_PATTERN_PNTS: f64 = 80 as f64;
 const KEY_REGEX_PNTS: f64 = 90 as f64;
@@ -245,7 +247,6 @@ pub trait Phonetic {
 }
 
 pub trait Tfidf {
-
   // determine how important a term is in a document compared to other documents
   fn tfidf(term: &str, doc_idx: usize, docs: Vec<Vec<(&str, usize)>>) -> f64{
     TfIdfDefault::tfidf(term, &docs[doc_idx], docs.iter())
@@ -1196,9 +1197,35 @@ impl DPI {
     /// use pbd::dpi::reference::Lib;
     /// ```
     pub fn train(&mut self, docs: Vec<String>) {
+      let mut keys: Vec<(f64, Vec<String>)> = Vec::new();
+
+      match self.key_patterns.clone() {
+        Some(k) => keys.push((KEY_PATTERN_PNTS,k)),
+        None => {},
+      }
+
+      match self.key_regexs.clone() {
+        Some(k) => keys.push((KEY_REGEX_PNTS, k)),
+        None => {},
+      }
+
+      match self.key_words.clone() {
+        Some(k) => keys.push((KEY_WORD_PNTS,k)),
+        None => {},
+      }
+      
+
       docs.iter().for_each(|text| {
-        self.train_from_doc(text.clone());
+        let tokens = Self::tokenize(&text);
+        let rslts = Self::train_from_keys(keys.clone(), tokens);
+
+        rslts.iter().for_each(|t|{
+          self.add_to_score_points(t.0.to_string(), t.1);
+        });
       });
+
+      // get suggested words
+
 
       /*
       struct Tknzr;
@@ -1248,38 +1275,50 @@ impl DPI {
     /// #Example
     ///
     /// ```rust
-    /// use pbd::dpi::DPI;
+    /// use pbd::dpi::{DPI, Tokenizer};
     /// use pbd::dpi::reference::Lib;
     ///
-    /// let text = "My ssn is 003-76-0098".to_string();
-    /// let words = Some(vec![Lib::TEXT_SSN_ABBR.to_string()]);
-    /// let regexs = Some(vec![Lib::REGEX_SSN_DASHES.to_string()]);
-    /// let patterns = Some(vec![Lib::PTTRN_SSN_DASHES.to_string()]);
-    /// let mut dpi = DPI::with(words, regexs, patterns);
-    /// 
-    /// dpi.train_from_doc(text);
-    ///     
-    /// assert_eq!(dpi.get_score(Lib::TEXT_SSN_ABBR.to_string()).points, 200.0);
-    /// assert_eq!(dpi.get_score(Lib::REGEX_SSN_DASHES.to_string()).points, 180.0);
-    /// assert_eq!(dpi.get_score(Lib::PTTRN_SSN_DASHES.to_string()).points, 160.0);
+    /// struct Tknzr {}
+    ///  impl Tokenizer for Tknzr{}
+    ///
+    ///  let text = "My ssn is 003-76-0098".to_string();
+    ///  let tokens = Tknzr::tokenize(&text);
+    ///  let words = (100 as f64, vec![Lib::TEXT_SSN_ABBR.to_string()]);
+    ///  let regexs = (90 as f64, vec![Lib::REGEX_SSN_DASHES.to_string()]);
+    ///  let patterns = (80 as f64, vec![Lib::PTTRN_SSN_DASHES.to_string()]);
+    ///  
+    ///  let mut pnts: f64 = 0.0;
+    ///  let rslts = DPI::train_from_keys(vec![patterns, regexs, words,], tokens);
+    ///
+    ///  println!("{:?}",rslts);
     /// ```
-    pub fn train_from_doc(&mut self, text: String) {
-      let tokens = Self::tokenize(&text);
+    pub fn train_from_keys(keys: Vec<(f64, Vec<String>)>, tokens: Vec<&str>) -> Vec<(String, f64)>{
+      let mut rtn: Vec<(String, f64)> = Vec::new();
+      let (tx, rx): (Sender<Vec<(String, f64)>>, Receiver<Vec<(String, f64)>>) = mpsc::channel();
 
-      let tpttrns = Self::train_for_key_patterns(self.key_patterns.clone().unwrap(), tokens.clone());
-      tpttrns.iter().for_each(|t|{
-        self.add_to_score_points(t.0.to_string(), t.1);
+      keys.iter().for_each(|(k,v)| {
+        let thread_tx = tx.clone();
+        if k == &KEY_PATTERN_PNTS {
+          let lst = Self::train_for_key_patterns(v.to_vec(), tokens.clone());
+          thread_tx.send(lst).unwrap();
+        }
+
+        if k == &KEY_REGEX_PNTS {
+          let lst = Self::train_for_key_regexs(v.to_vec(), tokens.clone());
+          thread_tx.send(lst).unwrap();
+        }
+
+        if k == &KEY_WORD_PNTS {
+          let lst = Self::train_for_key_words(v.to_vec(), tokens.clone());
+          thread_tx.send(lst).unwrap();
+        }
       });
 
-      let tregexs = Self::train_for_key_regexs(self.key_regexs.clone().unwrap(), tokens.clone());
-      tregexs.iter().for_each(|t|{
-        self.add_to_score_points(t.0.to_string(), t.1);
+      keys.iter().for_each(|_| {
+        rx.recv().iter().for_each(|x| x.iter().for_each(|y|rtn.push(y.clone()) ) );
       });
-      
-      let twords = Self::train_for_key_words(self.key_words.clone().unwrap(), tokens);
-      twords.iter().for_each(|t|{
-        self.add_to_score_points(t.0.to_string(), t.1);
-      });
+
+      rtn
     }
 
     /// Update (if not exits then inserts) a Score object
@@ -1518,17 +1557,20 @@ mod tests {
 
     #[test]
     fn test_dpi_train_using_keys() {
+      struct Tknzr {}
+      impl Tokenizer for Tknzr{}
+
       let text = get_text();
-      let words = Some(vec![Lib::TEXT_SSN_ABBR.to_string()]);
-      let regexs = Some(vec![Lib::REGEX_SSN_DASHES.to_string()]);
-      let patterns = Some(vec![Lib::PTTRN_SSN_DASHES.to_string()]);
-      let mut dpi = DPI::with(words, regexs, patterns);
+      let tokens = Tknzr::tokenize(&text);
+      let words = (KEY_WORD_PNTS, vec![Lib::TEXT_SSN_ABBR.to_string()]);
+      let regexs = (KEY_REGEX_PNTS,vec![Lib::REGEX_SSN_DASHES.to_string()]);
+      let patterns = (KEY_PATTERN_PNTS, vec![Lib::PTTRN_SSN_DASHES.to_string()]);
       
-      dpi.train_from_doc(text);
-      
-      assert_eq!(dpi.get_score(Lib::TEXT_SSN_ABBR.to_string()).points, 200.0);
-      assert_eq!(dpi.get_score(Lib::REGEX_SSN_DASHES.to_string()).points, 180.0);
-      assert_eq!(dpi.get_score(Lib::PTTRN_SSN_DASHES.to_string()).points, 160.0);
+      let mut pnts: f64 = 0.0;
+      let rslts = DPI::train_from_keys(vec![patterns, regexs, words,], tokens);
+      rslts.iter().for_each(|x|{pnts = pnts + x.1});
+
+      assert_eq!(pnts, 270.0);
     } 
 
     #[test]
