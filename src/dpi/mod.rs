@@ -1063,6 +1063,38 @@ impl DPI {
       .len()
     }
 
+    fn get_suggested_words(key_words: Vec<String>, docs: Vec<String>) -> BTreeMap<String, f64>{
+      struct TfIdfzr;
+      impl Tfidf for TfIdfzr{}
+            
+      let mut rslts: BTreeMap<String, f64> = BTreeMap::new();
+      let mut cnts: Vec<Vec<(&str, usize)>> = Vec::new();
+
+      docs.iter().for_each(|text| {
+        let tokens = Self::tokenize(&text);
+        let feq_cnts = TfIdfzr::frequency_counts_as_vec(tokens.clone());
+        cnts.push(feq_cnts);
+      });
+
+      docs.iter().for_each(|text| {
+        for word in key_words.clone().iter() {
+          let tokens = Self::tokenize(&text).clone(); 
+          let suggestions = DPI::suggest_from_key_word(word, tokens);
+
+          for (key, _val) in suggestions.iter() {
+            let mut n: f64 = 0.00;
+            for doc_idx in 0..docs.len() {
+              n = n + TfIdfzr::tfidf(key, doc_idx, cnts.clone());
+            }
+            if (n/docs.len() as f64) >= 0.30 as f64 {
+              rslts.insert(key.to_string(), n/docs.len() as f64 * KEY_WORD_PNTS);
+            }
+          }
+        }
+      });
+      
+      rslts
+    }
 
     fn suggest_from_key_word<'a>(word: &str, tokens: Vec<&'a str>) -> Vec<(&'a str, i8)> {
       let mut suggestions: Vec<(&str, i8)> = Vec::new();
@@ -1146,40 +1178,7 @@ impl DPI {
       });
 
       // get suggested words
-      struct TfIdfzr;
-      impl Tfidf for TfIdfzr{}
-            
-      let mut rslts: BTreeMap<String, f64> = BTreeMap::new();
-      let mut cnts: Vec<Vec<(&str, usize)>> = Vec::new();
-
-      docs.iter().for_each(|text| {
-        let tokens = Self::tokenize(&text);
-        let feq_cnts = TfIdfzr::frequency_counts_as_vec(tokens.clone());
-        cnts.push(feq_cnts);
-      });
-
-      docs.iter().for_each(|text| {
-        for list in self.key_words.clone().iter() {
-            for word in list.iter() {
-              let tokens = Self::tokenize(&text).clone(); 
-              let suggestions = DPI::suggest_from_key_word(word, tokens);
-
-              for (key, _val) in suggestions.iter() {
-                let mut n: f64 = 0.00;
-
-                for doc_idx in 0..docs.len() {
-                  n = n + TfIdfzr::tfidf(key, doc_idx, cnts.clone());
-                }
-
-                if (n/docs.len() as f64) >= 0.30 as f64 {
-                  rslts.insert(key.to_string(), n/docs.len() as f64 * KEY_WORD_PNTS);
-                }
-              }
-            }
-          }
-      });
-      
-      rslts
+      Self::get_suggested_words(self.key_words.clone().unwrap(), docs.clone())
     }
 
     /// Trains the DPI object using key patterns against a the list of words provided as the sample content and 
