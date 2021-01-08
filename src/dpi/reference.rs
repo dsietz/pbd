@@ -46,17 +46,27 @@ lib_codes! {
     /// 15000 Social Security Number abbreviated
     (15000, TEXT_SSN_FULL, r"Social Security Number");
     /// 15001 Social Security Number abbreviated
-    (15001, TEXT_SSN_ABBR, r"SSN");
+    (15001, TEXT_SSN_ABBR, r"SSN");    
+    /// 15002 Account
+    (15002, TEXT_ACCOUNT, r"account");
     /// 25000 Social Security Number with dashes
     //(25000, REGEX_SSN_DASHES, r"^(?!b(d)1+-(d)1+-(d)1+b)(?!123-45-6789|219-09-9999|078-05-1120)(?!666|000|9d{2})d{3}-(?!00)d{2}-(?!0{4})d{4}$");
     (25000, REGEX_SSN_DASHES, r"^\d{3}-\d{2}-\d{4}$");
     /// 25000 Social Security Number without dashes
     //(25001, REGEX_SSN_NODASHES, r"^(?!b(d)1+b)(?!123456789|219099999|078051120)(?!666|000|9d{2})d{3}(?!00)d{2}(?!0{4})d{4}$");
     (25001, REGEX_SSN_NODASHES, r"^\d{9}$");
+    /// 25002 Account
+    (25002, REGEX_ACCOUNT, r"([Aa]..[aeiouAEIOU]{2}..)");
     /// 35000 Social Security Number with dashes
     (35000, PTTRN_SSN_DASHES, r"###@##@####");
     /// 35001 Social Security Number without dahses
     (35001, PTTRN_SSN_NODASHES, r"#########");
+    /// 35002 Account Camel
+    (35002, PTTRN_ACCOUNT_CAMEL, r"Vccvvcc");
+    /// 35003 Account Upper
+    (35003, PTTRN_ACCOUNT_UPPER, r"VCCVVCC");
+    /// 35004 Account Lower
+    (35004, PTTRN_ACCOUNT_LOWER, r"vccvvcc");
 }
 
 impl InvalidCode {

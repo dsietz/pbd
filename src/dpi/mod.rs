@@ -32,6 +32,7 @@ use std::cmp::Ordering;
 use tfidf::{TfIdf, TfIdfDefault};
 use std::sync::mpsc::{Sender, Receiver};
 use std::sync::mpsc;
+use std::thread;
 
 const KEY_PATTERN_PNTS: f64 = 80 as f64;
 const KEY_REGEX_PNTS: f64 = 90 as f64;
@@ -718,7 +719,7 @@ impl DPI {
     ///     
     /// println!("Using {} words and {} patterns for learning.", dpi.key_words.unwrap().len(), dpi.key_patterns.unwrap().len());
     /// ```
-    pub fn with(words: Option<KeyWordList>, regexs: Option<KeyWordList>, patterns: Option<KeyWordList>) -> DPI {
+    pub fn with(words: Option<KeyWordList>, regexs: Option<KeyWordList>, patterns: Option<KeyWordList>) -> DPI {      
       match regexs.clone() {
         Some(reg) =>{
           match Self::validate_regexs(reg) {
@@ -1001,7 +1002,7 @@ impl DPI {
     pub fn contains_key_pattern(pattern: &str, tokens: Vec<&str>) -> usize {
       tokens.par_iter()
       .filter(|t| {
-        let pttrn_def = PatternDefinition::new();
+        let pttrn_def = PatternDefinition::new();   
         pttrn_def.analyze(t) == pattern
       })
       .collect::<Vec<&&str>>()
@@ -1090,6 +1091,97 @@ impl DPI {
       suggestions
     }    
 
+    /// Trains the DPI object using its keys against a list of Strings as the sample content.
+    /// Returns a `BTreeMap<String, f64>` of suggested key words with average Tfidf greater than 0.30 
+    /// which are recommended as additional keys for consideration.
+    /// 
+    /// # Arguments
+    /// 
+    /// * text: String - The text that is sample content.</br>
+    /// 
+    /// #Example
+    ///
+    /// ```rust
+    /// use pbd::dpi::DPI;
+    /// use pbd::dpi::reference::Lib;
+    /// 
+    /// let mut docs = Vec::new();
+    /// docs.push("Dear Acme Client, Thank you for your payment On 12/01/2020, a payment of $354.42 was received on your membership account in 3869. For transaction details, or to view statements, account information and more, please sign in to our Customer Portal at acme.com or our Mobile Portal application. We\'re here for you. If you need assistance, please call our Client Services Department at (800) 226-7321, Monday through Friday 8 a.m. to 8 p.m., Saturday 9 a.m. to 3 p.m., ET. Thank you for being a valued Acme client. ".to_string());
+    /// docs.push("Thank you for being a loyal customer, John! Your membership renewal documents and billing information are now available in your online account. Get your new membership ID card. We\'ve gone green! From now on, your ID card will be available through your online account. You can save them to your mobile device or print them as proof of membership. Questions for customer service? Text your billing and policy questions to 1-800-111-2222. Quickly access your policy documents and more with our app. Access your ID card and policy details on the go Update your account information Pay your bill or update your payment preferences".to_string());
+    /// docs.push("Dear JOHN DOE, Your current bank statement for ACCOUNT ENDING WITH *0011 was created on 01/31/2019 and is now available to view online. To access your statement, please sign on to online banking and select the Statements link. Please do not respond directly to this e-mail message. If you have any questions, please contact us at 1-800-325-6149. Sincerely, Helpful Bank ".to_string());
+    /// 
+    /// let words = Some(vec![Lib::TEXT_ACCOUNT.to_string(),"membership".to_string()]);
+    /// let patterns = Some(vec![Lib::PTTRN_ACCOUNT_CAMEL.to_string(),Lib::PTTRN_ACCOUNT_UPPER.to_string(),Lib::PTTRN_ACCOUNT_LOWER.to_string()]);
+    /// let regexs = Some(vec![Lib::REGEX_ACCOUNT.to_string()]);
+    /// let mut dpi = DPI::with(words, regexs, patterns);   
+    /// let suggestions = dpi.train(docs);
+    /// 
+    /// println!("SCORES: {:?}", dpi.scores);      
+    /// println!("SUGGESTIONS: {:?}", suggestions);
+    /// ```
+    pub fn train(&mut self, docs: Vec<String>) -> BTreeMap<String, f64>{
+      let mut keys: Vec<(f64, Vec<String>)> = Vec::new();
+
+      match self.key_patterns.clone() {
+        Some(k) => keys.push((KEY_PATTERN_PNTS,k)),
+        None => {},
+      }
+
+      match self.key_regexs.clone() {
+        Some(k) => keys.push((KEY_REGEX_PNTS, k)),
+        None => {},
+      }
+
+      match self.key_words.clone() {
+        Some(k) => keys.push((KEY_WORD_PNTS,k)),
+        None => {},
+      }     
+
+      docs.iter().for_each(|text| {
+        let tokens = Self::tokenize(&text);
+        let rslts = Self::train_from_keys(keys.clone(), tokens);
+        rslts.iter().for_each(|t|{
+          self.add_to_score_points(t.0.to_string(), t.1);
+        });
+      });
+
+      // get suggested words
+      struct TfIdfzr;
+      impl Tfidf for TfIdfzr{}
+            
+      let mut rslts: BTreeMap<String, f64> = BTreeMap::new();
+      let mut cnts: Vec<Vec<(&str, usize)>> = Vec::new();
+
+      docs.iter().for_each(|text| {
+        let tokens = Self::tokenize(&text);
+        let feq_cnts = TfIdfzr::frequency_counts_as_vec(tokens.clone());
+        cnts.push(feq_cnts);
+      });
+
+      docs.iter().for_each(|text| {
+        for list in self.key_words.clone().iter() {
+            for word in list.iter() {
+              let tokens = Self::tokenize(&text).clone(); 
+              let suggestions = DPI::suggest_from_key_word(word, tokens);
+
+              for (key, _val) in suggestions.iter() {
+                let mut n: f64 = 0.00;
+
+                for doc_idx in 0..docs.len() {
+                  n = n + TfIdfzr::tfidf(key, doc_idx, cnts.clone());
+                }
+
+                if (n/docs.len() as f64) >= 0.30 as f64 {
+                  rslts.insert(key.to_string(), n/docs.len() as f64 * KEY_WORD_PNTS);
+                }
+              }
+            }
+          }
+      });
+      
+      rslts
+    }
+
     /// Trains the DPI object using key patterns against a the list of words provided as the sample content and 
     /// returns a list of found patterns and points slices
     /// 
@@ -1112,10 +1204,10 @@ impl DPI {
     /// ```
     pub fn train_for_key_patterns(pttrns: Vec<String>, tokens: Vec<&str>) -> Vec<(String, f64)> {
       pttrns.par_iter()
-        .filter(|p| {
+        .filter(|p| {           
           DPI::contains_key_pattern(p, tokens.clone()) > 0
         })
-        .map(|p| {
+        .map(|p| {       
           (p.to_string(), KEY_PATTERN_PNTS)
         })
         .collect()
@@ -1184,88 +1276,6 @@ impl DPI {
        .collect()
     }
 
-    /// Trains the DPI object using its key words against a list of Strings as the sample content
-    /// 
-    /// # Arguments
-    /// 
-    /// * text: String - The text that is sample content.</br>
-    /// 
-    /// #Example
-    ///
-    /// ```rust
-    /// use pbd::dpi::DPI;
-    /// use pbd::dpi::reference::Lib;
-    /// ```
-    pub fn train(&mut self, docs: Vec<String>) {
-      let mut keys: Vec<(f64, Vec<String>)> = Vec::new();
-
-      match self.key_patterns.clone() {
-        Some(k) => keys.push((KEY_PATTERN_PNTS,k)),
-        None => {},
-      }
-
-      match self.key_regexs.clone() {
-        Some(k) => keys.push((KEY_REGEX_PNTS, k)),
-        None => {},
-      }
-
-      match self.key_words.clone() {
-        Some(k) => keys.push((KEY_WORD_PNTS,k)),
-        None => {},
-      }
-      
-
-      docs.iter().for_each(|text| {
-        let tokens = Self::tokenize(&text);
-        let rslts = Self::train_from_keys(keys.clone(), tokens);
-
-        rslts.iter().for_each(|t|{
-          self.add_to_score_points(t.0.to_string(), t.1);
-        });
-      });
-
-      // get suggested words
-
-
-      /*
-      struct Tknzr;
-      impl Tokenizer for Tknzr {}
-      
-      struct TfIdfzr;
-      impl Tfidf for TfIdfzr{}
-
-      let word = "account";
-      let files = get_files();      
-      let mut rslts: BTreeMap<String, f64> = BTreeMap::new();
-      let mut docs: Vec<Vec<(&str, usize)>> = Vec::new();
-
-      for content in files.iter() {
-        let tokens = Tknzr::tokenize(&content);
-        let feq_cnts = TfIdfzr::frequency_counts_as_vec(tokens.clone());
-        docs.push(feq_cnts);
-        let suggestions = DPI::suggest_from_key_word(word, tokens);
-        
-        for (key, _val) in suggestions.iter() {
-          let mut n: f64 = 0.00;
-          for doc_idx in 0..docs.len() {
-            n = n + TfIdfzr::tfidf(key, doc_idx, docs.clone());
-            
-          }
-          //println!("tfidf for {} is {}",key,(n/docs.len() as f64));
-          if (n/docs.len() as f64) >= 0.30 as f64 {
-            rslts.insert(key.to_string(), n/docs.len() as f64 * KEY_WORD_PNTS);
-          }
-        }
-      }
-      
-      //for (k,v) in rslts.iter() {
-      //  println!("Key: {} val: {}",k,v);
-      //}
-
-      assert_eq!(*rslts.get("statement").unwrap(), 67.13741764082893 as f64);
-      */
-    }
-
     /// Trains the DPI object using its key words against a String as the sample content
     /// 
     /// # Arguments
@@ -1292,31 +1302,15 @@ impl DPI {
     ///
     ///  println!("{:?}",rslts);
     /// ```
-    pub fn train_from_keys(keys: Vec<(f64, Vec<String>)>, tokens: Vec<&str>) -> Vec<(String, f64)>{
-      let mut rtn: Vec<(String, f64)> = Vec::new();
-      let (tx, rx): (Sender<Vec<(String, f64)>>, Receiver<Vec<(String, f64)>>) = mpsc::channel();
+    pub fn train_from_keys(keys: Vec<(f64, Vec<String>)>, tokens: Vec<&str>) -> Vec<(String, f64)>{   
+      let mut rtn: Vec<(String, f64)> = Vec::new(); 
+      let pttrns: Vec<(f64, Vec<String>)> = keys.iter().filter(|(k,_)| k == &KEY_PATTERN_PNTS).map(|x| (x.0, x.1.clone())).collect();
+      let regexs: Vec<(f64, Vec<String>)> = keys.iter().filter(|(k,_)| { k == &KEY_REGEX_PNTS}).map(|x| (x.0, x.1.clone())).collect();
+      let words: Vec<(f64, Vec<String>)> = keys.iter().filter(|(k,_)| { k == &KEY_WORD_PNTS}).map(|x| (x.0, x.1.clone())).collect();
 
-      keys.iter().for_each(|(k,v)| {
-        let thread_tx = tx.clone();
-        if k == &KEY_PATTERN_PNTS {
-          let lst = Self::train_for_key_patterns(v.to_vec(), tokens.clone());
-          thread_tx.send(lst).unwrap();
-        }
-
-        if k == &KEY_REGEX_PNTS {
-          let lst = Self::train_for_key_regexs(v.to_vec(), tokens.clone());
-          thread_tx.send(lst).unwrap();
-        }
-
-        if k == &KEY_WORD_PNTS {
-          let lst = Self::train_for_key_words(v.to_vec(), tokens.clone());
-          thread_tx.send(lst).unwrap();
-        }
-      });
-
-      keys.iter().for_each(|_| {
-        rx.recv().iter().for_each(|x| x.iter().for_each(|y|rtn.push(y.clone()) ) );
-      });
+      pttrns.iter().for_each(|(_,v)| rtn.append(&mut Self::train_for_key_patterns(v.to_vec(), tokens.clone())));
+      regexs.iter().for_each(|(_,v)| rtn.append(&mut Self::train_for_key_regexs(v.to_vec(), tokens.clone())));
+      words.iter().for_each(|(_,v)| rtn.append(&mut Self::train_for_key_words(v.to_vec(), tokens.clone())));
 
       rtn
     }
@@ -1519,18 +1513,39 @@ mod tests {
             n = n + TfIdfzr::tfidf(key, doc_idx, docs.clone());
             
           }
-          //println!("tfidf for {} is {}",key,(n/docs.len() as f64));
+          
           if (n/docs.len() as f64) >= 0.30 as f64 {
             rslts.insert(key.to_string(), n/docs.len() as f64 * KEY_WORD_PNTS);
           }
         }
       }
       
-      //for (k,v) in rslts.iter() {
-      //  println!("Key: {} val: {}",k,v);
-      //}
-
       assert_eq!(*rslts.get("statement").unwrap(), 67.13741764082893 as f64);
+    }
+
+    #[test]
+    fn test_dpi_train() {
+      let files = get_files();      
+      let mut docs: Vec<String> = Vec::new();
+      let words = Some(vec![Lib::TEXT_ACCOUNT.to_string(),"membership".to_string()]);
+      let patterns = Some(vec![Lib::PTTRN_ACCOUNT_CAMEL.to_string(),Lib::PTTRN_ACCOUNT_UPPER.to_string(),Lib::PTTRN_ACCOUNT_LOWER.to_string()]);
+      let regexs = Some(vec![Lib::REGEX_ACCOUNT.to_string()]);
+      let mut dpi = DPI::with(words, regexs, patterns);   
+
+      for content in files.iter() {
+        docs.push(content.to_string());
+      }
+               
+      let suggestions = dpi.train(docs);
+      //println!("SCORES: {:?}", dpi.scores);      
+      //println!("SUGGESTIONS: {:?}", suggestions);
+
+      assert_eq!(dpi.get_score(Lib::TEXT_ACCOUNT.to_string()).points, 400.0);
+      assert_eq!(dpi.get_score(Lib::REGEX_ACCOUNT.to_string()).points, 360.0);
+      assert_eq!(dpi.get_score(Lib::PTTRN_ACCOUNT_CAMEL.to_string()).points, 80.0);
+      assert_eq!(dpi.get_score(Lib::PTTRN_ACCOUNT_LOWER.to_string()).points, 240.0);
+      assert_eq!(dpi.get_score(Lib::PTTRN_ACCOUNT_UPPER.to_string()).points, 160.0);
+      assert_eq!(*suggestions.get("statement").unwrap(), 67.13741764082893);
     }
 
     #[test]
