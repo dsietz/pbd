@@ -30,9 +30,32 @@ use rayon::prelude::*;
 use multimap::MultiMap;
 use std::cmp::Ordering;
 use tfidf::{TfIdf, TfIdfDefault};
-use std::sync::mpsc::{Sender, Receiver};
-use std::sync::mpsc;
-use std::thread;
+//use std::sync::mpsc::{Sender, Receiver};
+//use std::sync::mpsc;
+//use std::thread;
+
+macro_rules! string_to_regex {
+  ( $text:expr ) => {
+    {
+      let mut regex = String::new();
+      let chars = $text.char_indices().map(|x| x.1).collect::<Vec<char>>();
+
+      chars.iter().for_each(|c| {
+        if c.is_ascii_digit() {
+          regex.push_str("[0-9]");
+        } else if c.is_ascii_alphabetic() {
+          regex.push_str("[a-zA-Z]");
+        } else if c.is_ascii_graphic() && !c.is_ascii_alphanumeric() {
+          regex.push_str("[^a-zA-Z0-9]");
+        } else {
+          regex.push_str(".");
+        }
+      });
+
+      &regex
+    }
+  }
+}
 
 const KEY_PATTERN_PNTS: f64 = 80 as f64;
 const KEY_REGEX_PNTS: f64 = 90 as f64;
@@ -1096,6 +1119,28 @@ impl DPI {
       rslts
     }
 
+    fn suggest_from_key_regex<'a>(regex: &str, tokens: Vec<&'a str>) -> Vec<(&'a str, i8)> {
+      let mut suggestions: Vec<(&str, i8)> = Vec::new();
+      struct Tknzr {}
+      impl Tfidf for Tknzr {}
+      let total_count = tokens.len();
+      let freq_counts = Tknzr::frequency_counts(tokens.clone());
+
+      for (idx, tkn) in tokens.iter().enumerate() {
+        if Regex::new(regex).unwrap().is_match(tkn) {
+          let idx_scope: Vec<i8> = vec![-2, -1, 1, 2];
+          for i in &idx_scope {              
+            let cnt = freq_counts.get(&tokens[add(idx, *i)]).unwrap();
+            if (cnt / total_count ) <= 0.15 as usize {
+              suggestions.push( (string_to_regex!(tokens[add(idx, *i)]), *i) );
+            }
+          } 
+        }
+      }
+
+      suggestions
+    }    
+
     fn suggest_from_key_word<'a>(word: &str, tokens: Vec<&'a str>) -> Vec<(&'a str, i8)> {
       let mut suggestions: Vec<(&str, i8)> = Vec::new();
       struct Tknzr {}
@@ -1486,6 +1531,48 @@ mod tests {
 
         assert_eq!(dpi.serialize(), serialized);
     }
+
+    #[test]
+    fn test_dpi_string_to_regex() {
+      assert_eq!(string_to_regex!("Account"),"[a-zA-Z][a-zA-Z][a-zA-Z][a-zA-Z][a-zA-Z][a-zA-Z][a-zA-Z]".to_string());
+      assert_eq!(string_to_regex!("12/31/2020"),"[0-9][0-9][^a-zA-Z0-9][0-9][0-9][^a-zA-Z0-9][0-9][0-9][0-9][0-9]".to_string());
+      assert_eq!(string_to_regex!("P3ssw0rd"),"[a-zA-Z][0-9][a-zA-Z][a-zA-Z][a-zA-Z][0-9][a-zA-Z][a-zA-Z]".to_string());
+    }
+
+    #[test]
+    fn test_suggested_key_regexs() {
+      struct Tknzr;
+      impl Tokenizer for Tknzr {}
+      
+      struct TfIdfzr;
+      impl Tfidf for TfIdfzr{}
+
+      let regex = "([Aa]..[aeiouAEIOU]{2}..)";
+      let files = get_files();      
+      let mut rslts: BTreeMap<String, f64> = BTreeMap::new();
+      let mut docs: Vec<Vec<(&str, usize)>> = Vec::new();
+
+      for content in files.iter() {
+        let tokens = Tknzr::tokenize(&content);
+        let feq_cnts = TfIdfzr::frequency_counts_as_vec(tokens.clone());
+        docs.push(feq_cnts);
+        let suggestions = DPI::suggest_from_key_regex(regex, tokens);
+        
+        for (key, _val) in suggestions.iter() {
+          let mut n: f64 = 0.00;
+          for doc_idx in 0..docs.len() {
+            n = n + TfIdfzr::tfidf(key, doc_idx, docs.clone());
+            
+          }
+          
+          if (n/docs.len() as f64) >= 0.30 as f64 {
+            rslts.insert(key.to_string(), n/docs.len() as f64 * KEY_WORD_PNTS);
+          }
+        }
+      }
+      
+      assert_eq!(*rslts.get("statement").unwrap(), 67.13741764082893 as f64);
+    }    
 
     #[test]
     fn test_suggested_key_words() {
