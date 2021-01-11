@@ -663,6 +663,69 @@ impl Score {
   }
 }
 
+/// Represents a Score
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct Suggestion {
+  /// The word being suggested
+  pub word: String,
+  /// The regex that represents the suggested word
+  pub regex: Option<String>,
+  /// The pattern that represents the suggested word
+  pub pattern: Option<String>,
+  /// The points the suggestion has received as a score of relavence
+  pub points: f64, 
+}
+
+impl Suggestion {
+  /// Constructs a Suggestion object
+  /// 
+  /// # Arguments
+  /// 
+  /// * word: String- The word being suggested.</br>
+  /// * regex: String - The regex that represents the suggested word, (e.g.: "[aA-zZ]{3}").</br>
+  /// * pttrn: String - The pattern that represents the suggested word, (e.g.: "cvc").</br>
+  /// * pnts: f64 - The scored points that the key has received 
+  /// 
+  /// #Example
+  ///
+  /// ```rust
+  /// use pbd::dpi::Suggestion;
+  /// let suggestion = Suggestion::new("dob".to_string());
+  /// ```
+  pub fn new(word: String) -> Suggestion {
+    Suggestion {
+      word: word,
+      regex: None,
+      pattern: None,
+      points: 0.0, 
+    }
+  }
+
+  /// Constructs a Suggestion object with all the attributes set
+  /// 
+  /// # Arguments
+  /// 
+  /// * word: String- The word being suggested.</br>
+  /// * regex: String - The regex that represents the suggested word, (e.g.: "[aA-zZ]{3}").</br>
+  /// * pttrn: String - The pattern that represents the suggested word, (e.g.: "cvc").</br>
+  /// * pnts: f64 - The scored points that the key has received 
+  /// 
+  /// #Example
+  ///
+  /// ```rust
+  /// use pbd::dpi::Suggestion;
+  /// let suggestion = Suggestion::with("dob".to_string(),"[aA-zZ]{3}".to_string(), "cvc".to_string(), 0.59874856);
+  /// ```
+  pub fn with(word: String, regex: String, pttrn: String, pnts: f64) -> Suggestion {
+    Suggestion {
+      word: word,
+      regex: Some(regex),
+      pattern: Some(pttrn),
+      points: pnts, 
+    }
+  }
+}
+
 /// Represents a Data Privacy Inspector (DPI)
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct DPI {
@@ -1063,11 +1126,44 @@ impl DPI {
       .len()
     }
 
-    fn get_suggested_words_from_regexs(key_regexs: Vec<String>, docs: Vec<String>) -> BTreeMap<String, f64>{
+    fn get_suggested_words_from_patterns(key_patterns: Vec<String>, docs: Vec<String>) -> Vec<(String, f64)>{
       struct TfIdfzr;
       impl Tfidf for TfIdfzr{}
             
-      let mut rslts: BTreeMap<String, f64> = BTreeMap::new();
+      let mut rslts: Vec<(String, f64)> = Vec::new();
+      let mut cnts: Vec<Vec<(&str, usize)>> = Vec::new();
+
+      docs.iter().for_each(|text| {
+        let tokens = Self::tokenize(&text);
+        let feq_cnts = TfIdfzr::frequency_counts_as_vec(tokens.clone());
+        cnts.push(feq_cnts);
+      });
+
+      docs.iter().for_each(|text| {
+        for pattern in key_patterns.clone().iter() {
+          let tokens = Self::tokenize(&text).clone(); 
+          let suggestions = DPI::suggest_from_key_pattern(pattern, tokens);
+
+          for (key, _val) in suggestions.iter() {
+            let mut n: f64 = 0.00;
+            for doc_idx in 0..docs.len() {
+              n = n + TfIdfzr::tfidf(key, doc_idx, cnts.clone());
+            }
+            if (n/docs.len() as f64) >= 0.30 as f64 {
+              rslts.push( (key.to_string(), n/docs.len() as f64 * KEY_WORD_PNTS) );
+            }
+          }
+        }
+      });
+      
+      rslts
+    }        
+
+    fn get_suggested_words_from_regexs(key_regexs: Vec<String>, docs: Vec<String>) -> Vec<(String, f64)>{
+      struct TfIdfzr;
+      impl Tfidf for TfIdfzr{}
+            
+      let mut rslts: Vec<(String, f64)> = Vec::new();
       let mut cnts: Vec<Vec<(&str, usize)>> = Vec::new();
 
       docs.iter().for_each(|text| {
@@ -1087,7 +1183,7 @@ impl DPI {
               n = n + TfIdfzr::tfidf(key, doc_idx, cnts.clone());
             }
             if (n/docs.len() as f64) >= 0.30 as f64 {
-              rslts.insert(key.to_string(), n/docs.len() as f64 * KEY_WORD_PNTS);
+              rslts.push( (key.to_string(), n/docs.len() as f64 * KEY_WORD_PNTS) );
             }
           }
         }
@@ -1096,11 +1192,11 @@ impl DPI {
       rslts
     }    
 
-    fn get_suggested_words_from_words(key_words: Vec<String>, docs: Vec<String>) -> BTreeMap<String, f64>{
+    fn get_suggested_words_from_words(key_words: Vec<String>, docs: Vec<String>) -> Vec<(String, f64)>{
       struct TfIdfzr;
       impl Tfidf for TfIdfzr{}
             
-      let mut rslts: BTreeMap<String, f64> = BTreeMap::new();
+      let mut rslts: Vec<(String, f64)> = Vec::new();
       let mut cnts: Vec<Vec<(&str, usize)>> = Vec::new();
 
       docs.iter().for_each(|text| {
@@ -1120,7 +1216,7 @@ impl DPI {
               n = n + TfIdfzr::tfidf(key, doc_idx, cnts.clone());
             }
             if (n/docs.len() as f64) >= 0.30 as f64 {
-              rslts.insert(key.to_string(), n/docs.len() as f64 * KEY_WORD_PNTS);
+              rslts.push( (key.to_string(), n/docs.len() as f64 * KEY_WORD_PNTS) );
             }
           }
         }
@@ -1128,6 +1224,29 @@ impl DPI {
       
       rslts
     }
+
+    fn suggest_from_key_pattern<'a>(pattern: &str, tokens: Vec<&'a str>) -> Vec<(&'a str, i8)> {      
+      let mut suggestions: Vec<(&str, i8)> = Vec::new();
+      struct Tknzr {}
+      impl Tfidf for Tknzr {}
+      let total_count = tokens.len();
+      let freq_counts = Tknzr::frequency_counts(tokens.clone());
+
+      for (idx, tkn) in tokens.iter().enumerate() {
+        let pttrn_def = PatternDefinition::new();  
+        if pttrn_def.analyze(tkn) == pattern {
+          let idx_scope: Vec<i8> = vec![-2, -1, 1, 2];
+          for i in &idx_scope {              
+            let cnt = freq_counts.get(&tokens[add(idx, *i)]).unwrap();
+            if (cnt / total_count ) <= 0.15 as usize {
+              suggestions.push( (tokens[add(idx, *i)], *i) );
+            }
+          } 
+        }
+      }
+
+      suggestions
+    }     
 
     fn suggest_from_key_regex<'a>(regex: &str, tokens: Vec<&'a str>) -> Vec<(&'a str, i8)> {      
       let mut suggestions: Vec<(&str, i8)> = Vec::new();
@@ -1206,7 +1325,7 @@ impl DPI {
     /// println!("SCORES: {:?}", dpi.scores);      
     /// println!("SUGGESTIONS: {:?}", suggestions);
     /// ```
-    pub fn train(&mut self, docs: Vec<String>) -> Vec<BTreeMap<String, f64>>{
+    pub fn train(&mut self, docs: Vec<String>) -> BTreeMap<String, Suggestion>{
       let mut keys: Vec<(f64, Vec<String>)> = Vec::new();
 
       match self.key_patterns.clone() {
@@ -1233,23 +1352,41 @@ impl DPI {
       });
 
       // get suggested words
-      let mut rtn = Vec::new();
+      let mut rtn: BTreeMap<String, Suggestion> = BTreeMap::new();
 
       if self.key_words.is_some() {
-      rtn.push(Self::get_suggested_words_from_words(self.key_words.clone().unwrap(), docs.clone()));
+        let words = Self::get_suggested_words_from_words(self.key_words.clone().unwrap(), docs.clone());
+        words.iter()
+          .for_each(|s|{
+            let suggest = Suggestion::with(s.0.clone(), Self::word_to_regex(s.0.to_string()), Self::word_to_pattern(s.0.to_string()), s.1);
+            rtn.insert(s.0.clone(), suggest);
+          });
       }
 
       if self.key_regexs.is_some() {
-        let word_suggestions = Self::get_suggested_words_from_regexs(self.key_regexs.clone().unwrap(), docs.clone());
-        let mut regex_suggestions: BTreeMap<String, f64> = BTreeMap::new();
-        word_suggestions.iter().for_each(|w|{          
-          regex_suggestions.insert(Self::word_to_regex(w.0.to_string()), *w.1);
-        });
-          
-        rtn.push(regex_suggestions);
+        let words = Self::get_suggested_words_from_regexs(self.key_regexs.clone().unwrap(), docs.clone());
+        words.iter()
+          .for_each(|s|{
+            let suggest = Suggestion::with(s.0.clone(), Self::word_to_regex(s.0.to_string()), Self::word_to_pattern(s.0.to_string()), s.1);
+            rtn.insert(s.0.clone(), suggest);
+          });
+      }
+
+      if self.key_patterns.is_some() {
+        let words = Self::get_suggested_words_from_patterns(self.key_patterns.clone().unwrap(), docs.clone());
+        words.iter()
+          .for_each(|s|{
+            let suggest = Suggestion::with(s.0.clone(), Self::word_to_regex(s.0.to_string()), Self::word_to_pattern(s.0.to_string()), s.1);
+            rtn.insert(s.0.clone(), suggest);
+          });
       }
 
       rtn
+    }
+
+    fn word_to_pattern(word: String) -> String {
+      let pttrn = PatternDefinition::new();
+      pttrn.analyze(&word)
     }
 
     fn word_to_regex(word: String) -> String {
@@ -1660,17 +1797,19 @@ mod tests {
       }
                
       let suggestions = dpi.train(docs);
-      //println!("SCORES: {:?}", dpi.scores);      
-      //println!("SUGGESTIONS: {:?}", suggestions);
 
       assert_eq!(dpi.get_score(Lib::TEXT_ACCOUNT.to_string()).points, 400.0);
       assert_eq!(dpi.get_score(Lib::REGEX_ACCOUNT.to_string()).points, 360.0);
       assert_eq!(dpi.get_score(Lib::PTTRN_ACCOUNT_CAMEL.to_string()).points, 80.0);
       assert_eq!(dpi.get_score(Lib::PTTRN_ACCOUNT_LOWER.to_string()).points, 240.0);
       assert_eq!(dpi.get_score(Lib::PTTRN_ACCOUNT_UPPER.to_string()).points, 160.0);
-      assert_eq!(*suggestions[0].get("statement").unwrap(), 67.13741764082893);
-      println!("SUGGESTIONS: {:?}",suggestions[1]);
-      assert_eq!(*suggestions[1].get("[0-9][0-9][0-9][0-9]").unwrap(), 59.50816563618928);
+      assert_eq!(suggestions.get("statement").unwrap().points, 67.13741764082893);
+
+      println!("SUGGESTIONS: {:?}",suggestions);
+      let _3869 = suggestions.get("3869").unwrap();
+      assert_eq!(_3869.points, 59.50816563618928);
+      assert_eq!(_3869.regex.as_ref().unwrap(), "[0-9][0-9][0-9][0-9]");
+      assert_eq!(_3869.pattern.as_ref().unwrap(), "####");
     }
 
     #[test]
