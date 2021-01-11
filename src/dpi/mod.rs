@@ -34,29 +34,6 @@ use tfidf::{TfIdf, TfIdfDefault};
 //use std::sync::mpsc;
 //use std::thread;
 
-macro_rules! string_to_regex {
-  ( $text:expr ) => {
-    {
-      let mut regex = String::new();
-      let chars = $text.char_indices().map(|x| x.1).collect::<Vec<char>>();
-
-      chars.iter().for_each(|c| {
-        if c.is_ascii_digit() {
-          regex.push_str("[0-9]");
-        } else if c.is_ascii_alphabetic() {
-          regex.push_str("[a-zA-Z]");
-        } else if c.is_ascii_graphic() && !c.is_ascii_alphanumeric() {
-          regex.push_str("[^a-zA-Z0-9]");
-        } else {
-          regex.push_str(".");
-        }
-      });
-
-      &regex
-    }
-  }
-}
-
 const KEY_PATTERN_PNTS: f64 = 80 as f64;
 const KEY_REGEX_PNTS: f64 = 90 as f64;
 const KEY_WORD_PNTS: f64 = 100 as f64;
@@ -1086,7 +1063,40 @@ impl DPI {
       .len()
     }
 
-    fn get_suggested_words(key_words: Vec<String>, docs: Vec<String>) -> BTreeMap<String, f64>{
+    fn get_suggested_words_from_regexs(key_regexs: Vec<String>, docs: Vec<String>) -> BTreeMap<String, f64>{
+      struct TfIdfzr;
+      impl Tfidf for TfIdfzr{}
+            
+      let mut rslts: BTreeMap<String, f64> = BTreeMap::new();
+      let mut cnts: Vec<Vec<(&str, usize)>> = Vec::new();
+
+      docs.iter().for_each(|text| {
+        let tokens = Self::tokenize(&text);
+        let feq_cnts = TfIdfzr::frequency_counts_as_vec(tokens.clone());
+        cnts.push(feq_cnts);
+      });
+
+      docs.iter().for_each(|text| {
+        for regex in key_regexs.clone().iter() {
+          let tokens = Self::tokenize(&text).clone(); 
+          let suggestions = DPI::suggest_from_key_regex(regex, tokens);
+
+          for (key, _val) in suggestions.iter() {
+            let mut n: f64 = 0.00;
+            for doc_idx in 0..docs.len() {
+              n = n + TfIdfzr::tfidf(key, doc_idx, cnts.clone());
+            }
+            if (n/docs.len() as f64) >= 0.30 as f64 {
+              rslts.insert(key.to_string(), n/docs.len() as f64 * KEY_WORD_PNTS);
+            }
+          }
+        }
+      });
+      
+      rslts
+    }    
+
+    fn get_suggested_words_from_words(key_words: Vec<String>, docs: Vec<String>) -> BTreeMap<String, f64>{
       struct TfIdfzr;
       impl Tfidf for TfIdfzr{}
             
@@ -1119,7 +1129,7 @@ impl DPI {
       rslts
     }
 
-    fn suggest_from_key_regex<'a>(regex: &str, tokens: Vec<&'a str>) -> Vec<(&'a str, i8)> {
+    fn suggest_from_key_regex<'a>(regex: &str, tokens: Vec<&'a str>) -> Vec<(&'a str, i8)> {      
       let mut suggestions: Vec<(&str, i8)> = Vec::new();
       struct Tknzr {}
       impl Tfidf for Tknzr {}
@@ -1132,14 +1142,14 @@ impl DPI {
           for i in &idx_scope {              
             let cnt = freq_counts.get(&tokens[add(idx, *i)]).unwrap();
             if (cnt / total_count ) <= 0.15 as usize {
-              suggestions.push( (string_to_regex!(tokens[add(idx, *i)]), *i) );
+              suggestions.push( (tokens[add(idx, *i)], *i) );
             }
           } 
         }
       }
 
       suggestions
-    }    
+    }   
 
     fn suggest_from_key_word<'a>(word: &str, tokens: Vec<&'a str>) -> Vec<(&'a str, i8)> {
       let mut suggestions: Vec<(&str, i8)> = Vec::new();
@@ -1196,7 +1206,7 @@ impl DPI {
     /// println!("SCORES: {:?}", dpi.scores);      
     /// println!("SUGGESTIONS: {:?}", suggestions);
     /// ```
-    pub fn train(&mut self, docs: Vec<String>) -> BTreeMap<String, f64>{
+    pub fn train(&mut self, docs: Vec<String>) -> Vec<BTreeMap<String, f64>>{
       let mut keys: Vec<(f64, Vec<String>)> = Vec::new();
 
       match self.key_patterns.clone() {
@@ -1223,7 +1233,41 @@ impl DPI {
       });
 
       // get suggested words
-      Self::get_suggested_words(self.key_words.clone().unwrap(), docs.clone())
+      let mut rtn = Vec::new();
+
+      if self.key_words.is_some() {
+      rtn.push(Self::get_suggested_words_from_words(self.key_words.clone().unwrap(), docs.clone()));
+      }
+
+      if self.key_regexs.is_some() {
+        let word_suggestions = Self::get_suggested_words_from_regexs(self.key_regexs.clone().unwrap(), docs.clone());
+        let mut regex_suggestions: BTreeMap<String, f64> = BTreeMap::new();
+        word_suggestions.iter().for_each(|w|{          
+          regex_suggestions.insert(Self::word_to_regex(w.0.to_string()), *w.1);
+        });
+          
+        rtn.push(regex_suggestions);
+      }
+
+      rtn
+    }
+
+    fn word_to_regex(word: String) -> String {
+      let mut rtn = String::new();
+
+      word.chars().for_each(|c|{
+        if c.is_alphabetic() {
+          rtn.push_str("[aA-zZ]");
+        }
+        if c.is_ascii_digit() {
+          rtn.push_str("[0-9]");
+        }
+        if !c.is_ascii_alphanumeric() {
+          rtn.push_str("[^a-zA-Z\\d\\s:]");
+        }
+      });
+
+      rtn
     }
 
     /// Trains the DPI object using key patterns against a the list of words provided as the sample content and 
@@ -1533,13 +1577,6 @@ mod tests {
     }
 
     #[test]
-    fn test_dpi_string_to_regex() {
-      assert_eq!(string_to_regex!("Account"),"[a-zA-Z][a-zA-Z][a-zA-Z][a-zA-Z][a-zA-Z][a-zA-Z][a-zA-Z]".to_string());
-      assert_eq!(string_to_regex!("12/31/2020"),"[0-9][0-9][^a-zA-Z0-9][0-9][0-9][^a-zA-Z0-9][0-9][0-9][0-9][0-9]".to_string());
-      assert_eq!(string_to_regex!("P3ssw0rd"),"[a-zA-Z][0-9][a-zA-Z][a-zA-Z][a-zA-Z][0-9][a-zA-Z][a-zA-Z]".to_string());
-    }
-
-    #[test]
     fn test_suggested_key_regexs() {
       struct Tknzr;
       impl Tokenizer for Tknzr {}
@@ -1631,7 +1668,9 @@ mod tests {
       assert_eq!(dpi.get_score(Lib::PTTRN_ACCOUNT_CAMEL.to_string()).points, 80.0);
       assert_eq!(dpi.get_score(Lib::PTTRN_ACCOUNT_LOWER.to_string()).points, 240.0);
       assert_eq!(dpi.get_score(Lib::PTTRN_ACCOUNT_UPPER.to_string()).points, 160.0);
-      assert_eq!(*suggestions.get("statement").unwrap(), 67.13741764082893);
+      assert_eq!(*suggestions[0].get("statement").unwrap(), 67.13741764082893);
+      println!("SUGGESTIONS: {:?}",suggestions[1]);
+      assert_eq!(*suggestions[1].get("[0-9][0-9][0-9][0-9]").unwrap(), 59.50816563618928);
     }
 
     #[test]
@@ -1707,6 +1746,22 @@ mod tests {
       let dpi = DPI::with_key_words(words);
       
       assert_eq!(dpi.key_words.unwrap().len(),1);
+    }
+
+    #[test]
+    fn test_word_to_regex() {
+      let sample = vec![
+        "1234".to_string(), 
+        "1aA4".to_string(), 
+        "$100".to_string(),
+        "Smith".to_string(),
+        "14%".to_string(),
+        ];
+
+      for s in sample {
+        assert!(Regex::new(&DPI::word_to_regex(s.to_string())).unwrap().is_match(&s));
+      }
+
     }
 
     #[test]
