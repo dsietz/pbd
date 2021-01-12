@@ -247,7 +247,10 @@ pub trait Phonetic {
   }
 }
 
-pub trait Tfidf {
+pub trait Tfidf {    
+  /// The default tf-idf limit before the term is considered relevant 
+  const TFIDF_LIMIT:f64 = 0.50;
+  
   // determine how important a term is in a document compared to other documents
   fn tfidf(term: &str, doc_idx: usize, docs: Vec<Vec<(&str, usize)>>) -> f64{
     TfIdfDefault::tfidf(term, &docs[doc_idx], docs.iter())
@@ -740,6 +743,7 @@ pub struct DPI {
 }
 
 impl Tokenizer for DPI {}
+impl Tfidf for DPI {}
 
 impl DPI {
     /// Constructs a DPI object without using any predefined set of key words or patterns to learn from
@@ -1149,7 +1153,7 @@ impl DPI {
             for doc_idx in 0..docs.len() {
               n = n + TfIdfzr::tfidf(key, doc_idx, cnts.clone());
             }
-            if (n/docs.len() as f64) >= 0.30 as f64 {
+            if (n/docs.len() as f64) >= Self::TFIDF_LIMIT as f64 {
               rslts.push( (key.to_string(), n/docs.len() as f64 * KEY_WORD_PNTS) );
             }
           }
@@ -1182,7 +1186,7 @@ impl DPI {
             for doc_idx in 0..docs.len() {
               n = n + TfIdfzr::tfidf(key, doc_idx, cnts.clone());
             }
-            if (n/docs.len() as f64) >= 0.30 as f64 {
+            if (n/docs.len() as f64) >= Self::TFIDF_LIMIT as f64 {
               rslts.push( (key.to_string(), n/docs.len() as f64 * KEY_WORD_PNTS) );
             }
           }
@@ -1215,7 +1219,7 @@ impl DPI {
             for doc_idx in 0..docs.len() {
               n = n + TfIdfzr::tfidf(key, doc_idx, cnts.clone());
             }
-            if (n/docs.len() as f64) >= 0.30 as f64 {
+            if (n/docs.len() as f64) >= Self::TFIDF_LIMIT as f64 {
               rslts.push( (key.to_string(), n/docs.len() as f64 * KEY_WORD_PNTS) );
             }
           }
@@ -1298,7 +1302,7 @@ impl DPI {
     }    
 
     /// Trains the DPI object using its keys against a list of Strings as the sample content.
-    /// Returns a `BTreeMap<String, f64>` of suggested key words with average Tfidf greater than 0.30 
+    /// Returns a `BTreeMap<String, f64>` of suggested key words with average Tfidf greater than Tfidf::TFIDF_LIMIT 
     /// which are recommended as additional keys for consideration.
     /// 
     /// # Arguments
@@ -1739,7 +1743,7 @@ mod tests {
             
           }
           
-          if (n/docs.len() as f64) >= 0.30 as f64 {
+          if (n/docs.len() as f64) >= DPI::TFIDF_LIMIT as f64 {
             rslts.insert(key.to_string(), n/docs.len() as f64 * KEY_WORD_PNTS);
           }
         }
@@ -1774,7 +1778,7 @@ mod tests {
             
           }
           
-          if (n/docs.len() as f64) >= 0.30 as f64 {
+          if (n/docs.len() as f64) >= DPI::TFIDF_LIMIT as f64 {
             rslts.insert(key.to_string(), n/docs.len() as f64 * KEY_WORD_PNTS);
           }
         }
