@@ -311,6 +311,12 @@ mod tests {
         assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
     }     
 
+    #[test]
+    fn test_dua_default_validation_level() {
+        let dflt = DUAEnforcer::default(); 
+        assert_eq!(dflt.validation_level, 1);
+    }
+
     #[actix_rt::test]
     async fn test_dua_valid_high_ok() {
         let mut app = test::init_service(

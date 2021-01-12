@@ -31,8 +31,6 @@
 //! }
 //! ```
 
-
-
 use super::*;
 use std::fmt;
 use actix_web::{FromRequest, HttpRequest};
@@ -174,6 +172,18 @@ mod tests {
         let resp = test::call_service(&mut app, req).await;
         assert_eq!(resp.status(), StatusCode::OK);
     }
+
+    #[actix_rt::test]
+    async fn test_dua_extractor_bad() {
+        let mut app = test::init_service(App::new().route("/", web::get().to(index_extract_dua))).await;
+        let req = test::TestRequest::get().uri("/")
+            .header("content-type", "application/json")
+            .header(DUA_HEADER, r#"[{"agreement_name":"billing""location":"www.dua.org/billing.pdf","agreed_dtm": 1553988607}]"#)
+            .to_request();
+        let resp = test::call_service(&mut app, req).await;
+        assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+    }
+
     #[actix_rt::test]
     async fn test_dua_extractor_missing() {
         let mut app = test::init_service(App::new().route("/", web::get().to(index_extract_dua))).await;
