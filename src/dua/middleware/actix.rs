@@ -161,7 +161,7 @@ where
                 if valid_ind == true && self.validation_level >= VALIDATION_HIGH {
                     let checks: usize = duas.vec().par_iter()
                         .map(|d|
-                            match reqwest::get(&d.location.clone()) {
+                            match reqwest::blocking::get(&d.location.clone()) {
                                 Ok(rsp) => {
                                     if rsp.status() == StatusCode::OK { 
                                         1
