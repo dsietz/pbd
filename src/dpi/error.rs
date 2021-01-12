@@ -18,4 +18,11 @@ impl ResponseError for Error{}
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+
+    #[test]
+    fn test_error_unknown_score() {
+        let err = Error::UnknownScore;
+        assert_eq!(format!("{}", err), "Unknown Score");
+    }
 }

@@ -38,3 +38,62 @@ pub enum Error {
 impl error::Error for Error{}
 
 impl ResponseError for Error{}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_error_bad_keypair() {
+        let err = Error::BadKeyPairError;
+        assert_eq!(format!("{}", err), "Bad key pair provided.");
+    }
+
+    #[test]
+    fn test_error_bad_transferset() {
+        let err = Error::BadTransferSetError;
+        assert_eq!(format!("{}", err), "Bad transfer set provided.");
+    }
+
+    #[test]
+    fn test_error_decryption() {
+        let err = Error::DecryptionError;
+        assert_eq!(format!("{}", err), "Unable to decrypt the data.");
+    }
+
+    #[test]
+    fn test_error_encryption() {
+        let err = Error::EncryptionError;
+        assert_eq!(format!("{}", err), "Unable to encrypt the data.");
+    }
+
+    #[test]
+    fn test_error_missing_nonce() {
+        let err = Error::MissingNonceError;
+        assert_eq!(format!("{}", err), "Missing required nonce (a.k.a. IV).");
+    }
+
+    #[test]
+    fn test_error_missing_symmetric_key() {
+        let err = Error::MissingSymmetricKeyError;
+        assert_eq!(format!("{}", err), "Missing required symmetric key.");
+    }
+
+    #[test]
+    fn test_error_payload_overflow() {
+        let err = Error::PayloadOverflowError;
+        assert_eq!(format!("{}", err), "Exeeded limit for reading payload.");
+    }
+
+    #[test]
+    fn test_error_payload_timeout() {
+        let err = Error::PayloadTimeoutError;
+        assert_eq!(format!("{}", err), "Timed out while reading the payload.");
+    }
+
+    #[test]
+    fn test_error_payload_unreadbale() {
+        let err = Error::PayloadUnreadableError;
+        assert_eq!(format!("{}", err), "Cannot read payload.");
+    }
+}
