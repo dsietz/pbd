@@ -29,7 +29,7 @@ default = ["dua", "dtc", "dsg", "dpi"]
 dua = ["actix-web", "actix-service", "futures", "rayon", "reqwest"] # Data Usage Agreement functionality
 dtc = ["actix-web", "actix-service", "pow_sha256", "base64"] # Data Tracker Chain functionality
 dsg = ["bytes", "openssl", "rand"] # Data Security Guard functionality
-dpi = ["multimap", "eddie", "rayon", "regex", "rust-tfidf"] # Data Privacy Inspector functionality
+dpi = ["multimap", "eddie", "levenshtein", "rayon", "regex", "rust-tfidf"] # Data Privacy Inspector functionality
 
 [dependencies]
 env_logger = "0.7"
@@ -52,6 +52,7 @@ regex = { version = "1.4", optional = true }
 eddie = { version = "0.4", optional = true }
 multimap = { version = "0.8.2", optional = true }
 rust-tfidf = { version = "1.1", optional = true }
+levenshtein = { version = "1.0.4", optional = true }
 
 [dependencies.reqwest]
 version = "0.11"

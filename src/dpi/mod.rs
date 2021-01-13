@@ -22,6 +22,7 @@
 
 extern crate eddie;
 extern crate regex;
+extern crate levenshtein;
 
 use super::*;
 use std::collections::{BTreeMap};
@@ -30,9 +31,7 @@ use rayon::prelude::*;
 use multimap::MultiMap;
 use std::cmp::Ordering;
 use tfidf::{TfIdf, TfIdfDefault};
-//use std::sync::mpsc::{Sender, Receiver};
-//use std::sync::mpsc;
-//use std::thread;
+use levenshtein::levenshtein;
 
 const KEY_PATTERN_PNTS: f64 = 80 as f64;
 const KEY_REGEX_PNTS: f64 = 90 as f64;
@@ -51,7 +50,7 @@ type SoundexWord = Vec<char>;
 type PatternMap = BTreeMap<String, char>;
 type ScoreCard = BTreeMap<String, Score>;
 
-/// The collection of methods that enable a structure to convert text to ngrams
+/// The collection of methods that enable a structure to find words that sound alike
 pub trait Phonetic {
   /// Pads the vector of chars with zeros if length is less than 4
   /// 
@@ -208,6 +207,36 @@ pub trait Phonetic {
     Self::soundex_word(word1) == Self::soundex_word(word2)
   }
 
+  /// Compares 2 words and determines if they similar in spelling (true=yes, false=no)
+  /// 
+  /// # Arguments
+  /// 
+  /// * word1: &str - The first textual word to compare to the second.</br>    
+  /// * word2: &str - The second textual word to compare to the first.</br>
+  /// 
+  /// #Example
+  ///
+  /// ```rust
+  /// use pbd::dpi::Phonetic;
+  ///
+  /// struct Prcsr;
+  /// impl Phonetic for Prcsr {}
+  ///   
+  /// assert!(!Prcsr::similar_word("rupert","robert"));
+  /// assert!(Prcsr::similar_word("Johnathan","Jonathan"));
+  /// ```
+  fn similar_word(word1: &str, word2: &str) -> bool {
+    let length = ( word1.len() as f64 + word2.len() as f64 ) / 2.0;
+    let diff = levenshtein(word1, word2) as f64;
+
+    if ( diff / length ) <= 0.30  {
+      true
+    } else {
+      println!("Length:{} diff:{}", length, diff);
+      false
+    }
+  }
+
   /// Removes duplicate chars that share the same char digits
   /// 
   /// # Arguments
@@ -250,6 +279,8 @@ pub trait Phonetic {
 pub trait Tfidf {    
   /// The default tf-idf limit before the term is considered relevant 
   const TFIDF_LIMIT:f64 = 0.50;
+  /// The default tf limit before the term is considered relevant
+  const TF_LIMIT:f64 = 0.15;
   
   /// Determines how important a term is in a document compared to other documents.
   /// 
@@ -807,6 +838,7 @@ pub struct DPI {
   pub scores: ScoreCard,
 }
 
+impl Phonetic for DPI {}
 impl Tokenizer for DPI {}
 impl Tfidf for DPI {}
 
@@ -1307,7 +1339,7 @@ impl DPI {
           let idx_scope: Vec<i8> = vec![-2, -1, 1, 2];
           for i in &idx_scope {              
             let cnt = freq_counts.get(&tokens[add(idx, *i)]).unwrap();
-            if (cnt / total_count ) <= 0.15 as usize {
+            if (cnt / total_count ) <= Self::TF_LIMIT as usize {
               suggestions.push( (tokens[add(idx, *i)], *i) );
             }
           } 
@@ -1329,7 +1361,7 @@ impl DPI {
           let idx_scope: Vec<i8> = vec![-2, -1, 1, 2];
           for i in &idx_scope {              
             let cnt = freq_counts.get(&tokens[add(idx, *i)]).unwrap();
-            if (cnt / total_count ) <= 0.15 as usize {
+            if (cnt / total_count ) <= Self::TF_LIMIT as usize {
               suggestions.push( (tokens[add(idx, *i)], *i) );
             }
           } 
@@ -1354,7 +1386,7 @@ impl DPI {
             for i in &idx_scope {              
               let cnt = freq_counts.get(&tokens[add(idx, *i)]).unwrap();
 
-              if (cnt / total_count ) <= 0.15 as usize {
+              if (cnt / total_count ) <= Self::TF_LIMIT as usize {
                 suggestions.push(( tokens[add(idx, *i)], *i) );
               }
             } 
@@ -1365,6 +1397,21 @@ impl DPI {
 
       suggestions
     }    
+
+    fn suggest_from_sounds_like<'a>(word: &str, tokens: Vec<&'a str>) -> Vec<(&'a str, usize)> {
+      let mut suggestions: Vec<(&str, usize)> = Vec::new();
+
+      for (idx, tkn) in tokens.iter().enumerate() {
+        match Self::sounds_like(word, tkn) {
+          true => {
+            suggestions.push(( tkn, idx) );
+          },
+          false => {},
+        }
+      }
+
+      suggestions
+    } 
 
     /// Trains the DPI object using its keys against a list of Strings as the sample content.
     /// Returns a `BTreeMap<String, f64>` of suggested key words with average Tfidf greater than Tfidf::TFIDF_LIMIT 
@@ -1818,6 +1865,17 @@ mod tests {
     }    
 
     #[test]
+    fn test_dpi_suggest_from_sounds_like() {
+      let tokens = vec!["Hello","my","name","is","Robert","Smith",
+      "I","was","wondering","if","you","would","send","me","the","application",
+      "My","address","is","42","Sunny","Way","AnyTown","MN","09887"];
+      let suggestions = DPI::suggest_from_sounds_like("Sunday",tokens);
+      let expected = vec![("Smith", 5)];
+      
+      assert_eq!(suggestions,expected);
+    }
+
+    #[test]
     fn test_suggested_key_words() {
       struct Tknzr;
       impl Tokenizer for Tknzr {}
@@ -2072,6 +2130,15 @@ mod tests {
        
         assert_eq!(Prcsr::strip_similar_chars(vec!['h', 'e', 'l', 'l', 'o']), vec!['h', '4']);
     }    
+
+    #[test]
+    fn test_phonetics_similar_word() {
+      struct Prcsr;
+      impl Phonetic for Prcsr {}
+      
+      assert!(!Prcsr::similar_word("rupert","robert"));
+      assert!(Prcsr::similar_word("Johnathan","Jonathan"));
+    }
 
     #[test]
     fn test_phonetics_soundex_encode() {
