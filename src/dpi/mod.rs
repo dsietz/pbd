@@ -251,11 +251,57 @@ pub trait Tfidf {
   /// The default tf-idf limit before the term is considered relevant 
   const TFIDF_LIMIT:f64 = 0.50;
   
-  // determine how important a term is in a document compared to other documents
+  /// Determines how important a term is in a document compared to other documents.
+  /// 
+  /// # Arguments
+  /// 
+  /// * tokens: Vec<&str> - A vector of words that are to be counted.</br>
+  /// 
+  /// #Example
+  ///
+  /// ```rust
+  /// use pbd::dpi::Tfidf;
+  /// 
+  /// struct FreqCnt {}
+  /// impl Tfidf for FreqCnt {}
+  /// 
+  /// let mut docs = Vec::new();
+  /// let tokens_list = vec![
+  ///   vec!["Hello","my","name","is","John","What","is","your","name"],
+  ///   vec!["A","name","is","a","personal","identifier","Never","share","your","name"],
+  ///   vec!["My","ssn","is","003-67-0998"]
+  /// ];
+  /// 
+  /// for tokens in tokens_list {
+  ///   docs.push(FreqCnt::frequency_counts_as_vec(tokens));
+  /// } 
+  /// 
+  /// assert_eq!(FreqCnt::tfidf("ssn", 2, docs.clone()), 1.0986122886681098);
+  /// assert_eq!(FreqCnt::tfidf("name", 1, docs.clone()), 0.4054651081081644);
+  /// assert_eq!(FreqCnt::tfidf("your", 1, docs), 0.3040988310811233);
+  /// ```  
   fn tfidf(term: &str, doc_idx: usize, docs: Vec<Vec<(&str, usize)>>) -> f64{
     TfIdfDefault::tfidf(term, &docs[doc_idx], docs.iter())
   }
 
+  /// Takes a list of words and returns a distinct list of words with the number of times they appear in the list.
+  /// 
+  /// # Arguments
+  /// 
+  /// * tokens: Vec<&str> - A vector of words that are to be counted.</br>
+  /// 
+  /// #Example
+  ///
+  /// ```rust
+  /// use pbd::dpi::Tfidf;
+  /// 
+  /// struct FreqCnt {}
+  /// impl Tfidf for FreqCnt {}
+  /// let tokens = vec!["Hello","my","name","is","John","What","is","your","name","A","name","is","a","personal","identifier","Never","share","your","name","My","ssn","is","003-67-0998"];
+  /// let _iter = tokens.iter().map(|t| t.to_string());
+  /// 
+  /// println!("{:?}", FreqCnt::frequency_counts_as_vec(tokens));
+  /// ```
   fn frequency_counts_as_vec(tokens: Vec<&str>) -> Vec<(&str, usize)>{
     let mut counts: Vec<(&str, usize)> = Vec::new();
 
@@ -291,6 +337,25 @@ pub trait Tfidf {
     counts
   }
 
+  /// Takes a list of words and returns a BTreeMap of key words with the number of times they appear in the list.
+  /// 
+  /// # Arguments
+  /// 
+  /// * tokens: Vec<&str> - A vector of words that are to be counted.</br>
+  /// 
+  /// #Example
+  ///
+  /// ```rust
+  /// use pbd::dpi::Tfidf;
+  /// 
+  /// struct FreqCnt {}
+  /// impl Tfidf for FreqCnt {}
+  /// let tokens = vec!["Hello","my","name","is","John","What","is","your","name","A","name","is","a","personal","identifier","Never","share","your","name","My","ssn","is","003-67-0998"];
+  /// let _iter = tokens.iter().map(|t| t.to_string());
+  /// let counts = FreqCnt::frequency_counts(tokens);
+  /// 
+  /// assert_eq!(*counts.get("name").unwrap(), 4 as usize);
+  /// ```
   fn frequency_counts(tokens: Vec<&str>) -> BTreeMap<&str, usize>{
     let counts: Vec<(&str, usize)> = Self::frequency_counts_as_vec(tokens);
 
@@ -666,7 +731,7 @@ impl Score {
   }
 }
 
-/// Represents a Score
+/// Represents a Suggestion
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Suggestion {
   /// The word being suggested
@@ -2051,4 +2116,34 @@ mod tests {
 
       assert_eq!(format!("{:?}", FreqCnt::frequency_counts(tokens)), counts);
     }
+
+    #[test]
+    fn test_tfidf_frequency_counts_as_vec() {
+      struct FreqCnt {}
+      impl Tfidf for FreqCnt {}
+      let tokens = get_tokens();
+      let counts = r#"[("is", 4), ("name", 4), ("your", 2), ("003-67-0998", 1), ("A", 1), ("Hello", 1), ("John", 1), ("My", 1), ("Never", 1), ("What", 1), ("a", 1), ("identifier", 1), ("my", 1), ("personal", 1), ("share", 1), ("ssn", 1)]"#;
+
+      assert_eq!(format!("{:?}", FreqCnt::frequency_counts_as_vec(tokens)), counts);
+    }
+
+    #[test]
+    fn test_tfidf_tfidf() {
+      struct FreqCnt {}
+      impl Tfidf for FreqCnt {}
+      let mut docs = Vec::new();
+      let tokens_list = vec![
+        vec!["Hello","my","name","is","John","What","is","your","name"],
+        vec!["A","name","is","a","personal","identifier","Never","share","your","name"],
+        vec!["My","ssn","is","003-67-0998"]
+      ];
+
+      for tokens in tokens_list {
+        docs.push(FreqCnt::frequency_counts_as_vec(tokens));
+      } 
+      
+      assert_eq!(FreqCnt::tfidf("ssn", 2, docs.clone()), 1.0986122886681098);
+      assert_eq!(FreqCnt::tfidf("name", 1, docs.clone()), 0.4054651081081644);
+      assert_eq!(FreqCnt::tfidf("your", 1, docs), 0.3040988310811233);
+    }    
 }
