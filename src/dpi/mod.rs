@@ -32,9 +32,9 @@ use std::cmp::Ordering;
 use std::collections::BTreeMap;
 use tfidf::{TfIdf, TfIdfDefault};
 
-const KEY_PATTERN_PNTS: f64 = 80 as f64;
-const KEY_REGEX_PNTS: f64 = 90 as f64;
-const KEY_WORD_PNTS: f64 = 100 as f64;
+const KEY_PATTERN_PNTS: f64 = 80_f64;
+const KEY_REGEX_PNTS: f64 = 90_f64;
+const KEY_WORD_PNTS: f64 = 100_f64;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum ScoreKey {
@@ -253,8 +253,8 @@ pub trait Phonetic {
     fn strip_similar_chars(chars: Vec<char>) -> Vec<char> {
         let mut enc_chars = Vec::new();
         enc_chars.push(chars[0]);
-        for i in 1..chars.len() {
-            enc_chars.push(Self::get_char_digit(chars[i]));
+        for c in chars.iter().skip(1) {
+            enc_chars.push(Self::get_char_digit(*c));
         }
         let mut chars_no_hw = Vec::new();
         let mut chars_no_vowels = Vec::new();
@@ -508,11 +508,24 @@ pub trait Tokenizer {
     /// assert_eq!(Tknzr::is_match(' '), true);
     /// ```
     fn is_match(c: char) -> bool {
-        match c {
-            ' ' | ',' | '.' | '!' | '?' | ';' | '\'' | '"' | ':' | '\t' | '\n' | '\r' | '('
-            | ')' | '{' | '}' => true,
-            _ => false,
-        }
+        matches!(
+            c,
+            ' ' | ','
+                | '.'
+                | '!'
+                | '?'
+                | ';'
+                | '\''
+                | '"'
+                | ':'
+                | '\t'
+                | '\n'
+                | '\r'
+                | '('
+                | ')'
+                | '{'
+                | '}'
+        )
     }
 }
 
@@ -729,6 +742,12 @@ impl PatternDefinition {
     }
 }
 
+impl Default for PatternDefinition {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 /// Represents a Score
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Score {
@@ -887,14 +906,13 @@ impl DPI {
         regexs: Option<KeyWordList>,
         patterns: Option<KeyWordList>,
     ) -> DPI {
-        match regexs.clone() {
-            Some(reg) => match Self::validate_regexs(reg) {
+        if let Some(reg) = regexs.clone() {
+            match Self::validate_regexs(reg) {
                 Err(err) => {
                     panic!("Bad Regex: {:?}", err);
                 }
                 _ => {}
-            },
-            _ => {}
+            }
         }
 
         let mut dpi = DPI {
@@ -1014,7 +1032,7 @@ impl DPI {
         match &self.key_words.clone() {
             Some(keys) => {
                 for key in keys.iter() {
-                    &self.add_to_score_points(key.to_string(), KEY_WORD_PNTS);
+                    self.add_to_score_points(key.to_string(), KEY_WORD_PNTS);
                 }
             }
             None => {}
@@ -1027,7 +1045,7 @@ impl DPI {
         match &self.key_patterns.clone() {
             Some(pttrns) => {
                 for pttrn in pttrns.iter() {
-                    &self.add_to_score_points(pttrn.to_string(), KEY_PATTERN_PNTS);
+                    self.add_to_score_points(pttrn.to_string(), KEY_PATTERN_PNTS);
                 }
             }
             None => {}
@@ -1040,7 +1058,7 @@ impl DPI {
         match &self.key_regexs.clone() {
             Some(regexs) => {
                 for regex in regexs.iter() {
-                    &self.add_to_score_points(regex.to_string(), KEY_REGEX_PNTS);
+                    self.add_to_score_points(regex.to_string(), KEY_REGEX_PNTS);
                 }
             }
             None => {}
@@ -1752,6 +1770,12 @@ impl DPI {
             error!("Bad Regex: {:?}", bad);
             Err(bad)
         }
+    }
+}
+
+impl Default for DPI {
+    fn default() -> Self {
+        Self::new()
     }
 }
 

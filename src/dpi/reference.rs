@@ -160,11 +160,21 @@ impl Lib {
         let e = src[4].wrapping_sub(b'0') as u16;
         */
 
-        if src_vec[0] == 0 || (src_vec[0] > 6 && src_vec[1] > 5 && src_vec[2] > 5 && src_vec[3] > 3 && src_vec[4] > 5) {
+        if src_vec[0] == 0
+            || (src_vec[0] > 6
+                && src_vec[1] > 5
+                && src_vec[2] > 5
+                && src_vec[3] > 3
+                && src_vec[4] > 5)
+        {
             return Err(InvalidCode::new());
         }
 
-        let code = (src_vec[0] * 10000) + (src_vec[1] * 1000) + (src_vec[2] * 100) + (src_vec[3] * 10) + (src_vec[4] * 1);
+        let code = (src_vec[0] * 10000)
+            + (src_vec[1] * 1000)
+            + (src_vec[2] * 100)
+            + (src_vec[3] * 10)
+            + (src_vec[4] * 1);
         NonZeroU16::new(code).map(Lib).ok_or_else(InvalidCode::new)
     }
 
