@@ -394,7 +394,7 @@ pub trait Tfidf {
         // Convert to BTreeMap
         let mut list = BTreeMap::new();
         for count in counts.iter() {
-            list.insert(count.0.clone(), count.1);
+            list.insert(count.0, count.1);
         }
 
         list
@@ -907,11 +907,8 @@ impl DPI {
         patterns: Option<KeyWordList>,
     ) -> DPI {
         if let Some(reg) = regexs.clone() {
-            match Self::validate_regexs(reg) {
-                Err(err) => {
-                    panic!("Bad Regex: {:?}", err);
-                }
-                _ => {}
+            if let Err(err) = Self::validate_regexs(reg) {
+                panic!("Bad Regex: {:?}", err);
             }
         }
 
@@ -1131,7 +1128,7 @@ impl DPI {
     pub fn get_score(&mut self, key: String) -> Score {
         match self.scores.get_mut(&key) {
             Some(s) => s.clone(),
-            None => Score::new(ScoreKey::KeyWord, key, 0 as f64).clone(),
+            None => Score::new(ScoreKey::KeyWord, key, 0 as f64),
         }
     }
 
