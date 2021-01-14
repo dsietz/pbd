@@ -78,51 +78,25 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
-  grcov:
+  coveralls-grcov:
+    name: Generate code coverage
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-
-      - name: Install toolchain
-        uses: actions-rs/toolchain@v1
+      - uses: hecrj/setup-rust-action@v1
         with:
-          profile: minimal
-          toolchain: stable
-          override: true
-
-      - name: Execute tests
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
+          rust-version: nightly
+      - name: Run test for coverage
         env:
           CARGO_INCREMENTAL: 0
-          RUSTFLAGS: "-Zprofile -Ccodegen-units=1 -Cinline-threshold=0 -Clink-dead-code -Coverflow-checks=off -Cpanic=abort -Zpanic_abort_tests"
-      
-      - name: Pre-installing grcov
-        uses: actions-rs/grcov@v0.1
-        with:
-          crate: grcov
-          use-tool-cache: true
-      
-      - name: Gather coverage data
-        id: coverage
-        uses: actions-rs/grcov@v0.1
-        with:
-          coveralls-token: ${{ secrets.COVERALLS_TOKEN }}
-      
+          RUSTFLAGS: -Zprofile -Ccodegen-units=1 -Copt-level=0 -Clink-dead-code -Coverflow-checks=off -Zpanic_abort_tests -Cpanic=abort
+          RUSTDOCFLAGS: -Zprofile -Ccodegen-units=1 -Copt-level=0 -Clink-dead-code -Coverflow-checks=off -Zpanic_abort_tests -Cpanic=abort
+        run: |
+          cargo test
+      - uses: actions-rs/grcov@v0.1
       - name: Coveralls upload
         uses: coverallsapp/github-action@master
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           parallel: true
           path-to-lcov: ${{ steps.coverage.outputs.report }}
-
-  grcov_finalize:
-    runs-on: ubuntu-latest
-    needs: grcov
-    steps:
-      - name: Coveralls finalization
-        uses: coverallsapp/github-action@master
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          parallel-finished: true          
