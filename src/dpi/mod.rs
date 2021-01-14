@@ -571,7 +571,7 @@ impl PatternDefinition {
     ///
     /// ```rust
     /// use pbd::dpi::PatternDefinition;
-    ///	let pttrn_def = PatternDefinition::new();
+    /// let pttrn_def = PatternDefinition::new();
     /// ```
     pub fn new() -> PatternDefinition {
         let symbols: [char; 9] = ['@', 'C', 'c', 'V', 'v', '#', '~', 'S', 'p'];
@@ -782,10 +782,7 @@ impl Suggestion {
     ///
     /// # Arguments
     ///
-    /// * word: String- The word being suggested.</br>
-    /// * regex: String - The regex that represents the suggested word, (e.g.: "[aA-zZ]{3}").</br>
-    /// * pttrn: String - The pattern that represents the suggested word, (e.g.: "cvc").</br>
-    /// * pnts: f64 - The scored points that the key has received
+    /// * token: String- The word being suggested.</br>
     ///
     /// #Example
     ///
@@ -793,9 +790,9 @@ impl Suggestion {
     /// use pbd::dpi::Suggestion;
     /// let suggestion = Suggestion::new("dob".to_string());
     /// ```
-    pub fn new(word: String) -> Suggestion {
+    pub fn new(token: String) -> Suggestion {
         Suggestion {
-            word: word,
+            word: token,
             regex: None,
             pattern: None,
             points: 0.0,
@@ -806,7 +803,7 @@ impl Suggestion {
     ///
     /// # Arguments
     ///
-    /// * word: String- The word being suggested.</br>
+    /// * token: String- The word being suggested.</br>
     /// * regex: String - The regex that represents the suggested word, (e.g.: "[aA-zZ]{3}").</br>
     /// * pttrn: String - The pattern that represents the suggested word, (e.g.: "cvc").</br>
     /// * pnts: f64 - The scored points that the key has received
@@ -817,9 +814,9 @@ impl Suggestion {
     /// use pbd::dpi::Suggestion;
     /// let suggestion = Suggestion::with("dob".to_string(),"[aA-zZ]{3}".to_string(), "cvc".to_string(), 0.59874856);
     /// ```
-    pub fn with(word: String, regex: String, pttrn: String, pnts: f64) -> Suggestion {
+    pub fn with(token: String, regex: String, pttrn: String, pnts: f64) -> Suggestion {
         Suggestion {
-            word: word,
+            word: token,
             regex: Some(regex),
             pattern: Some(pttrn),
             points: pnts,

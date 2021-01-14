@@ -356,11 +356,11 @@ pub trait PrivacySecurityGuard {
         // These are unique attributes for the data being secured which ensures that no 2 data transfers
         // can be decrypted using the private key without these unique attributes.
         let key = self.generate_symmetric_key();
-        let nonce = self.generate_nonce();
+        let nonc = self.generate_nonce();
 
         // 1. encrypt the data using the symmetric key
         let secured_data =
-            match self.encrypt_data(key.clone(), Some(&nonce.clone()), data_to_encrypt.clone()) {
+            match self.encrypt_data(key.clone(), Some(&nonc.clone()), data_to_encrypt.clone()) {
                 Ok(msg) => msg,
                 Err(err) => {
                     error!("{:?}", err);
@@ -381,7 +381,7 @@ pub trait PrivacySecurityGuard {
         Ok(TransferSet {
             encrypted_data: secured_data,
             encrypted_symmetric_key: encrypted_key,
-            nonce: nonce,
+            nonce: nonc,
             padding: padding.as_raw(),
         })
     }

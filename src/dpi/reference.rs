@@ -142,21 +142,29 @@ impl Lib {
 
     /// Converts a &[u8] to a status code
     pub fn from_bytes(src: &[u8]) -> Result<Lib, InvalidCode> {
+        let mut src_vec = Vec::new();
+
         if src.len() != 5 {
             return Err(InvalidCode::new());
         }
 
+        for s in src {
+            src_vec.push(s.wrapping_sub(b'0') as u16);
+        }
+
+        /*
         let a = src[0].wrapping_sub(b'0') as u16;
         let b = src[1].wrapping_sub(b'0') as u16;
         let c = src[2].wrapping_sub(b'0') as u16;
         let d = src[3].wrapping_sub(b'0') as u16;
         let e = src[4].wrapping_sub(b'0') as u16;
+        */
 
-        if a == 0 || (a > 6 && b > 5 && c > 5 && d > 3 && e > 5) {
+        if src_vec[0] == 0 || (src_vec[0] > 6 && src_vec[1] > 5 && src_vec[2] > 5 && src_vec[3] > 3 && src_vec[4] > 5) {
             return Err(InvalidCode::new());
         }
 
-        let code = (a * 10000) + (b * 1000) + (c * 100) + (d * 10) + (e * 1);
+        let code = (src_vec[0] * 10000) + (src_vec[1] * 1000) + (src_vec[2] * 100) + (src_vec[3] * 10) + (src_vec[4] * 1);
         NonZeroU16::new(code).map(Lib).ok_or_else(InvalidCode::new)
     }
 
