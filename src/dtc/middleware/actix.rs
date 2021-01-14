@@ -178,9 +178,9 @@ where
                 }
             }
             None => {
-                return Either::Right(ok(
+                Either::Right(ok(
                     req.into_response(HttpResponse::BadRequest().finish().into_body())
-                ));
+                ))
             }
         }
     }
