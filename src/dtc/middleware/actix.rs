@@ -62,6 +62,7 @@
 //! For a further example, run the command `cargo run --example data-tracker-chain`.
 //! There are example service calls for POSTMAN (pbd.postman_collection.json) in the `examples` directory of the source code package.  
 //!
+#![allow(clippy::complexity)]
 use super::*;
 use crate::dtc::extractor::actix::TrackerHeader;
 use crate::dtc::Tracker;

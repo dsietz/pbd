@@ -1419,7 +1419,7 @@ impl DPI {
 
         suggestions
     }
-
+    #[allow(dead_code)]
     fn suggest_from_sounds_like<'a>(word: &str, tokens: Vec<&'a str>) -> Vec<(&'a str, usize)> {
         let mut suggestions: Vec<(&str, usize)> = Vec::new();
 

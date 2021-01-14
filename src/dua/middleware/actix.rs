@@ -63,6 +63,7 @@
 //! There are example service calls for POSTMAN (pbd.postman_collection.json) in the `examples` directory of the source code package.  
 //!
 
+#![allow(clippy::complexity)]
 use super::*;
 use crate::dua::extractor::actix::DUAs;
 use actix_service::{Service, Transform};
