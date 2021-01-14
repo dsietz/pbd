@@ -90,14 +90,14 @@ impl DUAs {
                     false => {
                         // couldn't find the header, so return empty list of DUAs
                         warn!("{}", LocalError::BadDUAFormat);
-                        return DUAs::new();
+                        DUAs::new()
                     }
                 }
             }
             Err(_e) => {
                 // couldn't find the header, so return empty list of DUAs
                 warn!("{}", LocalError::BadDUAFormat);
-                return DUAs::new();
+                DUAs::new()
             }
         }
     }
@@ -105,19 +105,25 @@ impl DUAs {
     // Constructor
     pub fn from_request(req: &HttpRequest) -> DUAs {
         match req.headers().get(DUA_HEADER) {
-            Some(u) => return DUAs::duas_from_header_value(u),
+            Some(u) => DUAs::duas_from_header_value(u),
             None => {
                 // couldn't find the header, so return empty list of DUAs
                 warn!("{}", LocalError::MissingDUA);
-                return DUAs::new();
+                DUAs::new()
             }
-        };
+        }
     }
 
     // returns a Vector of DUA objects
     #[allow(dead_code)]
     pub fn vec(&self) -> Vec<DUA> {
         self.list.clone()
+    }
+}
+
+impl Default for DUAs {
+    fn default() -> Self {
+        Self::new()
     }
 }
 

@@ -153,12 +153,12 @@ where
                 let mut valid_ind: bool = false;
 
                 // Level 1 Validation: Check to see if there are DUAs provided
-                if self.validation_level >= VALIDATION_LOW && duas.vec().len() > 0 {
+                if self.validation_level >= VALIDATION_LOW && !duas.vec().is_empty() {
                     valid_ind = true;
                 }
 
                 // Level 2 Validation: Check to see if the DUAs provided are valid ones
-                if valid_ind == true && self.validation_level >= VALIDATION_HIGH {
+                if valid_ind && self.validation_level >= VALIDATION_HIGH {
                     let checks: usize = duas
                         .vec()
                         .par_iter()
@@ -185,19 +185,17 @@ where
                     }
                 }
 
-                if valid_ind == true {
-                    return Either::Left(self.service.call(req));
+                if valid_ind {
+                    Either::Left(self.service.call(req))
                 } else {
-                    return Either::Right(ok(
+                    Either::Right(ok(
                         req.into_response(HttpResponse::BadRequest().finish().into_body())
-                    ));
+                    ))
                 }
             }
-            None => {
-                return Either::Right(ok(
-                    req.into_response(HttpResponse::BadRequest().finish().into_body())
-                ))
-            }
+            None => Either::Right(ok(
+                req.into_response(HttpResponse::BadRequest().finish().into_body())
+            )),
         }
     }
 }
