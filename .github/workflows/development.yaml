@@ -97,7 +97,7 @@ jobs:
           CARGO_INCREMENTAL: 0
           RUSTFLAGS: "-Zprofile -Ccodegen-units=1 -Cinline-threshold=0 -Clink-dead-code -Coverflow-checks=off -Cpanic=abort -Zpanic_abort_tests"
       - name: Pre-installing grcov
-        uses: actions-rs/grcov@v1
+        uses: actions-rs/grcov@v0.1
         with:
           crate: grcov
           use-tool-cache: true
