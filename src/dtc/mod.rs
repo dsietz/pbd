@@ -338,6 +338,27 @@ impl Tracker {
         None
     }
 
+    /// Indicates if the Tracker's Marker Chain is empty.
+    ///
+    /// #Example
+    ///
+    /// ```
+    /// extern crate pbd;
+    ///
+    /// use pbd::dtc::Tracker;
+    ///
+    /// fn main() {
+    ///     let mut tracker = Tracker::new("order~clothing~iStore~15150".to_string());
+    ///     tracker.add(1578071239, "notifier~billing~receipt~email".to_string(), "order~clothing~iStore~15150".to_string());
+    ///     
+    ///     // The Tracker has two Markers: the genesis Marker when new() was called, and the one that was added
+    ///     assert!(!tracker.is_empty());
+    /// }
+    /// ```
+    pub fn is_empty(&self) -> bool {
+        self.chain.len() == 0
+    }
+
     /// Determines if the Tracker has a valid Marker Chain, (a.k.a. not been tampered with).
     ///
     /// #Example

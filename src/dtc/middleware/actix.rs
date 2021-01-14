@@ -152,7 +152,7 @@ where
                         }
 
                         // Level 2 Validation: Check to see if the DUAs provided are valid ones
-                        if valid_ind == true && self.validation_level >= VALIDATION_HIGH {
+                        if valid_ind && self.validation_level >= VALIDATION_HIGH {
                             if !tracker.is_valid() {
                                 warn!("{}", crate::dtc::error::Error::BadDTC);
                                 valid_ind = false;
@@ -161,19 +161,19 @@ where
                             }
                         }
 
-                        if valid_ind == true {
-                            return Either::Left(self.service.call(req));
+                        if valid_ind {
+                            Either::Left(self.service.call(req))
                         } else {
-                            return Either::Right(ok(
+                            Either::Right(ok(
                                 req.into_response(HttpResponse::BadRequest().finish().into_body())
-                            ));
+                            ))
                         }
                     }
                     Err(e) => {
                         warn!("{}", e);
-                        return Either::Right(ok(
+                        Either::Right(ok(
                             req.into_response(HttpResponse::BadRequest().finish().into_body())
-                        ));
+                        ))
                     }
                 }
             }

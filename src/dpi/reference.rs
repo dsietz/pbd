@@ -152,14 +152,6 @@ impl Lib {
             src_vec.push(s.wrapping_sub(b'0') as u16);
         }
 
-        /*
-        let a = src[0].wrapping_sub(b'0') as u16;
-        let b = src[1].wrapping_sub(b'0') as u16;
-        let c = src[2].wrapping_sub(b'0') as u16;
-        let d = src[3].wrapping_sub(b'0') as u16;
-        let e = src[4].wrapping_sub(b'0') as u16;
-        */
-
         if src_vec[0] == 0
             || (src_vec[0] > 6
                 && src_vec[1] > 5
@@ -174,7 +166,7 @@ impl Lib {
             + (src_vec[1] * 1000)
             + (src_vec[2] * 100)
             + (src_vec[3] * 10)
-            + (src_vec[4] * 1);
+            + (src_vec[4]);
         NonZeroU16::new(code).map(Lib).ok_or_else(InvalidCode::new)
     }
 
@@ -277,7 +269,7 @@ impl FromStr for Lib {
 impl<'a> From<&'a Lib> for Lib {
     #[inline]
     fn from(t: &'a Lib) -> Self {
-        t.clone()
+        *t
     }
 }
 

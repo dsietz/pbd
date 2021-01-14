@@ -108,18 +108,18 @@ impl FromRequest for Tracker {
     fn from_request(req: &HttpRequest, _payload: &mut actix_web::dev::Payload) -> Self::Future {
         match req.headers().get(DTC_HEADER) {
             Some(u) => match Tracker::tracker_from_header_value(u) {
-                Ok(dtc) => return ok(dtc),
+                Ok(dtc) => ok(dtc),
                 Err(e) => {
                     warn!("{}", e);
-                    return err(LocalError::BadDTC);
+                    err(LocalError::BadDTC)
                 }
             },
             None => {
                 // couldn't find the header
                 warn!("{}", LocalError::MissingDTC);
-                return err(LocalError::MissingDTC);
+                err(LocalError::MissingDTC)
             }
-        };
+        }
     }
 }
 

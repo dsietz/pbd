@@ -184,7 +184,7 @@ pub trait PrivacySecurityGuard {
 
         for chr in message {
             if chr.is_ascii_control() && chr == zero {
-                c = c + 1;
+                c += 1;
             } else {
                 message_trimmed.push(chr);
             }
@@ -263,7 +263,7 @@ pub trait PrivacySecurityGuard {
             Ok(_sz) => Ok(self.clean_decrypted(message)),
             Err(err) => {
                 debug!("{}", err);
-                return Err(Error::DecryptionError);
+                Err(Error::DecryptionError)
             }
         }
     }
@@ -359,17 +359,16 @@ pub trait PrivacySecurityGuard {
         let nonc = self.generate_nonce();
 
         // 1. encrypt the data using the symmetric key
-        let secured_data =
-            match self.encrypt_data(key.clone(), Some(&nonc.clone()), data_to_encrypt.clone()) {
-                Ok(msg) => msg,
-                Err(err) => {
-                    error!("{:?}", err);
-                    return Err(err);
-                }
-            };
+        let secured_data = match self.encrypt_data(key.clone(), Some(&nonc), data_to_encrypt) {
+            Ok(msg) => msg,
+            Err(err) => {
+                error!("{:?}", err);
+                return Err(err);
+            }
+        };
 
         // 2. Encrypt the symmetric key
-        let encrypted_key = match self.encrypt_symmetric_key(pub_key, key.clone(), padding) {
+        let encrypted_key = match self.encrypt_symmetric_key(pub_key, key, padding) {
             Ok(e_key) => e_key,
             Err(err) => {
                 error!("{:?}", err);
