@@ -1,7 +1,7 @@
 use std::convert::TryFrom;
-use std::num::NonZeroU16;
 use std::error::Error;
 use std::fmt;
+use std::num::NonZeroU16;
 use std::str::FromStr;
 
 /// Represents a DPI Library Code
@@ -10,7 +10,7 @@ pub struct Lib(NonZeroU16);
 
 /// A possible error value when converting a `DPI Library Code` from a `u16` or `&str`
 ///
-/// This error indicates that the supplied input was not a valid number, 
+/// This error indicates that the supplied input was not a valid number,
 /// was less than 10000 or greater than 65535.
 pub struct InvalidCode {
     _priv: (),
@@ -46,7 +46,7 @@ lib_codes! {
     /// 15000 Social Security Number abbreviated
     (15000, TEXT_SSN_FULL, r"Social Security Number");
     /// 15001 Social Security Number abbreviated
-    (15001, TEXT_SSN_ABBR, r"SSN");    
+    (15001, TEXT_SSN_ABBR, r"SSN");
     /// 15002 Account
     (15002, TEXT_ACCOUNT, r"account");
     /// 25000 Social Security Number with dashes
@@ -71,9 +71,7 @@ lib_codes! {
 
 impl InvalidCode {
     fn new() -> InvalidCode {
-        InvalidCode {
-            _priv: (),
-        }
+        InvalidCode { _priv: () }
     }
 }
 
@@ -94,18 +92,18 @@ impl fmt::Display for InvalidCode {
 impl Error for InvalidCode {}
 
 /// The codes used in the DPI library are catalogued based on type of codes:
-/// 
+///
 /// 1xxxx = Key Words
 /// 25xxx = Key Words for NPPI
 /// 2xxxx = Regular Expressions
 /// 25xxx = Regular Expressions for NPPI
 /// 3xxxx = Pattern Definitions
 /// 35xxx = Pattern Definitions for NPPI
-/// 
-impl Lib{
+///
+impl Lib {
     /// Returns a &str representation of the `Code`
     ///
-    /// The return value representation of the code. 
+    /// The return value representation of the code.
     ///
     /// # Example
     ///
@@ -154,14 +152,12 @@ impl Lib{
         let d = src[3].wrapping_sub(b'0') as u16;
         let e = src[4].wrapping_sub(b'0') as u16;
 
-        if a == 0 || ( a > 6 && b > 5 && c > 5 && d > 3 && e > 5 )  {
+        if a == 0 || (a > 6 && b > 5 && c > 5 && d > 3 && e > 5) {
             return Err(InvalidCode::new());
         }
 
         let code = (a * 10000) + (b * 1000) + (c * 100) + (d * 10) + (e * 1);
-        NonZeroU16::new(code)
-            .map(Lib)
-            .ok_or_else(InvalidCode::new)
+        NonZeroU16::new(code).map(Lib).ok_or_else(InvalidCode::new)
     }
 
     /// Converts a u16 to a library code.
@@ -186,10 +182,8 @@ impl Lib{
             return Err(InvalidCode::new());
         }
 
-        NonZeroU16::new(src)
-            .map(Lib)
-            .ok_or_else(InvalidCode::new)
-    }    
+        NonZeroU16::new(src).map(Lib).ok_or_else(InvalidCode::new)
+    }
 
     /// Get the standardised `reason-phrase` for this standard.
     ///
@@ -203,7 +197,7 @@ impl Lib{
     ///
     /// ```rust
     /// use pbd::dpi::reference::Lib;
-    /// 
+    ///
     /// let code = Lib::TEXT_SSN_ABBR;
     /// assert_eq!(code.get_value(), Some("SSN"));
     /// ```
@@ -224,16 +218,12 @@ impl fmt::Debug for Lib {
 ///
 /// ```rust
 /// use pbd::dpi::reference::Lib;
-/// 
+///
 /// assert_eq!(format!("{}", Lib::TEXT_SSN_ABBR), "SSN");
 /// ```
 impl fmt::Display for Lib {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "{}",
-            self.get_value().unwrap_or("<unknown code>")
-        )
+        write!(f, "{}", self.get_value().unwrap_or("<unknown code>"))
     }
 }
 
@@ -326,13 +316,13 @@ mod tests {
     fn test_from_u16() {
         let ssn = Lib::from_u16(15001).unwrap();
         assert_eq!(ssn, Lib::TEXT_SSN_ABBR);
-        
+
         let err = Lib::from_u16(1000);
         assert!(err.is_err());
     }
 
     #[test]
-    fn test_nppi_code(){
+    fn test_nppi_code() {
         let code = Lib::TEXT_SSN_ABBR;
         assert_eq!(code.get_value(), Some(r"SSN"));
         assert_eq!(Lib::from_u16(15001).unwrap(), Lib::TEXT_SSN_ABBR);

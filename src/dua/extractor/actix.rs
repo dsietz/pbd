@@ -1,12 +1,12 @@
-//! The DUA Extractor is a simple way to pull the list of DUAs from the HTTP Request. 
-//! 
+//! The DUA Extractor is a simple way to pull the list of DUAs from the HTTP Request.
+//!
 //! ---
-//! 
-//! Example 
+//!
+//! Example
 //! ```rust,no_run
 //! extern crate pbd;
 //! extern crate actix_web;
-//! 
+//!
 //! use pbd::dua::extractor::actix::*;
 //! use actix_web::{web, http, App, HttpRequest, HttpResponse, HttpServer};
 //!
@@ -19,7 +19,7 @@
 //!         .header(http::header::CONTENT_TYPE, "application/json")
 //!         .body(format!("{}", duas))
 //! }
-//! 
+//!
 //! #[actix_rt::main]
 //! async fn main() -> std::io::Result<()> {
 //!     HttpServer::new(|| App::new().service(
@@ -32,21 +32,21 @@
 //! ```
 
 use super::*;
-use std::fmt;
-use actix_web::{FromRequest, HttpRequest};
-use json::JsonValue;
 use actix_web::http::header::HeaderValue;
+use actix_web::{FromRequest, HttpRequest};
 use futures::future::{ok, Ready};
+use json::JsonValue;
+use std::fmt;
 
-// 
+//
 // The Data Usage Agreement Extractor
-// 
+//
 pub type LocalError = super::error::Error;
 // DUA list
 type DUAList = Vec<DUA>;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct DUAs{
+pub struct DUAs {
     list: DUAList,
 }
 
@@ -59,21 +59,19 @@ impl fmt::Display for DUAs {
 impl DUAs {
     // Constructor
     pub fn new() -> DUAs {
-        DUAs {
-            list: Vec::new(),
-        }
+        DUAs { list: Vec::new() }
     }
     // Associated Function
     fn value_to_vec(docs: &JsonValue) -> Vec<DUA> {
         let mut v = Vec::new();
-    
+
         for d in 0..docs.len() {
             v.push(DUA::from_serialized(&docs[d].to_string()));
-        }                    
+        }
         v
     }
 
-    pub fn duas_from_header_value(header_value: &HeaderValue) -> DUAs{
+    pub fn duas_from_header_value(header_value: &HeaderValue) -> DUAs {
         match header_value.to_str() {
             Ok(list) => {
                 let docs = match json::parse(list) {
@@ -81,42 +79,38 @@ impl DUAs {
                     Err(_e) => {
                         // couldn't find the header, so return empty list of DUAs
                         warn!("{}", LocalError::BadDUAFormat);
-                        return DUAs::new()
-                    },
+                        return DUAs::new();
+                    }
                 };
-            
+
                 match docs.is_array() {
-                    true => {
-                        DUAs{
-                            list: DUAs::value_to_vec(&docs),
-                        }
+                    true => DUAs {
+                        list: DUAs::value_to_vec(&docs),
                     },
                     false => {
                         // couldn't find the header, so return empty list of DUAs
                         warn!("{}", LocalError::BadDUAFormat);
-                        return DUAs::new()
-                    },
+                        return DUAs::new();
+                    }
                 }
-            },
+            }
             Err(_e) => {
                 // couldn't find the header, so return empty list of DUAs
                 warn!("{}", LocalError::BadDUAFormat);
-                return DUAs::new()
-            },
+                return DUAs::new();
+            }
         }
     }
 
     // Constructor
-    pub fn from_request(req: &HttpRequest) -> DUAs{
+    pub fn from_request(req: &HttpRequest) -> DUAs {
         match req.headers().get(DUA_HEADER) {
-            Some(u) => {
-                return DUAs::duas_from_header_value(u)
-            },
+            Some(u) => return DUAs::duas_from_header_value(u),
             None => {
                 // couldn't find the header, so return empty list of DUAs
                 warn!("{}", LocalError::MissingDUA);
-                return DUAs::new()
-            },
+                return DUAs::new();
+            }
         };
     }
 
@@ -140,19 +134,19 @@ impl FromRequest for DUAs {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use actix_web::{test, web, http, App, HttpRequest, HttpResponse};
-    use actix_web::http::{StatusCode};
+    use actix_web::http::StatusCode;
+    use actix_web::{http, test, web, App, HttpRequest, HttpResponse};
 
     // supporting functions
     fn index_extract_dua(duas: DUAs, _req: HttpRequest) -> HttpResponse {
         if duas.vec().len() > 0 {
             return HttpResponse::Ok()
                 .header(http::header::CONTENT_TYPE, "application/json")
-                .body(format!("{}", duas))
+                .body(format!("{}", duas));
         } else {
             return HttpResponse::BadRequest()
                 .header(http::header::CONTENT_TYPE, "application/json")
-                .body(format!("{}", LocalError::BadDUA))
+                .body(format!("{}", LocalError::BadDUA));
         }
     }
 
@@ -164,7 +158,8 @@ mod tests {
 
     #[actix_rt::test]
     async fn test_dua_extractor_good() {
-        let mut app = test::init_service(App::new().route("/", web::get().to(index_extract_dua))).await;
+        let mut app =
+            test::init_service(App::new().route("/", web::get().to(index_extract_dua))).await;
         let req = test::TestRequest::get().uri("/")
             .header("content-type", "application/json")
             .header(DUA_HEADER, r#"[{"agreement_name":"billing","location":"www.dua.org/billing.pdf","agreed_dtm": 1553988607}]"#)
@@ -175,7 +170,8 @@ mod tests {
 
     #[actix_rt::test]
     async fn test_dua_extractor_bad() {
-        let mut app = test::init_service(App::new().route("/", web::get().to(index_extract_dua))).await;
+        let mut app =
+            test::init_service(App::new().route("/", web::get().to(index_extract_dua))).await;
         let req = test::TestRequest::get().uri("/")
             .header("content-type", "application/json")
             .header(DUA_HEADER, r#"[{"agreement_name":"billing""location":"www.dua.org/billing.pdf","agreed_dtm": 1553988607}]"#)
@@ -186,14 +182,21 @@ mod tests {
 
     #[actix_rt::test]
     async fn test_dua_extractor_missing() {
-        let mut app = test::init_service(App::new().route("/", web::get().to(index_extract_dua))).await;
-        let req = test::TestRequest::get().uri("/")
+        let mut app =
+            test::init_service(App::new().route("/", web::get().to(index_extract_dua))).await;
+        let req = test::TestRequest::get()
+            .uri("/")
             .header("content-type", "application/json")
             .to_request();
         let resp = test::call_service(&mut app, req).await;
         assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
         // read response
         let body = test::read_body(resp).await;
-        assert_eq!(body, actix_web::web::Bytes::from_static(b"Malformed or missing one or more Data Usage Agreements"));
+        assert_eq!(
+            body,
+            actix_web::web::Bytes::from_static(
+                b"Malformed or missing one or more Data Usage Agreements"
+            )
+        );
     }
 }

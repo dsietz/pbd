@@ -1,4 +1,3 @@
-
 //! ### Background
 //! The practice of implementing Data Usage Agreements addresses the following Privacy Design Strategies:
 //! - Inform
@@ -6,10 +5,10 @@
 //! - Enforce
 //! - Demonstrate
 //!
-//! Whenever data is passed between Actors (e.g.: data collection between an online portal and the backend service to order the product), 
-//! it is important to ensure that the owners' consent for how the data wil be used doesn't become _lost in translation_. 
-//! 
-//! A privacy engineering practice that supports this _promise_ to adhere how the data may be used is defined in the Data Usage Agreements 
+//! Whenever data is passed between Actors (e.g.: data collection between an online portal and the backend service to order the product),
+//! it is important to ensure that the owners' consent for how the data wil be used doesn't become _lost in translation_.
+//!
+//! A privacy engineering practice that supports this _promise_ to adhere how the data may be used is defined in the Data Usage Agreements
 //! that are sent with the data.
 //!
 //! ### Usage
@@ -24,13 +23,13 @@
 //!     >         "agreed_dtm": Unix Epoch Number
 //!     >     }
 //!     > ]
-//!     > 
+//!     >
 //!     > *HTTP Header*
 //!     >
 //!     > Data-Usage-Agreement: [{"agreement_name":"billing","location":"www.dua.org/billing.pdf","agreed_dtm": 1553988607}]
 //!     
 //!
-//! 
+//!
 //! ---
 //!
 //! One way is to incorporate the use of DUA objects is directly in the code.
@@ -42,7 +41,7 @@
 //! fn main() {
 //!     let serialized = r#"{ "agreement_name": "For Billing Purpose", "location": "www.dua.org/billing.pdf", "agreed_dtm": 1553988607 }"#;
 //!     let dua = DUA::from_serialized(&serialized);
-//! 
+//!
 //!     match dua.agreement_name.as_ref() {
 //!         "For Billing Purpose" => println!("We can use the data for sending a bill."),
 //!          _ => println!("Oops: We can't use the data this way!")
@@ -69,13 +68,13 @@ pub struct DUA {
 
 impl DUA {
     /// Constructs a DUA object
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * agreement: String - The common name of the Data Usage Agreement, (e.g.: For Billing Purpose).</br>
     /// * uri: String - The URI where the version of the DUA can be found, (e.g.: https://iStore.example.org/dua/v2/billing.pdf).</br>
     /// * agreed_on: String - The Unix Epoch time when the DUA was agreed to.</br>
-    /// 
+    ///
     /// #Example
     ///
     /// ```
@@ -101,11 +100,11 @@ impl DUA {
     }
 
     /// Constructs a DUA object from a serialized string
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * serialized: &str - The string that represents the serialized object.</br>
-    /// 
+    ///
     /// #Example
     ///
     /// ```
@@ -125,11 +124,11 @@ impl DUA {
     }
 
     /// Serialize a DUA object
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * serialized: &str - The string that represents the serialized object.</br>
-    /// 
+    ///
     /// #Example
     ///
     /// ```
@@ -151,7 +150,7 @@ impl DUA {
     /// }
     /// ```
     pub fn serialize(&mut self) -> String {
-		serde_json::to_string(&self).unwrap()
+        serde_json::to_string(&self).unwrap()
     }
 }
 
@@ -164,13 +163,13 @@ pub mod middleware;
 mod tests {
     use super::*;
 
-    fn get_dua() -> Vec<DUA>{
+    fn get_dua() -> Vec<DUA> {
         let mut v = Vec::new();
-        v.push( DUA {
-                    agreement_name: "billing".to_string(),
-                    location: "www.dua.org/billing.pdf".to_string(),
-                    agreed_dtm: 1553988607,
-                });
+        v.push(DUA {
+            agreement_name: "billing".to_string(),
+            location: "www.dua.org/billing.pdf".to_string(),
+            agreed_dtm: 1553988607,
+        });
         v
     }
 

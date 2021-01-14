@@ -1,8 +1,8 @@
 //! Data Security Guard specific Errors
 
-use std::error;
-use derive_more::Display;
 use actix_web::ResponseError;
+use derive_more::Display;
+use std::error;
 
 #[derive(Debug, Clone, Display)]
 pub enum Error {
@@ -11,7 +11,7 @@ pub enum Error {
     BadKeyPairError,
     /// Bad TransferSet
     #[display(fmt = "Bad transfer set provided.")]
-    BadTransferSetError,    
+    BadTransferSetError,
     /// Decryption issue
     #[display(fmt = "Unable to decrypt the data.")]
     DecryptionError,
@@ -20,7 +20,7 @@ pub enum Error {
     EncryptionError,
     /// Missing Nonce
     #[display(fmt = "Missing required nonce (a.k.a. IV).")]
-    MissingNonceError, 
+    MissingNonceError,
     /// Missing symmetric key
     #[display(fmt = "Missing required symmetric key.")]
     MissingSymmetricKeyError,
@@ -33,11 +33,11 @@ pub enum Error {
     /// Cannot read payload
     #[display(fmt = "Cannot read payload.")]
     PayloadUnreadableError,
-} 
+}
 
-impl error::Error for Error{}
+impl error::Error for Error {}
 
-impl ResponseError for Error{}
+impl ResponseError for Error {}
 
 #[cfg(test)]
 mod tests {

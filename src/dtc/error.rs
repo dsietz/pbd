@@ -1,8 +1,8 @@
 //! Data Tracker Chain specific Errors
 
-use std::error;
-use derive_more::Display;
 use actix_web::ResponseError;
+use derive_more::Display;
+use std::error;
 
 #[derive(Debug, Clone, Display)]
 pub enum Error {
@@ -14,19 +14,18 @@ pub enum Error {
     BadDTC,
     /// Bad Data Tracker Chain
     #[display(fmt = "Cannot decode Data Tracker Chain using Base64")]
-    Base64DTC,    
+    Base64DTC,
     /// Bad Data Uasage Agreement
     #[display(fmt = "Invalid or Currupt Marker")]
     BadMarker,
     /// Bad Data Tracker Chain
     #[display(fmt = "Missing Data Tracker Chain")]
     MissingDTC,
-} 
+}
 
-impl error::Error for Error{}
+impl error::Error for Error {}
 
-impl ResponseError for Error{}
-
+impl ResponseError for Error {}
 
 #[cfg(test)]
 mod tests {
@@ -40,7 +39,10 @@ mod tests {
 
     #[test]
     fn test_error_dtc_base64() {
-        assert_eq!(format!("{}", Error::Base64DTC), "Cannot decode Data Tracker Chain using Base64");
+        assert_eq!(
+            format!("{}", Error::Base64DTC),
+            "Cannot decode Data Tracker Chain using Base64"
+        );
     }
 
     #[test]

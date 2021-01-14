@@ -4,38 +4,38 @@
 //! - Control
 //! - Demonstrate
 //!
-//! Whenever data is passed through Actors (e.g.: data collection between an online portal and the backend service to order the product), 
-//! it is important to ensure that data lineage is tracked and retained. 
-//! 
+//! Whenever data is passed through Actors (e.g.: data collection between an online portal and the backend service to order the product),
+//! it is important to ensure that data lineage is tracked and retained.
+//!
 //! A privacy engineering practice that supports the real-time recording of data lineage is to implement a Data Tracking Chain that lives with the data.
 //!
 //! ### Usage
 //! Whenever the data is touched by a processor or landed in a location, we have the Tracker add a Marker its MarkerChain.
-//! 
+//!
 //! ```
 //! extern crate pbd;
-//! 
+//!
 //! use pbd::dtc::Tracker;
-//! 
+//!
 //! fn main() {
 //!     let mut tracker = Tracker::new("purchaseId=12345".to_string());
 //!     tracker.add(1578071239, "payment-validator".to_string(), "purchaseId=12345".to_string());
 //!     tracker.add(1578071245, "credit-card-transaction-processor".to_string(), "purchaseId=12345".to_string());
-//! 
+//!
 //!     println!("{}", tracker.serialize());
 //! }
 //! ```
-//! 
+//!
 //! ---
-//! 
-//! We can ensure that the MarkerChain has been tampered with outside of the Tracker's control (e.g.: `tracker.serialize()` => change the JSON => `Tracker::from_serialize()`) 
+//!
+//! We can ensure that the MarkerChain has been tampered with outside of the Tracker's control (e.g.: `tracker.serialize()` => change the JSON => `Tracker::from_serialize()`)
 //! by calling the `is_valid()` method.
 //! ```
 //! extern crate pbd;
 //! extern crate json;
-//! 
+//!
 //! use pbd::dtc::{Marker, Tracker};
-//! 
+//!
 //! fn main() {
 //!     let mut tracker = Tracker::new("purchaseId=12345".to_string());
 //!     tracker.add(1578071239, "payment-validator".to_string(), "purchaseId=12345".to_string());
@@ -49,20 +49,20 @@
 //!     assert_eq!(Tracker::is_valid(&tracker_tampered), false);
 //! }
 //! ```
-//! 
+//!
 //! ---
-//! 
+//!
 //! We can also ensure that Data Tracker Chains are passed when working with RESTful APIs by implementing the `middleware` and `extractor` modules.
-//! 
+//!
 
-extern crate pow_sha256;
 extern crate base64;
+extern crate pow_sha256;
 
 use crate::dtc::error::*;
 use pow_sha256::PoW;
 
 /// The nonce value for adding complexity to the hash
-pub static DIFFICULTY: u128 = 5; 
+pub static DIFFICULTY: u128 = 5;
 /// The standard header attribute for list (array) of the Data Usage Agreements
 pub static DTC_HEADER: &str = "Data-Tracker-Chain";
 
@@ -76,14 +76,14 @@ pub struct MarkerIdentifier {
     // The date and time (Unix timestamp) the data came into posession of the Actor, (1578071239)
     pub timestamp: u64,
     /// The unique identifier of the Actor who touched the data, (e.g.: notifier~billing~receipt~email)
-    pub actor_id: String,    
+    pub actor_id: String,
     /// The identifying hash of the previous Marker in the Data Tracker Chain
     pub previous_hash: String,
 }
 
 impl MarkerIdentifier {
     /// Serializes the MarkerIdenifier.
-    /// 
+    ///
     /// #Example
     ///
     /// ```
@@ -115,15 +115,15 @@ pub struct Marker {
 
 impl Marker {
     /// Constructs a Marker object
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * idx: usize - The sequanece number of the Marker in the Data Tracker Chain, (e.g.: 0,1,2,3).</br>
     /// * tmstp: String - The date and time (Unix timestamp) the data came into posession of the Actor.</br>
     /// * act_id: String - The Unix Epoch time when the DUA was agreed to.</br>
     /// * dat_id: String - The unique identifier of the the data being tracked.</br>
     /// * prev_hash: String - The identifying hash of the previous Marker in the Data Tracker Chain</br>
-    /// 
+    ///
     /// #Example
     ///
     /// ```
@@ -137,13 +137,19 @@ impl Marker {
     ///     println!("{} has touched the data object {}", marker.identifier.actor_id, marker.identifier.data_id);
     /// }
     /// ```
-    pub fn new(idx: usize, tmstp: u64, act_id: String, dat_id: String, prev_hash: String) -> Marker {
+    pub fn new(
+        idx: usize,
+        tmstp: u64,
+        act_id: String,
+        dat_id: String,
+        prev_hash: String,
+    ) -> Marker {
         let idfy = MarkerIdentifier {
             data_id: dat_id,
             index: idx,
             timestamp: tmstp,
             actor_id: act_id,
-            previous_hash: prev_hash, 
+            previous_hash: prev_hash,
         };
 
         Marker {
@@ -158,11 +164,11 @@ impl Marker {
     }
 
     /// Constructs the first Marker (a.k.a. Genesis Black)
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * dat_id: String - The unique identifier of the the data being tracked.</br>
-    /// 
+    ///
     /// #Example
     ///
     /// ```
@@ -182,9 +188,9 @@ impl Marker {
             index: 0,
             timestamp: 0,
             actor_id: "".to_string(),
-            previous_hash: "0".to_string(),            
+            previous_hash: "0".to_string(),
         };
-        
+
         Marker {
             identifier: idfy.clone(),
             hash: Marker::calculate_hash(idfy, DIFFICULTY).result,
@@ -193,7 +199,7 @@ impl Marker {
     }
 
     /// Serializes the Marker.
-    /// 
+    ///
     /// #Example
     ///
     /// ```
@@ -216,15 +222,15 @@ impl Marker {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Tracker {
     chain: Vec<Marker>,
-} 
+}
 
-impl Tracker {   
+impl Tracker {
     /// Constructs a Tracker (a.k.a. MarkerChain)
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * dat_id: String - The unique identifier of the the data being tracked.</br>
-    /// 
+    ///
     /// #Example
     ///
     /// ```
@@ -240,9 +246,7 @@ impl Tracker {
     /// }
     /// ```
     pub fn new(dat_id: String) -> Tracker {
-        let mut tracker = Tracker {
-            chain: Vec::new(),
-        };
+        let mut tracker = Tracker { chain: Vec::new() };
 
         tracker.chain.push(Marker::genesis(dat_id));
 
@@ -251,13 +255,13 @@ impl Tracker {
 
     /// Appends a new Marker to the end of the Marker Chain.
     /// The index of the Marker and hash from the previous Marker are automatically defined when added.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * tmstp: String - The date and time (Unix timestamp) the data came into posession of the Actor.</br>
     /// * act_id: String - The unique identifier of the Actor touching the data.</br>
     /// * dat_id: String - The unique identifier of the data being tracked.</br>
-    /// 
+    ///
     /// #Example
     ///
     /// ```
@@ -273,18 +277,18 @@ impl Tracker {
     /// }
     /// ```
     pub fn add(&mut self, tmstp: u64, act_id: String, dat_id: String) {
-        let prior_marker = self.chain[self.chain.len()-1].clone();
+        let prior_marker = self.chain[self.chain.len() - 1].clone();
         let marker = Marker::new(self.chain.len(), tmstp, act_id, dat_id, prior_marker.hash);
 
         self.chain.push(marker);
     }
 
     /// Constructs a Tracker (a.k.a. MarkerChain) from a serialized chain
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * serialized: &str - The serialized Vec of Markers.</br>
-    /// 
+    ///
     /// #Example
     ///
     /// ```
@@ -301,11 +305,7 @@ impl Tracker {
     /// ```
     pub fn from_serialized(serialized: &str) -> Result<Tracker, Error> {
         match serde_json::from_str(&serialized) {
-            Ok(v) => {
-                Ok(Tracker {
-                    chain: v,
-                })
-            },
+            Ok(v) => Ok(Tracker { chain: v }),
             Err(_e) => Err(Error::BadChain),
         }
     }
@@ -313,9 +313,9 @@ impl Tracker {
     /// Returns the Marker from the Marker Chain at the specified index.
     ///
     /// # Arguments
-    /// 
+    ///
     /// * index: usize - The index of the Marker.</br>
-    /// 
+    ///
     /// #Example
     ///
     /// ```
@@ -332,14 +332,14 @@ impl Tracker {
     /// ```
     pub fn get(&self, index: usize) -> Option<Marker> {
         if index < self.chain.len() {
-            return Some(self.chain[index].clone())
+            return Some(self.chain[index].clone());
         }
 
         None
     }
 
     /// Determines if the Tracker has a valid Marker Chain, (a.k.a. not been tampered with).
-    /// 
+    ///
     /// #Example
     ///
     /// ```
@@ -354,7 +354,7 @@ impl Tracker {
     ///     assert!(Tracker::is_valid(&mkrchn));
     /// }
     /// ```
-    pub fn is_valid(&self) -> bool{
+    pub fn is_valid(&self) -> bool {
         debug!("Validating chain ...");
 
         for (m, marker) in self.chain.clone().iter().enumerate() {
@@ -365,7 +365,7 @@ impl Tracker {
             }
 
             // make sure the relationship with the prior Marker hasn't been altered
-            if m > 0 && marker.identifier.previous_hash != self.chain.clone()[m-1].hash {
+            if m > 0 && marker.identifier.previous_hash != self.chain.clone()[m - 1].hash {
                 return false;
             }
         }
@@ -374,7 +374,7 @@ impl Tracker {
     }
 
     /// Returns the length of the Tracker's Marker Chain.
-    /// 
+    ///
     /// #Example
     ///
     /// ```
@@ -395,7 +395,7 @@ impl Tracker {
     }
 
     /// Serializes the Tracker's Marker Chain.
-    /// 
+    ///
     /// #Example
     ///
     /// ```
@@ -415,11 +415,9 @@ impl Tracker {
     }
 }
 
-
 pub mod error;
 pub mod extractor;
 pub mod middleware;
-
 
 // Unit Tests
 #[cfg(test)]
@@ -427,7 +425,13 @@ mod tests {
     use super::*;
 
     fn get_marker() -> Marker {
-        Marker::new(1, 1578071239, "notifier~billing~receipt~email".to_string(), "order~clothing~iStore~15150".to_string(), "123456".to_string())
+        Marker::new(
+            1,
+            1578071239,
+            "notifier~billing~receipt~email".to_string(),
+            "order~clothing~iStore~15150".to_string(),
+            "123456".to_string(),
+        )
     }
 
     #[test]
@@ -454,7 +458,11 @@ mod tests {
     #[test]
     fn test_markerchain_get() {
         let mut mkrchn = Tracker::new("order~clothing~iStore~15150".to_string());
-        mkrchn.add(1578071239, "notifier~billing~receipt~email".to_string(), "order~clothing~iStore~15150".to_string());
+        mkrchn.add(
+            1578071239,
+            "notifier~billing~receipt~email".to_string(),
+            "order~clothing~iStore~15150".to_string(),
+        );
 
         assert!(mkrchn.get(0).is_some());
         assert!(mkrchn.get(1).is_some());
@@ -463,7 +471,9 @@ mod tests {
 
     #[test]
     fn test_markerchain_from_serialized() {
-        let mkrchn = Tracker::from_serialized(r#"[{"identifier":{"data_id":"order~clothing~iStore~15150","index":0,"timestamp":0,"actor_id":"","previous_hash":"0"},"hash":"272081696611464773728024926793703167782","nonce":5},{"identifier":{"data_id":"order~clothing~iStore~15150","index":1,"timestamp":1578071239,"actor_id":"notifier~billing~receipt~email","previous_hash":"272081696611464773728024926793703167782"},"hash":"50104149701098700632511144125867736193","nonce":5}]"#);
+        let mkrchn = Tracker::from_serialized(
+            r#"[{"identifier":{"data_id":"order~clothing~iStore~15150","index":0,"timestamp":0,"actor_id":"","previous_hash":"0"},"hash":"272081696611464773728024926793703167782","nonce":5},{"identifier":{"data_id":"order~clothing~iStore~15150","index":1,"timestamp":1578071239,"actor_id":"notifier~billing~receipt~email","previous_hash":"272081696611464773728024926793703167782"},"hash":"50104149701098700632511144125867736193","nonce":5}]"#,
+        );
 
         assert!(mkrchn.is_ok());
     }
@@ -477,7 +487,11 @@ mod tests {
     #[test]
     fn test_markerchain_serialize() {
         let mut mkrchn = Tracker::new("order~clothing~iStore~15150".to_string());
-        mkrchn.add(1578071239, "notifier~billing~receipt~email".to_string(), "order~clothing~iStore~15150".to_string());
+        mkrchn.add(
+            1578071239,
+            "notifier~billing~receipt~email".to_string(),
+            "order~clothing~iStore~15150".to_string(),
+        );
 
         assert!(mkrchn.serialize().len() > 0);
     }
@@ -486,7 +500,11 @@ mod tests {
     fn test_markerchain_valid() {
         let mut mkrchn = Tracker::new("order~clothing~iStore~15150".to_string());
 
-        mkrchn.add(1578071239, "notifier~billing~receipt~email".to_string(), "order~clothing~iStore~15150".to_string());
+        mkrchn.add(
+            1578071239,
+            "notifier~billing~receipt~email".to_string(),
+            "order~clothing~iStore~15150".to_string(),
+        );
 
         assert!(Tracker::is_valid(&mkrchn));
     }
@@ -494,8 +512,16 @@ mod tests {
     #[test]
     fn test_markerchain_invalid() {
         let mut tracker = Tracker::new("purchaseId=12345".to_string());
-        tracker.add(1578071239, "payment-validator".to_string(), "purchaseId=12345".to_string());
-        tracker.add(1578071245, "credit-card-transaction-processor".to_string(), "purchaseId=12345".to_string());
+        tracker.add(
+            1578071239,
+            "payment-validator".to_string(),
+            "purchaseId=12345".to_string(),
+        );
+        tracker.add(
+            1578071245,
+            "credit-card-transaction-processor".to_string(),
+            "purchaseId=12345".to_string(),
+        );
 
         let mut markerchain: Vec<Marker> = serde_json::from_str(&tracker.serialize()).unwrap();
         markerchain[1].identifier.actor_id = "tampered data".to_string();
