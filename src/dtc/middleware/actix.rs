@@ -177,11 +177,9 @@ where
                     }
                 }
             }
-            None => {
-                Either::Right(ok(
-                    req.into_response(HttpResponse::BadRequest().finish().into_body())
-                ))
-            }
+            None => Either::Right(ok(
+                req.into_response(HttpResponse::BadRequest().finish().into_body())
+            )),
         }
     }
 }
