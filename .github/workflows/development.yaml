@@ -68,7 +68,7 @@ jobs:
       - uses: actions-rs/cargo@v1
         with:
           command: clippy
-          args: -- -D errors
+          args: -- -D warnings
 
   security_audit:
     runs-on: ubuntu-latest
