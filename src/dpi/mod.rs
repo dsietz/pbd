@@ -1157,7 +1157,7 @@ impl DPI {
     pub fn add_to_score_points(&mut self, key: String, pnts: f64) {
         let mut score = self.get_score(key);
         score.points += pnts;
-        &self.upsert_score(score);
+        self.upsert_score(score);
     }
 
     /// Determines how many times a pattern appears in a list of tokens
@@ -1264,7 +1264,7 @@ impl DPI {
                 for (key, _val) in suggestions.iter() {
                     let mut n: f64 = 0.00;
                     for doc_idx in 0..docs.len() {
-                        n = n + TfIdfzr::tfidf(key, doc_idx, cnts.clone());
+                        n += TfIdfzr::tfidf(key, doc_idx, cnts.clone());
                     }
                     if (n / docs.len() as f64) >= Self::TFIDF_LIMIT as f64 {
                         rslts.push((key.to_string(), n / docs.len() as f64 * KEY_WORD_PNTS));
@@ -1300,7 +1300,7 @@ impl DPI {
                 for (key, _val) in suggestions.iter() {
                     let mut n: f64 = 0.00;
                     for doc_idx in 0..docs.len() {
-                        n = n + TfIdfzr::tfidf(key, doc_idx, cnts.clone());
+                        n += TfIdfzr::tfidf(key, doc_idx, cnts.clone());
                     }
                     if (n / docs.len() as f64) >= Self::TFIDF_LIMIT as f64 {
                         rslts.push((key.to_string(), n / docs.len() as f64 * KEY_WORD_PNTS));
@@ -1336,7 +1336,7 @@ impl DPI {
                 for (key, _val) in suggestions.iter() {
                     let mut n: f64 = 0.00;
                     for doc_idx in 0..docs.len() {
-                        n = n + TfIdfzr::tfidf(key, doc_idx, cnts.clone());
+                        n += TfIdfzr::tfidf(key, doc_idx, cnts.clone());
                     }
                     if (n / docs.len() as f64) >= Self::TFIDF_LIMIT as f64 {
                         rslts.push((key.to_string(), n / docs.len() as f64 * KEY_WORD_PNTS));
@@ -1466,19 +1466,14 @@ impl DPI {
     pub fn train(&mut self, docs: Vec<String>) -> BTreeMap<String, Suggestion> {
         let mut keys: Vec<(f64, Vec<String>)> = Vec::new();
 
-        match self.key_patterns.clone() {
-            Some(k) => keys.push((KEY_PATTERN_PNTS, k)),
-            None => {}
+        if let Some(k) = self.key_patterns.clone() {
+            keys.push((KEY_PATTERN_PNTS, k))
         }
-
-        match self.key_regexs.clone() {
-            Some(k) => keys.push((KEY_REGEX_PNTS, k)),
-            None => {}
+        if let Some(k) = self.key_regexs.clone() {
+            keys.push((KEY_REGEX_PNTS, k))
         }
-
-        match self.key_words.clone() {
-            Some(k) => keys.push((KEY_WORD_PNTS, k)),
-            None => {}
+        if let Some(k) = self.key_words.clone() {
+            keys.push((KEY_WORD_PNTS, k))
         }
 
         docs.iter().for_each(|text| {
@@ -1523,10 +1518,8 @@ impl DPI {
         }
 
         if self.key_patterns.is_some() {
-            let words = Self::get_suggested_words_from_patterns(
-                self.key_patterns.clone().unwrap(),
-                docs.clone(),
-            );
+            let words =
+                Self::get_suggested_words_from_patterns(self.key_patterns.clone().unwrap(), docs);
             words.iter().for_each(|s| {
                 let suggest = Suggestion::with(
                     s.0.clone(),
@@ -1761,7 +1754,7 @@ impl DPI {
             .map(|x| x)
             .collect::<KeyRegexList>();
 
-        if bad.len() == 0 {
+        if bad.is_empty() {
             Ok(1)
         } else {
             error!("Bad Regex: {:?}", bad);
