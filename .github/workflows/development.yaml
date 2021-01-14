@@ -68,7 +68,7 @@ jobs:
       - uses: actions-rs/cargo@v1
         with:
           command: clippy
-          args: -- -D warnings dead-code clippy::type-complexity
+          args: -- -D warnings -D dead-code -D clippy::type-complexity
 
   security_audit:
     runs-on: ubuntu-latest
