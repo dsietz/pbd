@@ -1,14 +1,14 @@
 branch: true
 ignore-not-existing: true
 llvm: true
+parallel: true
 filter: covered
 output-type: lcov
-output-path: ./lcov.info
-prefix-dir: /home/user/build/
+output-path: ./target/debug/coverage/
 ignore:
   - "/*"
   - "C:/*"
   - "../*"
+  - "/.cargo,/usr/lib"
 path-mapping:
-  - "/path1"
-  - "/path2"
+  - "./target/debug/*-*[^\.d]"
