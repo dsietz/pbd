@@ -105,8 +105,8 @@ jobs:
       - name: Gather coverage data
         id: coverage
         uses: actions-rs/grcov@v0.1
-        with:
-          config: .github/workflows/configs/grcov.yml
+        #with:
+        #  config: .github/workflows/configs/grcov.yml
       - name: Coveralls upload
         uses: coverallsapp/github-action@master
         with:
