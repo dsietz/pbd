@@ -8,4 +8,7 @@ ignore:
   - "/*"
   - "C:/*"
   - "../*"
-  - "/.cargo,/usr/lib"
+  - "/.cargo"
+  - "/usr/lib"
+path-mapping:
+  - "./target/debug"
