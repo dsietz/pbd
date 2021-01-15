@@ -10,5 +10,3 @@ ignore:
   - "C:/*"
   - "../*"
   - "/.cargo,/usr/lib"
-path-mapping:
-  - "./target/debug/*-*[^\.d]"
