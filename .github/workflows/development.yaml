@@ -84,20 +84,29 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - uses: hecrj/setup-rust-action@v1
+      - name: Nightly install
+        uses: actions-rs/toolchain@v1
         with:
-          rust-version: nightly
+          toolchain: nightly
+          override: true
+      - name: Cargo clean
+        uses: actions-rs/cargo@v1
+        with:
+          command: clean    
       - name: Run test for coverage
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --no-run
         env:
           CARGO_INCREMENTAL: 0
-          RUSTFLAGS: -Zprofile -Ccodegen-units=1 -Copt-level=0 -Clink-dead-code -Coverflow-checks=off -Zpanic_abort_tests -Cpanic=abort
-          RUSTDOCFLAGS: -Zprofile -Ccodegen-units=1 -Copt-level=0 -Clink-dead-code -Coverflow-checks=off -Zpanic_abort_tests -Cpanic=abort
-        run: |
-          cargo test
+          RUSTFLAGS: '-Zprofile -Ccodegen-units=1 -Cinline-threshold=0 -Clink-dead-code -Coverflow-checks=off -Cpanic=abort -Zpanic_abort_tests'
+          RUSTDOCFLAGS: '-Zprofile -Ccodegen-units=1 -Cinline-threshold=0 -Clink-dead-code -Coverflow-checks=off -Cpanic=abort -Zpanic_abort_tests'
       - name: Gather coverage data
         id: coverage
         uses: actions-rs/grcov@v0.1
         with:
+          config: configs/grcov.yml
           coveralls-token: ${{ secrets.COVERALLS_TOKEN }}
       - name: Coveralls upload
         uses: coverallsapp/github-action@master
