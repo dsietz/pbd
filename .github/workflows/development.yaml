@@ -94,7 +94,7 @@ jobs:
           RUSTDOCFLAGS: -Zprofile -Ccodegen-units=1 -Copt-level=0 -Clink-dead-code -Coverflow-checks=off -Zpanic_abort_tests -Cpanic=abort
         run: |
           cargo test
-       - name: Gather coverage data
+      - name: Gather coverage data
         id: coverage
         uses: actions-rs/grcov@v0.1
         with:
