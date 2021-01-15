@@ -1,13 +1,12 @@
 branch: true
 ignore-not-existing: true
 llvm: true
-parallel: true
 output-type: lcov
 #output-path: ./target/debug/coverage/
 ignore:
-  - "/*"
-  - "C:/*"
-  - "../*"
+#  - "/*"
+#  - "C:/*"
+#  - "../*"
   - "/.cargo"
   - "/usr/lib"
 #path-mapping:
