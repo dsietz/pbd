@@ -2,7 +2,7 @@
 [![Coverage Status](https://coveralls.io/repos/github/dsietz/pbd/badge.svg?branch=master)](https://coveralls.io/github/dsietz/pbd?branch=master)
 [![Docs.rs](https://docs.rs/pbd/badge.svg)](https://docs.rs/pbd)
 
-Linux: [![Build Status](https://travis-ci.org/dsietz/pbd.svg?branch=master)](https://travis-ci.org/dsietz/pbd)
+Linux: [![Build Status](https://github.com/dsietz/pbd/workflows/Master/badge.svg)](https://github.com/dsietz/pbd/actions?query=workflow%3AMaster)
 Windows: [![Build status](https://ci.appveyor.com/api/projects/status/o3w8863fpji4pfoq?svg=true)](https://ci.appveyor.com/project/dsietz/pbd/branch/master)
 
 
@@ -22,18 +22,15 @@ For software development teams who implement Privacy by Design practices, this P
 
 ## What's New
 
-Here's whats new in 0.3.0:
+Here's whats new in 0.4.0:
 
-We've upgraded to more current versions of our crate's dependencies
-- actix-web to 3.0
-
-Move the following dependent crates to only be included during development (`dev-dependencies`):
-- actix-rt to 1.1
+We've added a new feature to our SDK - the Data Privacy Inspector!
 
 ## Features
 
 - Data Usage Agreements (dua)
 - Data Tracker Chain (dtc)
+- Data Privacy Inspector (dpi)
 - Data Security Guard (dsg)
 
 ## About

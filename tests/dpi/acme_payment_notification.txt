@@ -1,0 +1,7 @@
+Dear Acme Client,
+
+Thank you for your payment On 12/01/2020, a payment of $354.42 was received on your membership account in 3869. For transaction details, or to view statements, account information and more, please sign in to our Customer Portal at acme.com or our Mobile Portal application.
+
+We're here for you. If you need assistance, please call our Client Services Department at (800) 226-7321, Monday through Friday 8 a.m. to 8 p.m., Saturday 9 a.m. to 3 p.m., ET.
+
+Thank you for being a valued Acme client.
