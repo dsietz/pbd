@@ -328,6 +328,14 @@ mod tests {
     }
 
     #[test]
+    fn test_from_bytes() {
+        assert!(!Lib::from_bytes("15001".as_bytes()).is_err());
+        assert!(!Lib::from_bytes("36666".as_bytes()).is_err());
+        assert!(Lib::from_bytes("1000".as_bytes()).is_err());
+        assert!(Lib::from_bytes("99999".as_bytes()).is_err());
+    }    
+
+    #[test]
     fn test_from_str() {
         let ssn = Lib::from_str("15001").unwrap();
         assert_eq!(ssn, Lib::TEXT_SSN_ABBR);
@@ -357,11 +365,5 @@ mod tests {
         let code = Lib::TEXT_SSN_ABBR;
         assert_eq!(code.get_value(), Some(r"SSN"));
         assert_eq!(Lib::from_u16(15001).unwrap(), Lib::TEXT_SSN_ABBR);
-    }
-
-    #[test]
-    fn test_from_bytes() {
-        assert!(!Lib::from_bytes("15001".as_bytes()).is_err());
-        assert!(Lib::from_bytes("1000".as_bytes()).is_err());
     }
 }
