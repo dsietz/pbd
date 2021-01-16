@@ -4,9 +4,9 @@ llvm: true
 output-type: lcov
 #output-path: ./target/debug/coverage/
 ignore:
-#  - "/*"
-#  - "C:/*"
-#  - "../*"
+  - "/*"
+  - "C:/*"
+  - "../*"
   - "/.cargo"
   - "/usr/lib"
 #path-mapping:
