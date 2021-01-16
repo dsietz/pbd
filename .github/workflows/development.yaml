@@ -84,28 +84,40 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - name: Nightly install
+      #- name: Nightly install
+      #  uses: actions-rs/toolchain@v1
+      #  with:
+      #    toolchain: nightly
+      #    override: true
+      - name: Install stable toolchain
         uses: actions-rs/toolchain@v1
         with:
-          toolchain: nightly
+          toolchain: stable
           override: true
       - name: Cargo clean
         uses: actions-rs/cargo@v1
         with:
           command: clean    
-      - name: Run test for coverage
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-        env:
-          CARGO_INCREMENTAL: 0
-          RUSTFLAGS: '-Zprofile -Ccodegen-units=1 -Cinline-threshold=0 -Clink-dead-code -Coverflow-checks=off -Cpanic=abort -Zpanic_abort_tests'
-          RUSTDOCFLAGS: '-Zprofile -Ccodegen-units=1 -Cinline-threshold=0 -Clink-dead-code -Coverflow-checks=off -Cpanic=abort -Zpanic_abort_tests'
+      #- name: Run test for coverage
+      #  uses: actions-rs/cargo@v1
+      #  with:
+      #    command: test
+      #  env:
+      #    CARGO_INCREMENTAL: 0
+      #    RUSTFLAGS: '-Zprofile -Ccodegen-units=1 -Cinline-threshold=0 -Clink-dead-code -Coverflow-checks=off -Cpanic=abort -Zpanic_abort_tests'
+      #    RUSTDOCFLAGS: '-Zprofile -Ccodegen-units=1 -Cinline-threshold=0 -Clink-dead-code -Coverflow-checks=off -Cpanic=abort -Zpanic_abort_tests'
+      #- name: Gather coverage data
+      #  id: coverage
+      #  uses: actions-rs/grcov@v0.1
+      #  with:
+      #    config: .github/workflows/configs/grcov.yml
       - name: Gather coverage data
-        id: coverage
-        uses: actions-rs/grcov@v0.1
+        uses: actions-rs/tarpaulin@v0.1
         with:
-          config: .github/workflows/configs/grcov.yml
+          version: '0.15.0'
+          out-type: 'Lcov'
+          run-types: Tests
+          args: '-- --test-threads 1'  
       - name: Coveralls upload
         uses: coverallsapp/github-action@master
         with:

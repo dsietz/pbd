@@ -36,6 +36,7 @@ extern crate derive_more;
 extern crate json;
 extern crate serde_json;
 
+#[allow(dead_code)]
 fn add(u: usize, i: i8) -> usize {
     if i.is_negative() {
         u - i.wrapping_abs() as u8 as usize
