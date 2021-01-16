@@ -117,13 +117,13 @@ jobs:
           version: '0.15.0'
           out-type: 'Lcov'
           run-types: Tests
-          args: '-- --test-threads 1 --output-dir /tmp/coverage/'  
+          args: '-- --test-threads 1'  
       - name: Coveralls upload
         uses: coverallsapp/github-action@master
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           #coveralls-token: ${{ secrets.COVERALLS_TOKEN }}
-          path-to-lcov: /tmp/coverage/lcov.info         
+          path-to-lcov: lcov.info         
           parallel: true
 
   grcov_finalize:
