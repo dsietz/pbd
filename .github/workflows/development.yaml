@@ -123,7 +123,7 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           #coveralls-token: ${{ secrets.COVERALLS_TOKEN }}
-          path-to-lcov: ${{ steps.coverage.outputs.report }}          
+          #path-to-lcov: ${{ steps.coverage.outputs.report }}          
           parallel: true
 
   grcov_finalize:
