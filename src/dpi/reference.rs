@@ -318,8 +318,22 @@ mod tests {
     }
 
     #[test]
+    fn test_debug_code() {
+        assert_eq!(format!("{:?}", Lib::TEXT_SSN_ABBR), "15001");
+    }
+
+    #[test]
     fn test_display_code() {
         assert_eq!(format!("{}", Lib::TEXT_SSN_ABBR), "SSN");
+    }
+
+    #[test]
+    fn test_from_str() {
+        let ssn = Lib::from_str("15001").unwrap();
+        assert_eq!(ssn, Lib::TEXT_SSN_ABBR);
+
+        let err = Lib::from_str("ssn");
+        assert!(err.is_err());
     }
 
     #[test]
@@ -332,9 +346,22 @@ mod tests {
     }
 
     #[test]
+    fn test_invalid_code() {
+        let invalid_code = InvalidCode::new();
+        assert_eq!(format!("{:?}", invalid_code), "InvalidCode");
+        assert_eq!(format!("{}", invalid_code), "invalid code");
+    }
+
+    #[test]
     fn test_nppi_code() {
         let code = Lib::TEXT_SSN_ABBR;
         assert_eq!(code.get_value(), Some(r"SSN"));
         assert_eq!(Lib::from_u16(15001).unwrap(), Lib::TEXT_SSN_ABBR);
+    }
+
+    #[test]
+    fn test_from_bytes() {
+        assert!(!Lib::from_bytes("15001".as_bytes()).is_err());
+        assert!(Lib::from_bytes("1000".as_bytes()).is_err());
     }
 }
