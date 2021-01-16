@@ -333,7 +333,7 @@ mod tests {
         assert!(!Lib::from_bytes("36666".as_bytes()).is_err());
         assert!(Lib::from_bytes("1000".as_bytes()).is_err());
         assert!(Lib::from_bytes("99999".as_bytes()).is_err());
-    }    
+    }
 
     #[test]
     fn test_from_str() {
