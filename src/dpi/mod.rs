@@ -35,6 +35,8 @@ use tfidf::{TfIdf, TfIdfDefault};
 const KEY_PATTERN_PNTS: f64 = 80_f64;
 const KEY_REGEX_PNTS: f64 = 90_f64;
 const KEY_WORD_PNTS: f64 = 100_f64;
+const SOUNDS_LIKE_WORD_PNTS: f64 = 50_f64;
+const LENVENSHTEIN_WORD_PNTS: f64 = 60_f64;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum ScoreKey {
@@ -51,6 +53,9 @@ type ScoreCard = BTreeMap<String, Score>;
 
 /// The collection of methods that enable a structure to find words that sound alike
 pub trait Phonetic {
+    /// The default tf-idf limit before the term is considered relevant
+    const LEVENSHTEIN_LIMIT: f64 = 0.15;
+
     /// Pads the vector of chars with zeros if length is less than 4
     ///
     /// # Arguments
@@ -133,6 +138,27 @@ pub trait Phonetic {
             'h' | 'w' => '9', //0 and 9 are removed later, this is just to separate vowels from h and w
             _ => '0',         //Vowels
         }
+    }
+
+    /// Calculates the Vladimir Levenshtein's edit distance between two tokens
+    ///
+    /// # Arguments
+    ///
+    /// * a: &str - The first token.</br>
+    /// * b: &str - The second token.</br>
+    ///
+    /// #Example
+    ///
+    /// ```rust
+    /// use pbd::dpi::Phonetic;
+    ///
+    /// struct Prcsr;
+    /// impl Phonetic for Prcsr {}
+    ///   
+    /// assert_eq!(Prcsr::levenshtein("kitten", "sitting"),3);
+    /// ```
+    fn levenshtein(a: &str, b: &str) -> usize {
+        levenshtein::levenshtein(a, b)
     }
 
     /// Converts a vector of chars to a SoundexWord type
@@ -1261,7 +1287,7 @@ impl DPI {
                 let tokens = Self::tokenize(&text).clone();
                 let suggestions = DPI::suggest_from_key_pattern(pattern, tokens);
 
-                for (key, _val) in suggestions.iter() {
+                for key in suggestions.iter() {
                     let mut n: f64 = 0.00;
                     for doc_idx in 0..docs.len() {
                         n += TfIdfzr::tfidf(key, doc_idx, cnts.clone());
@@ -1297,7 +1323,7 @@ impl DPI {
                 let tokens = Self::tokenize(&text).clone();
                 let suggestions = DPI::suggest_from_key_regex(regex, tokens);
 
-                for (key, _val) in suggestions.iter() {
+                for key in suggestions.iter() {
                     let mut n: f64 = 0.00;
                     for doc_idx in 0..docs.len() {
                         n += TfIdfzr::tfidf(key, doc_idx, cnts.clone());
@@ -1331,9 +1357,9 @@ impl DPI {
         docs.iter().for_each(|text| {
             for word in key_words.clone().iter() {
                 let tokens = Self::tokenize(&text).clone();
-                let suggestions = DPI::suggest_from_key_word(word, tokens);
+                let suggestions = DPI::suggest_from_key_word(word, tokens.clone());
 
-                for (key, _val) in suggestions.iter() {
+                for key in suggestions.iter() {
                     let mut n: f64 = 0.00;
                     for doc_idx in 0..docs.len() {
                         n += TfIdfzr::tfidf(key, doc_idx, cnts.clone());
@@ -1342,14 +1368,44 @@ impl DPI {
                         rslts.push((key.to_string(), n / docs.len() as f64 * KEY_WORD_PNTS));
                     }
                 }
+
+                let suggestions = DPI::suggest_from_sounds_like(word, tokens.clone());
+
+                for suggested in suggestions.iter() {
+                    let mut n: f64 = 0.00;
+                    for doc_idx in 0..docs.len() {
+                        n += TfIdfzr::tfidf(suggested, doc_idx, cnts.clone());
+                    }
+                    if (n / docs.len() as f64) >= Self::TFIDF_LIMIT as f64 {
+                        rslts.push((
+                            suggested.to_string(),
+                            n / docs.len() as f64 * SOUNDS_LIKE_WORD_PNTS,
+                        ));
+                    }
+                }
+
+                let suggestions = DPI::suggest_from_levenshtein(word, tokens);
+
+                for suggested in suggestions.iter() {
+                    let mut n: f64 = 0.00;
+                    for doc_idx in 0..docs.len() {
+                        n += TfIdfzr::tfidf(suggested, doc_idx, cnts.clone());
+                    }
+                    if (n / docs.len() as f64) >= Self::TFIDF_LIMIT as f64 {
+                        rslts.push((
+                            suggested.to_string(),
+                            n / docs.len() as f64 * LENVENSHTEIN_WORD_PNTS,
+                        ));
+                    }
+                }
             }
         });
 
         rslts
     }
 
-    fn suggest_from_key_pattern<'a>(pattern: &str, tokens: Vec<&'a str>) -> Vec<(&'a str, i8)> {
-        let mut suggestions: Vec<(&str, i8)> = Vec::new();
+    fn suggest_from_key_pattern<'a>(pattern: &str, tokens: Vec<&'a str>) -> Vec<&'a str> {
+        let mut suggestions: Vec<&str> = Vec::new();
         struct Tknzr {}
         impl Tfidf for Tknzr {}
         let total_count = tokens.len();
@@ -1362,7 +1418,7 @@ impl DPI {
                 for i in &idx_scope {
                     let cnt = freq_counts.get(&tokens[add(idx, *i)]).unwrap();
                     if (cnt / total_count) <= Self::TF_LIMIT as usize {
-                        suggestions.push((tokens[add(idx, *i)], *i));
+                        suggestions.push(tokens[add(idx, *i)]);
                     }
                 }
             }
@@ -1371,8 +1427,8 @@ impl DPI {
         suggestions
     }
 
-    fn suggest_from_key_regex<'a>(regex: &str, tokens: Vec<&'a str>) -> Vec<(&'a str, i8)> {
-        let mut suggestions: Vec<(&str, i8)> = Vec::new();
+    fn suggest_from_key_regex<'a>(regex: &str, tokens: Vec<&'a str>) -> Vec<&'a str> {
+        let mut suggestions: Vec<&str> = Vec::new();
         struct Tknzr {}
         impl Tfidf for Tknzr {}
         let total_count = tokens.len();
@@ -1384,7 +1440,7 @@ impl DPI {
                 for i in &idx_scope {
                     let cnt = freq_counts.get(&tokens[add(idx, *i)]).unwrap();
                     if (cnt / total_count) <= Self::TF_LIMIT as usize {
-                        suggestions.push((tokens[add(idx, *i)], *i));
+                        suggestions.push(tokens[add(idx, *i)]);
                     }
                 }
             }
@@ -1393,8 +1449,8 @@ impl DPI {
         suggestions
     }
 
-    fn suggest_from_key_word<'a>(word: &str, tokens: Vec<&'a str>) -> Vec<(&'a str, i8)> {
-        let mut suggestions: Vec<(&str, i8)> = Vec::new();
+    fn suggest_from_key_word<'a>(word: &str, tokens: Vec<&'a str>) -> Vec<&'a str> {
+        let mut suggestions: Vec<&str> = Vec::new();
         struct Tknzr {}
         impl Tfidf for Tknzr {}
         let total_count = tokens.len();
@@ -1409,7 +1465,7 @@ impl DPI {
                         let cnt = freq_counts.get(&tokens[add(idx, *i)]).unwrap();
 
                         if (cnt / total_count) <= Self::TF_LIMIT as usize {
-                            suggestions.push((tokens[add(idx, *i)], *i));
+                            suggestions.push(tokens[add(idx, *i)]);
                         }
                     }
                 }
@@ -1419,16 +1475,30 @@ impl DPI {
 
         suggestions
     }
-    #[allow(dead_code)]
-    fn suggest_from_sounds_like<'a>(word: &str, tokens: Vec<&'a str>) -> Vec<(&'a str, usize)> {
-        let mut suggestions: Vec<(&str, usize)> = Vec::new();
 
-        for (idx, tkn) in tokens.iter().enumerate() {
+    #[allow(dead_code)]
+    fn suggest_from_sounds_like<'a>(word: &str, tokens: Vec<&'a str>) -> Vec<&'a str> {
+        let mut suggestions: Vec<&str> = Vec::new();
+
+        for tkn in tokens.iter() {
             match Self::sounds_like(word, tkn) {
                 true => {
-                    suggestions.push((tkn, idx));
+                    suggestions.push(tkn);
                 }
                 false => {}
+            }
+        }
+
+        suggestions
+    }
+
+    #[allow(dead_code)]
+    fn suggest_from_levenshtein<'a>(word: &str, tokens: Vec<&'a str>) -> Vec<&'a str> {
+        let mut suggestions: Vec<&str> = Vec::new();
+
+        for tkn in tokens.iter() {
+            if (Self::levenshtein(word, tkn) / word.len()) as f64 <= Self::LEVENSHTEIN_LIMIT {
+                suggestions.push(tkn);
             }
         }
 
@@ -1634,7 +1704,6 @@ impl DPI {
     /// println!("{:?}", DPI::train_for_key_words(dpi.key_words.clone().unwrap(), tokens));
     /// ```
     pub fn train_for_key_words(words: Vec<String>, tokens: Vec<&str>) -> Vec<(String, f64)> {
-        //let kwords = words.clone();
         words
             .par_iter()
             .filter(|w| DPI::contains_key_word(w, tokens.clone()) > 0)
@@ -1843,6 +1912,14 @@ mod tests {
     }
 
     #[test]
+    fn test_dpi_default() {
+        let dpi = DPI::default();
+
+        assert!(dpi.key_words.is_none());
+        assert!(dpi.key_patterns.is_none());
+    }
+
+    #[test]
     fn test_dpi_new() {
         let dpi = DPI::new();
 
@@ -1939,7 +2016,7 @@ mod tests {
             docs.push(feq_cnts);
             let suggestions = DPI::suggest_from_key_regex(regex, tokens);
 
-            for (key, _val) in suggestions.iter() {
+            for key in suggestions.iter() {
                 let mut n: f64 = 0.00;
                 for doc_idx in 0..docs.len() {
                     n = n + TfIdfzr::tfidf(key, doc_idx, docs.clone());
@@ -1952,6 +2029,41 @@ mod tests {
         }
 
         assert_eq!(*rslts.get("statement").unwrap(), 67.13741764082893 as f64);
+    }
+
+    #[test]
+    fn test_dpi_suggest_from_levenshtein() {
+        let tokens = vec![
+            "Hello",
+            "my",
+            "name",
+            "is",
+            "Robert",
+            "Smith",
+            "I",
+            "was",
+            "wondering",
+            "if",
+            "you",
+            "would",
+            "send",
+            "me",
+            "the",
+            "application",
+            "My",
+            "address",
+            "is",
+            "42",
+            "Sunny",
+            "Way",
+            "AnyTown",
+            "MN",
+            "09887",
+        ];
+        let suggestions = DPI::suggest_from_levenshtein("Robby", tokens);
+        let expected = vec!["my", "Robert", "you", "would", "My", "Sunny", "Way"];
+
+        assert_eq!(suggestions, expected);
     }
 
     #[test]
@@ -1984,7 +2096,7 @@ mod tests {
             "09887",
         ];
         let suggestions = DPI::suggest_from_sounds_like("Sunday", tokens);
-        let expected = vec![("Smith", 5)];
+        let expected = vec!["Smith"];
 
         assert_eq!(suggestions, expected);
     }
@@ -2008,7 +2120,7 @@ mod tests {
             docs.push(feq_cnts);
             let suggestions = DPI::suggest_from_key_word(word, tokens);
 
-            for (key, _val) in suggestions.iter() {
+            for key in suggestions.iter() {
                 let mut n: f64 = 0.00;
                 for doc_idx in 0..docs.len() {
                     n = n + TfIdfzr::tfidf(key, doc_idx, docs.clone());
@@ -2327,6 +2439,14 @@ mod tests {
 
         assert!(Prcsr::sounds_like("rupert", "robert"));
         assert!(Prcsr::sounds_like("social", "sozial"));
+    }
+
+    #[test]
+    fn test_phonetic_levenshtein() {
+        struct Prcsr;
+        impl Phonetic for Prcsr {}
+
+        assert_eq!(Prcsr::levenshtein("kitten", "sitting"), 3);
     }
 
     #[test]
