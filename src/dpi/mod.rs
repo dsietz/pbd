@@ -35,8 +35,8 @@ use tfidf::{TfIdf, TfIdfDefault};
 const KEY_PATTERN_PNTS: f64 = 80_f64;
 const KEY_REGEX_PNTS: f64 = 90_f64;
 const KEY_WORD_PNTS: f64 = 100_f64;
-const SOUNDS_LIKE_WORD_PNTS: f64 = 50_f64;
-const LENVENSHTEIN_WORD_PNTS: f64 = 60_f64;
+//const SOUNDS_LIKE_WORD_PNTS: f64 = 50_f64;
+//const LENVENSHTEIN_WORD_PNTS: f64 = 60_f64;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum ScoreKey {
@@ -1062,39 +1062,30 @@ impl DPI {
     // Private functon that initiates the DPI key_words attribute
     // Call this function from within the init function
     fn init_words(&mut self) {
-        match &self.key_words.clone() {
-            Some(keys) => {
-                for key in keys.iter() {
-                    self.add_to_score_points(key.to_string(), KEY_WORD_PNTS);
-                }
+        if self.key_words.is_some() {
+            for key in self.key_words.clone().unwrap().iter() {
+                self.add_to_score_points(key.to_string(), KEY_WORD_PNTS);
             }
-            None => {}
         }
     }
 
     // Private function that initiates the DPI key_patterns attribute
     // Call this function from within the init function
     fn init_patterns(&mut self) {
-        match &self.key_patterns.clone() {
-            Some(pttrns) => {
-                for pttrn in pttrns.iter() {
-                    self.add_to_score_points(pttrn.to_string(), KEY_PATTERN_PNTS);
-                }
+        if self.key_patterns.is_some() {
+            for pttrn in self.key_patterns.clone().unwrap().iter() {
+                self.add_to_score_points(pttrn.to_string(), KEY_PATTERN_PNTS);
             }
-            None => {}
         }
     }
 
     // Private function that initiates the DPI key_regexs attribute
     // Call this function from within the init function
     fn init_regexs(&mut self) {
-        match &self.key_regexs.clone() {
-            Some(regexs) => {
-                for regex in regexs.iter() {
-                    self.add_to_score_points(regex.to_string(), KEY_REGEX_PNTS);
-                }
+        if self.key_regexs.is_some() {
+            for regex in self.key_regexs.clone().unwrap().iter() {
+                self.add_to_score_points(regex.to_string(), KEY_REGEX_PNTS);
             }
-            None => {}
         }
     }
 
@@ -1305,7 +1296,7 @@ impl DPI {
             for pattern in key_patterns.clone().iter() {
                 let tokens = Self::tokenize(text.to_string()).clone();
                 let suggestions = DPI::suggest_from_key_pattern(pattern, tokens);
-                Self::push_suggestions(suggestions, cnts.clone(), KEY_WORD_PNTS, &mut rslts);
+                Self::push_suggestions(suggestions, cnts.clone(), KEY_PATTERN_PNTS, &mut rslts);
             }
         });
 
@@ -1327,7 +1318,7 @@ impl DPI {
                 let tokens = Self::tokenize(text.to_string()).clone();
                 let suggestions = DPI::suggest_from_key_regex(regex, tokens);
 
-                Self::push_suggestions(suggestions, cnts.clone(), KEY_WORD_PNTS, &mut rslts);
+                Self::push_suggestions(suggestions, cnts.clone(), KEY_REGEX_PNTS, &mut rslts);
             }
         });
 
@@ -1350,22 +1341,6 @@ impl DPI {
                 let suggestions = DPI::suggest_from_key_word(word, tokens.clone());
 
                 Self::push_suggestions(suggestions, cnts.clone(), KEY_WORD_PNTS, &mut rslts);
-
-                let suggestions = DPI::suggest_from_sounds_like(word, tokens.clone());
-                Self::push_suggestions(
-                    suggestions,
-                    cnts.clone(),
-                    SOUNDS_LIKE_WORD_PNTS,
-                    &mut rslts,
-                );
-
-                let suggestions = DPI::suggest_from_levenshtein(word, tokens);
-                Self::push_suggestions(
-                    suggestions,
-                    cnts.clone(),
-                    LENVENSHTEIN_WORD_PNTS,
-                    &mut rslts,
-                );
             }
         });
 
@@ -1404,9 +1379,17 @@ impl DPI {
             if pttrn_def.analyze(tkn) == pattern {
                 let idx_scope: Vec<i8> = vec![-2, -1, 1, 2];
                 for i in &idx_scope {
-                    let cnt = freq_counts.get(&tokens[add(idx, *i)]).unwrap();
+                    let word = tokens[add(idx, *i)].clone();
+                    let cnt = freq_counts.get(&word).unwrap();
                     if (cnt / total_count) <= Self::TF_LIMIT as usize {
-                        suggestions.push(tokens[add(idx, *i)].clone());
+                        suggestions.push(word.clone());
+
+                        suggestions.append(&mut DPI::suggest_from_sounds_like(
+                            word.clone(),
+                            tokens.clone(),
+                        ));
+                        suggestions
+                            .append(&mut DPI::suggest_from_levenshtein(word, tokens.clone()));
                     }
                 }
             }
@@ -1426,9 +1409,17 @@ impl DPI {
             if Regex::new(regex).unwrap().is_match(tkn) {
                 let idx_scope: Vec<i8> = vec![-2, -1, 1, 2];
                 for i in &idx_scope {
-                    let cnt = freq_counts.get(&tokens[add(idx, *i)]).unwrap();
+                    let word = tokens[add(idx, *i)].clone();
+                    let cnt = freq_counts.get(&word).unwrap();
                     if (cnt / total_count) <= Self::TF_LIMIT as usize {
-                        suggestions.push(tokens[add(idx, *i)].clone());
+                        suggestions.push(word.clone());
+
+                        suggestions.append(&mut DPI::suggest_from_sounds_like(
+                            word.clone(),
+                            tokens.clone(),
+                        ));
+                        suggestions
+                            .append(&mut DPI::suggest_from_levenshtein(word, tokens.clone()));
                     }
                 }
             }
@@ -1450,10 +1441,17 @@ impl DPI {
                     let idx_scope: Vec<i8> = vec![-2, -1, 1, 2];
 
                     for i in &idx_scope {
-                        let cnt = freq_counts.get(&tokens[add(idx, *i)]).unwrap();
-
+                        let word = tokens[add(idx, *i)].clone();
+                        let cnt = freq_counts.get(&word).unwrap();
                         if (cnt / total_count) <= Self::TF_LIMIT as usize {
-                            suggestions.push(tokens[add(idx, *i)].clone());
+                            suggestions.push(word.clone());
+
+                            suggestions.append(&mut DPI::suggest_from_sounds_like(
+                                word.clone(),
+                                tokens.clone(),
+                            ));
+                            suggestions
+                                .append(&mut DPI::suggest_from_levenshtein(word, tokens.clone()));
                         }
                     }
                 }
@@ -1464,12 +1462,11 @@ impl DPI {
         suggestions
     }
 
-    #[allow(dead_code)]
-    fn suggest_from_sounds_like(word: &str, tokens: Vec<String>) -> Vec<String> {
+    fn suggest_from_sounds_like(word: String, tokens: Vec<String>) -> Vec<String> {
         let mut suggestions: Vec<String> = Vec::new();
 
         for tkn in tokens.iter() {
-            match Self::sounds_like(word, tkn) {
+            match Self::sounds_like(&word, tkn) {
                 true => {
                     suggestions.push(tkn.to_string());
                 }
@@ -1480,12 +1477,11 @@ impl DPI {
         suggestions
     }
 
-    #[allow(dead_code)]
-    fn suggest_from_levenshtein(word: &str, tokens: Vec<String>) -> Vec<String> {
+    fn suggest_from_levenshtein(word: String, tokens: Vec<String>) -> Vec<String> {
         let mut suggestions: Vec<String> = Vec::new();
 
         for tkn in tokens.iter() {
-            if (Self::levenshtein(word, tkn) / word.len()) as f64 <= Self::LEVENSHTEIN_LIMIT {
+            if (Self::levenshtein(&word, tkn) / word.len()) as f64 <= Self::LEVENSHTEIN_LIMIT {
                 suggestions.push(tkn.to_string());
             }
         }
@@ -1534,6 +1530,7 @@ impl DPI {
             keys.push((KEY_WORD_PNTS, k))
         }
 
+        // traing for keys
         docs.iter().for_each(|text| {
             let tokens = Self::tokenize(text.to_string());
             let rslts = Self::train_from_keys(keys.clone(), tokens);
@@ -1962,6 +1959,15 @@ mod tests {
     }
 
     #[test]
+    fn test_dpi_from_serialized_ok() {
+        let serialized = r#"{"key_words":["ssn"],"key_patterns":["^(?!666|000|9\\d{2})\\d{3}-(?!00)\\d{2}-(?!0{4})\\d{4}$"],"scores":{}}"#;
+        let dpi = DPI::from_serialized(serialized);
+
+        assert_eq!(dpi.key_words.unwrap().len(), 1);
+        assert_eq!(dpi.key_patterns.unwrap().len(), 1);
+    }
+
+    #[test]
     fn test_dpi_get_score() {
         let score = Score::new(ScoreKey::KeyWord, "ssn".to_string(), 25.0);
         let mut dpi = DPI::new();
@@ -1971,15 +1977,6 @@ mod tests {
         let returned_score = dpi.get_score("ssn".to_string());
 
         assert_eq!(returned_score.points, 25.0);
-    }
-
-    #[test]
-    fn test_dpi_from_serialized_ok() {
-        let serialized = r#"{"key_words":["ssn"],"key_patterns":["^(?!666|000|9\\d{2})\\d{3}-(?!00)\\d{2}-(?!0{4})\\d{4}$"],"scores":{}}"#;
-        let dpi = DPI::from_serialized(serialized);
-
-        assert_eq!(dpi.key_words.unwrap().len(), 1);
-        assert_eq!(dpi.key_patterns.unwrap().len(), 1);
     }
 
     #[test]
@@ -2053,8 +2050,10 @@ mod tests {
             "MN",
             "09887",
         ];
-        let suggestions =
-            DPI::suggest_from_levenshtein("Robby", tokens.iter().map(|s| s.to_string()).collect());
+        let suggestions = DPI::suggest_from_levenshtein(
+            "Robby".to_string(),
+            tokens.iter().map(|s| s.to_string()).collect(),
+        );
         let expected = vec!["my", "Robert", "you", "would", "My", "Sunny", "Way"];
 
         assert_eq!(suggestions, expected);
@@ -2089,8 +2088,10 @@ mod tests {
             "MN",
             "09887",
         ];
-        let suggestions =
-            DPI::suggest_from_sounds_like("Sunday", tokens.iter().map(|s| s.to_string()).collect());
+        let suggestions = DPI::suggest_from_sounds_like(
+            "Sunday".to_string(),
+            tokens.iter().map(|s| s.to_string()).collect(),
+        );
         let expected = vec!["Smith".to_string()];
 
         assert_eq!(suggestions, expected);
@@ -2168,12 +2169,12 @@ mod tests {
         );
         assert_eq!(
             suggestions.get("statement").unwrap().points,
-            67.13741764082893
+            53.70993411266315
         );
 
         println!("SUGGESTIONS: {:?}", suggestions);
         let _3869 = suggestions.get("3869").unwrap();
-        assert_eq!(_3869.points, 59.50816563618928);
+        assert_eq!(_3869.points, 47.606532508951425);
         assert_eq!(_3869.regex.as_ref().unwrap(), "[0-9][0-9][0-9][0-9]");
         assert_eq!(_3869.pattern.as_ref().unwrap(), "####");
     }
@@ -2225,13 +2226,22 @@ mod tests {
     }
 
     #[test]
-    fn test_dpi_with() {
+    fn test_dpi_with_good() {
         let words = Some(vec![Lib::TEXT_SSN_ABBR.to_string()]);
         let patterns = Some(vec![Lib::PTTRN_SSN_DASHES.to_string()]);
         let regexs = Some(vec![Lib::REGEX_SSN_DASHES.to_string()]);
         let dpi = DPI::with(words, regexs, patterns);
 
         assert_eq!(dpi.key_words.unwrap().len(), 1);
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_dpi_with_bad() {
+        let words = Some(vec![Lib::TEXT_SSN_ABBR.to_string()]);
+        let patterns = Some(vec![Lib::PTTRN_SSN_DASHES.to_string()]);
+        let regexs = Some(vec!["!?(^}".to_string()]);
+        let _ = DPI::with(words, regexs, patterns);
     }
 
     #[test]
@@ -2251,6 +2261,13 @@ mod tests {
     }
 
     #[test]
+    #[should_panic]
+    fn test_dpi_with_keyregexs_bad() {
+        let regexs = vec!["!?(^}".to_string()];
+        let _ = DPI::with_key_regexs(regexs);
+    }
+
+    #[test]
     fn test_dpi_with_keywords() {
         let words = vec![Lib::TEXT_SSN_ABBR.to_string()];
         let dpi = DPI::with_key_words(words);
@@ -2259,7 +2276,7 @@ mod tests {
     }
 
     #[test]
-    fn test_word_to_regex() {
+    fn test_dpi_word_to_regex() {
         let sample = vec![
             "1234".to_string(),
             "1aA4".to_string(),
@@ -2370,6 +2387,18 @@ mod tests {
     }
 
     #[test]
+    fn test_pattern_default() {
+        let pttrn_def = PatternDefinition::default();
+        assert_eq!(pttrn_def.get(&"VowelUpper".to_string()), 'V');
+    }
+
+    #[test]
+    fn test_pattern_get() {
+        let pttrn_def = PatternDefinition::new();
+        assert_eq!(pttrn_def.get(&"VowelUpper".to_string()), 'V');
+    }
+
+    #[test]
     fn test_phonetic_char_digit() {
         struct Prcsr;
         impl Phonetic for Prcsr {}
@@ -2456,6 +2485,34 @@ mod tests {
         impl Phonetic for Prcsr {}
 
         assert_eq!(Prcsr::soundex_word("hello"), vec!['h', '4', '0', '0']);
+    }
+
+    #[test]
+    fn test_suggestion_new() {
+        let suggestion = Suggestion::new("dob".to_string());
+        assert_eq!(suggestion.word, "dob".to_string());
+    }
+
+    #[test]
+    fn test_tokenizer_is_match() {
+        struct Prcsr;
+        impl Tokenizer for Prcsr {}
+
+        assert!(Prcsr::is_match('.'));
+        assert!(Prcsr::is_match('!'));
+        assert!(Prcsr::is_match('?'));
+        assert!(Prcsr::is_match(';'));
+        assert!(Prcsr::is_match('\''));
+        assert!(Prcsr::is_match('"'));
+        assert!(Prcsr::is_match(':'));
+        assert!(Prcsr::is_match('\t'));
+        assert!(Prcsr::is_match('\n'));
+        assert!(Prcsr::is_match('\r'));
+        assert!(Prcsr::is_match('('));
+        assert!(Prcsr::is_match(')'));
+        assert!(Prcsr::is_match('{'));
+        assert!(Prcsr::is_match('}'));
+        assert!(!Prcsr::is_match('a'));
     }
 
     #[test]
