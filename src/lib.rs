@@ -45,6 +45,27 @@ fn add(u: usize, i: i8) -> usize {
     }
 }
 
+/// Takes a list of &str and returns a list of String
+///
+/// # Arguments
+///
+/// * list: Vec<&str> - The list of &str to convert to String.</br>
+///
+/// #Example
+///
+/// ```rust
+/// use pbd::to_vec_string;
+///
+/// assert_eq!(
+///     to_vec_string(vec!["one", "two", "three"]),
+///     vec!["one".to_string(), "two".to_string(), "three".to_string()]
+/// );
+/// ```
+#[allow(dead_code)]
+pub fn to_vec_string(list: Vec<&str>) -> Vec<String> {
+    list.iter().map(|s| s.to_string()).collect()
+}
+
 // Modules
 #[cfg(feature = "dpi")]
 pub mod dpi;
@@ -65,5 +86,13 @@ mod tests {
         let x: usize = 2;
         let y: i8 = -1;
         assert_eq!(add(x, y), 1);
+    }
+
+    #[test]
+    fn test_to_vec_string() {
+        assert_eq!(
+            to_vec_string(vec!["one", "two", "three"]),
+            vec!["one".to_string(), "two".to_string(), "three".to_string()]
+        );
     }
 }

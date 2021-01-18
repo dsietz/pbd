@@ -314,6 +314,7 @@ pub trait Tfidf {
     /// #Example
     ///
     /// ```rust
+    /// use pbd::to_vec_string;
     /// use pbd::dpi::Tfidf;
     ///
     /// struct FreqCnt {}
@@ -327,15 +328,23 @@ pub trait Tfidf {
     /// ];
     ///
     /// for tokens in tokens_list {
-    ///   docs.push(FreqCnt::frequency_counts_as_vec(tokens));
+    ///   docs.push(FreqCnt::frequency_counts_as_vec(to_vec_string(tokens)));
     /// }
     ///
     /// assert_eq!(FreqCnt::tfidf("ssn", 2, docs.clone()), 1.0986122886681098);
     /// assert_eq!(FreqCnt::tfidf("name", 1, docs.clone()), 0.4054651081081644);
     /// assert_eq!(FreqCnt::tfidf("your", 1, docs), 0.3040988310811233);
     /// ```  
-    fn tfidf(term: &str, doc_idx: usize, docs: Vec<Vec<(&str, usize)>>) -> f64 {
-        TfIdfDefault::tfidf(term, &docs[doc_idx], docs.iter())
+    fn tfidf(term: &str, doc_idx: usize, docs: Vec<Vec<(String, usize)>>) -> f64 {
+        let d = docs
+            .iter()
+            .map(|v| {
+                v.iter()
+                    .map(|s| (s.0.as_str(), s.1))
+                    .collect::<Vec<(&str, usize)>>()
+            })
+            .collect::<Vec<_>>();
+        TfIdfDefault::tfidf(term, &d[doc_idx], d.iter())
     }
 
     /// Takes a list of words and returns a distinct list of words with the number of times they appear in the list.
@@ -347,17 +356,17 @@ pub trait Tfidf {
     /// #Example
     ///
     /// ```rust
+    /// use pbd::to_vec_string;
     /// use pbd::dpi::Tfidf;
     ///
     /// struct FreqCnt {}
     /// impl Tfidf for FreqCnt {}
     /// let tokens = vec!["Hello","my","name","is","John","What","is","your","name","A","name","is","a","personal","identifier","Never","share","your","name","My","ssn","is","003-67-0998"];
-    /// let _iter = tokens.iter().map(|t| t.to_string());
     ///
-    /// println!("{:?}", FreqCnt::frequency_counts_as_vec(tokens));
+    /// println!("{:?}", FreqCnt::frequency_counts_as_vec(to_vec_string(tokens)));
     /// ```
-    fn frequency_counts_as_vec(tokens: Vec<&str>) -> Vec<(&str, usize)> {
-        let mut counts: Vec<(&str, usize)> = Vec::new();
+    fn frequency_counts_as_vec(tokens: Vec<String>) -> Vec<(String, usize)> {
+        let mut counts: Vec<(String, usize)> = Vec::new();
 
         // MapReduce
         // Map input collection.
@@ -389,7 +398,7 @@ pub trait Tfidf {
 
         // Collect results
         for (word, count) in reduced.into_iter() {
-            counts.push((word, count));
+            counts.push((word.to_string(), count));
         }
 
         counts
@@ -404,23 +413,23 @@ pub trait Tfidf {
     /// #Example
     ///
     /// ```rust
+    /// use pbd::to_vec_string;
     /// use pbd::dpi::Tfidf;
     ///
     /// struct FreqCnt {}
     /// impl Tfidf for FreqCnt {}
     /// let tokens = vec!["Hello","my","name","is","John","What","is","your","name","A","name","is","a","personal","identifier","Never","share","your","name","My","ssn","is","003-67-0998"];
-    /// let _iter = tokens.iter().map(|t| t.to_string());
-    /// let counts = FreqCnt::frequency_counts(tokens);
+    /// let counts = FreqCnt::frequency_counts(to_vec_string(tokens));
     ///
     /// assert_eq!(*counts.get("name").unwrap(), 4 as usize);
     /// ```
-    fn frequency_counts(tokens: Vec<&str>) -> BTreeMap<&str, usize> {
-        let counts: Vec<(&str, usize)> = Self::frequency_counts_as_vec(tokens);
+    fn frequency_counts(tokens: Vec<String>) -> BTreeMap<String, usize> {
+        let counts: Vec<(String, usize)> = Self::frequency_counts_as_vec(tokens);
 
         // Convert to BTreeMap
         let mut list = BTreeMap::new();
         for count in counts.iter() {
-            list.insert(count.0, count.1);
+            list.insert(count.0.clone(), count.1);
         }
 
         list
@@ -446,11 +455,11 @@ pub trait Tokenizer {
     /// impl Tokenizer for Prcsr {}
     ///
     /// assert_eq!(
-    ///   Prcsr::ngram("This is my private data", 2, "----"),
+    ///   Prcsr::ngram("This is my private data".to_string(), 2, "----".to_string()),
     ///   vec![["----", "This"], ["This", "is"], ["is", "my"], ["my", "private"], ["private", "data"], ["data", "----"]]
     /// );
     /// ```
-    fn ngram<'a>(text: &'a str, n: usize, pad: &'a str) -> Vec<Vec<&'a str>> {
+    fn ngram(text: String, n: usize, pad: String) -> Vec<Vec<String>> {
         let mut tokenized_sequence = Self::tokenize(text);
         tokenized_sequence.shrink_to_fit();
 
@@ -464,7 +473,7 @@ pub trait Tokenizer {
                 let num_blanks = n - i;
                 let mut this_sequence = Vec::new();
                 for _ in 0..num_blanks {
-                    this_sequence.push(pad);
+                    this_sequence.push(pad.clone());
                 }
                 let sl = &tokenized_sequence[0..(n - num_blanks)];
                 this_sequence.extend_from_slice(sl);
@@ -487,7 +496,7 @@ pub trait Tokenizer {
                 let mut tc = Vec::new();
                 tc.extend_from_slice(&tokenized_sequence[(last_entry - num_tokens)..last_entry]);
                 for _ in 0..num_blanks {
-                    tc.push(pad);
+                    tc.push(pad.clone());
                 }
                 ngram_result.push(tc);
             }
@@ -509,11 +518,12 @@ pub trait Tokenizer {
     /// struct Tknzr;
     /// impl Tokenizer for Tknzr {}
     ///     
-    /// assert_eq!(Tknzr::tokenize("My personal data"), vec!["My","personal","data"]);
+    /// assert_eq!(Tknzr::tokenize("My personal data".to_string()), vec!["My","personal","data"]);
     /// ```
-    fn tokenize(text: &str) -> Vec<&str> {
+    fn tokenize(text: String) -> Vec<String> {
         text.split(Self::is_match)
             .filter(|s| !s.is_empty())
+            .map(|s| s.to_string())
             .collect()
     }
 
@@ -1196,21 +1206,22 @@ impl DPI {
     /// #Example
     ///
     /// ```rust
+    /// use pbd::to_vec_string;
     /// use pbd::dpi::DPI;
     /// use pbd::dpi::reference::Lib;
     ///
     /// let tokens = vec!["My","ssn","is","003-76-0098","Let","me","know","if","you","need","my","son's","ssn"];
     ///     
-    /// assert_eq!(DPI::contains_key_pattern(Lib::PTTRN_SSN_DASHES.as_str().unwrap(), tokens), 1);
+    /// assert_eq!(DPI::contains_key_pattern(Lib::PTTRN_SSN_DASHES.as_str().unwrap(), to_vec_string(tokens)), 1);
     /// ```
-    pub fn contains_key_pattern(pattern: &str, tokens: Vec<&str>) -> usize {
+    pub fn contains_key_pattern(pattern: &str, tokens: Vec<String>) -> usize {
         tokens
             .par_iter()
             .filter(|t| {
                 let pttrn_def = PatternDefinition::new();
                 pttrn_def.analyze(t) == pattern
             })
-            .collect::<Vec<&&str>>()
+            .collect::<Vec<&String>>()
             .len()
     }
 
@@ -1224,20 +1235,21 @@ impl DPI {
     /// #Example
     ///
     /// ```rust
+    /// use pbd::to_vec_string;
     /// use pbd::dpi::DPI;
     /// use pbd::dpi::reference::Lib;
     ///
     /// let tokens = vec!["My","ssn","is","003-76-0098","Let","me","know","if","you","need","my","son's","ssn"];
     ///     
-    /// assert_eq!(DPI::contains_key_regex(Lib::REGEX_SSN_DASHES.as_str().unwrap(), tokens), 1);
+    /// assert_eq!(DPI::contains_key_regex(Lib::REGEX_SSN_DASHES.as_str().unwrap(), to_vec_string(tokens)), 1);
     /// ```
-    pub fn contains_key_regex(regex: &str, tokens: Vec<&str>) -> usize {
+    pub fn contains_key_regex(regex: &str, tokens: Vec<String>) -> usize {
         let re = Regex::new(regex).unwrap();
 
         tokens
             .par_iter()
             .filter(|t| re.is_match(t))
-            .collect::<Vec<&&str>>()
+            .collect::<Vec<&String>>()
             .len()
     }
 
@@ -1251,19 +1263,32 @@ impl DPI {
     /// #Example
     ///
     /// ```rust
+    /// use pbd::to_vec_string;
     /// use pbd::dpi::DPI;
     /// use pbd::dpi::reference::Lib;
     ///
     /// let tokens = vec!["My","ssn","is","003-76-0098","Let","me","know","if","you","need","my","son's","ssn"];
     ///     
-    /// assert_eq!(DPI::contains_key_word(Lib::TEXT_SSN_ABBR.as_str().unwrap(), tokens), 2);
+    /// assert_eq!(DPI::contains_key_word(Lib::TEXT_SSN_ABBR.as_str().unwrap(), to_vec_string(tokens)), 2);
     /// ```
-    pub fn contains_key_word(word: &str, tokens: Vec<&str>) -> usize {
+    pub fn contains_key_word(word: &str, tokens: Vec<String>) -> usize {
         tokens
             .par_iter()
             .filter(|t| t.to_lowercase() == word.to_lowercase())
-            .collect::<Vec<&&str>>()
+            .collect::<Vec<&String>>()
             .len()
+    }
+
+    fn convert_docs_to_frequency_count_docs(docs: Vec<String>) -> Vec<Vec<(String, usize)>> {
+        struct TfIdfzr;
+        impl Tfidf for TfIdfzr {}
+
+        docs.into_iter()
+            .map(|text| {
+                let tokens = Self::tokenize(text);
+                TfIdfzr::frequency_counts_as_vec(tokens)
+            })
+            .collect()
     }
 
     fn get_suggested_words_from_patterns(
@@ -1274,28 +1299,13 @@ impl DPI {
         impl Tfidf for TfIdfzr {}
 
         let mut rslts: Vec<(String, f64)> = Vec::new();
-        let mut cnts: Vec<Vec<(&str, usize)>> = Vec::new();
-
-        docs.iter().for_each(|text| {
-            let tokens = Self::tokenize(&text);
-            let feq_cnts = TfIdfzr::frequency_counts_as_vec(tokens.clone());
-            cnts.push(feq_cnts);
-        });
+        let cnts = Self::convert_docs_to_frequency_count_docs(docs.clone());
 
         docs.iter().for_each(|text| {
             for pattern in key_patterns.clone().iter() {
-                let tokens = Self::tokenize(&text).clone();
+                let tokens = Self::tokenize(text.to_string()).clone();
                 let suggestions = DPI::suggest_from_key_pattern(pattern, tokens);
-
-                for key in suggestions.iter() {
-                    let mut n: f64 = 0.00;
-                    for doc_idx in 0..docs.len() {
-                        n += TfIdfzr::tfidf(key, doc_idx, cnts.clone());
-                    }
-                    if (n / docs.len() as f64) >= Self::TFIDF_LIMIT as f64 {
-                        rslts.push((key.to_string(), n / docs.len() as f64 * KEY_WORD_PNTS));
-                    }
-                }
+                Self::push_suggestions(suggestions, cnts.clone(), KEY_WORD_PNTS, &mut rslts);
             }
         });
 
@@ -1310,28 +1320,14 @@ impl DPI {
         impl Tfidf for TfIdfzr {}
 
         let mut rslts: Vec<(String, f64)> = Vec::new();
-        let mut cnts: Vec<Vec<(&str, usize)>> = Vec::new();
-
-        docs.iter().for_each(|text| {
-            let tokens = Self::tokenize(&text);
-            let feq_cnts = TfIdfzr::frequency_counts_as_vec(tokens.clone());
-            cnts.push(feq_cnts);
-        });
+        let cnts = Self::convert_docs_to_frequency_count_docs(docs.clone());
 
         docs.iter().for_each(|text| {
             for regex in key_regexs.clone().iter() {
-                let tokens = Self::tokenize(&text).clone();
+                let tokens = Self::tokenize(text.to_string()).clone();
                 let suggestions = DPI::suggest_from_key_regex(regex, tokens);
 
-                for key in suggestions.iter() {
-                    let mut n: f64 = 0.00;
-                    for doc_idx in 0..docs.len() {
-                        n += TfIdfzr::tfidf(key, doc_idx, cnts.clone());
-                    }
-                    if (n / docs.len() as f64) >= Self::TFIDF_LIMIT as f64 {
-                        rslts.push((key.to_string(), n / docs.len() as f64 * KEY_WORD_PNTS));
-                    }
-                }
+                Self::push_suggestions(suggestions, cnts.clone(), KEY_WORD_PNTS, &mut rslts);
             }
         });
 
@@ -1346,66 +1342,58 @@ impl DPI {
         impl Tfidf for TfIdfzr {}
 
         let mut rslts: Vec<(String, f64)> = Vec::new();
-        let mut cnts: Vec<Vec<(&str, usize)>> = Vec::new();
-
-        docs.iter().for_each(|text| {
-            let tokens = Self::tokenize(&text);
-            let feq_cnts = TfIdfzr::frequency_counts_as_vec(tokens.clone());
-            cnts.push(feq_cnts);
-        });
+        let cnts = Self::convert_docs_to_frequency_count_docs(docs.clone());
 
         docs.iter().for_each(|text| {
             for word in key_words.clone().iter() {
-                let tokens = Self::tokenize(&text).clone();
+                let tokens = Self::tokenize(text.to_string()).clone();
                 let suggestions = DPI::suggest_from_key_word(word, tokens.clone());
 
-                for key in suggestions.iter() {
-                    let mut n: f64 = 0.00;
-                    for doc_idx in 0..docs.len() {
-                        n += TfIdfzr::tfidf(key, doc_idx, cnts.clone());
-                    }
-                    if (n / docs.len() as f64) >= Self::TFIDF_LIMIT as f64 {
-                        rslts.push((key.to_string(), n / docs.len() as f64 * KEY_WORD_PNTS));
-                    }
-                }
+                Self::push_suggestions(suggestions, cnts.clone(), KEY_WORD_PNTS, &mut rslts);
 
                 let suggestions = DPI::suggest_from_sounds_like(word, tokens.clone());
-
-                for suggested in suggestions.iter() {
-                    let mut n: f64 = 0.00;
-                    for doc_idx in 0..docs.len() {
-                        n += TfIdfzr::tfidf(suggested, doc_idx, cnts.clone());
-                    }
-                    if (n / docs.len() as f64) >= Self::TFIDF_LIMIT as f64 {
-                        rslts.push((
-                            suggested.to_string(),
-                            n / docs.len() as f64 * SOUNDS_LIKE_WORD_PNTS,
-                        ));
-                    }
-                }
+                Self::push_suggestions(
+                    suggestions,
+                    cnts.clone(),
+                    SOUNDS_LIKE_WORD_PNTS,
+                    &mut rslts,
+                );
 
                 let suggestions = DPI::suggest_from_levenshtein(word, tokens);
-
-                for suggested in suggestions.iter() {
-                    let mut n: f64 = 0.00;
-                    for doc_idx in 0..docs.len() {
-                        n += TfIdfzr::tfidf(suggested, doc_idx, cnts.clone());
-                    }
-                    if (n / docs.len() as f64) >= Self::TFIDF_LIMIT as f64 {
-                        rslts.push((
-                            suggested.to_string(),
-                            n / docs.len() as f64 * LENVENSHTEIN_WORD_PNTS,
-                        ));
-                    }
-                }
+                Self::push_suggestions(
+                    suggestions,
+                    cnts.clone(),
+                    LENVENSHTEIN_WORD_PNTS,
+                    &mut rslts,
+                );
             }
         });
 
         rslts
     }
 
-    fn suggest_from_key_pattern<'a>(pattern: &str, tokens: Vec<&'a str>) -> Vec<&'a str> {
-        let mut suggestions: Vec<&str> = Vec::new();
+    fn push_suggestions(
+        suggestions: Vec<String>,
+        docs: Vec<Vec<(String, usize)>>,
+        pnts: f64,
+        list: &mut Vec<(std::string::String, f64)>,
+    ) {
+        struct TfIdfzr;
+        impl Tfidf for TfIdfzr {}
+
+        for suggestion in suggestions.iter() {
+            let mut n: f64 = 0.00;
+            for doc_idx in 0..docs.len() {
+                n += TfIdfzr::tfidf(suggestion, doc_idx, docs.clone());
+            }
+            if (n / docs.len() as f64) >= Self::TFIDF_LIMIT as f64 {
+                list.push((suggestion.to_string(), n / docs.len() as f64 * pnts));
+            }
+        }
+    }
+
+    fn suggest_from_key_pattern(pattern: &str, tokens: Vec<String>) -> Vec<String> {
+        let mut suggestions: Vec<String> = Vec::new();
         struct Tknzr {}
         impl Tfidf for Tknzr {}
         let total_count = tokens.len();
@@ -1418,7 +1406,7 @@ impl DPI {
                 for i in &idx_scope {
                     let cnt = freq_counts.get(&tokens[add(idx, *i)]).unwrap();
                     if (cnt / total_count) <= Self::TF_LIMIT as usize {
-                        suggestions.push(tokens[add(idx, *i)]);
+                        suggestions.push(tokens[add(idx, *i)].clone());
                     }
                 }
             }
@@ -1427,8 +1415,8 @@ impl DPI {
         suggestions
     }
 
-    fn suggest_from_key_regex<'a>(regex: &str, tokens: Vec<&'a str>) -> Vec<&'a str> {
-        let mut suggestions: Vec<&str> = Vec::new();
+    fn suggest_from_key_regex(regex: &str, tokens: Vec<String>) -> Vec<String> {
+        let mut suggestions: Vec<String> = Vec::new();
         struct Tknzr {}
         impl Tfidf for Tknzr {}
         let total_count = tokens.len();
@@ -1440,7 +1428,7 @@ impl DPI {
                 for i in &idx_scope {
                     let cnt = freq_counts.get(&tokens[add(idx, *i)]).unwrap();
                     if (cnt / total_count) <= Self::TF_LIMIT as usize {
-                        suggestions.push(tokens[add(idx, *i)]);
+                        suggestions.push(tokens[add(idx, *i)].clone());
                     }
                 }
             }
@@ -1449,8 +1437,8 @@ impl DPI {
         suggestions
     }
 
-    fn suggest_from_key_word<'a>(word: &str, tokens: Vec<&'a str>) -> Vec<&'a str> {
-        let mut suggestions: Vec<&str> = Vec::new();
+    fn suggest_from_key_word(word: &str, tokens: Vec<String>) -> Vec<String> {
+        let mut suggestions: Vec<String> = Vec::new();
         struct Tknzr {}
         impl Tfidf for Tknzr {}
         let total_count = tokens.len();
@@ -1465,7 +1453,7 @@ impl DPI {
                         let cnt = freq_counts.get(&tokens[add(idx, *i)]).unwrap();
 
                         if (cnt / total_count) <= Self::TF_LIMIT as usize {
-                            suggestions.push(tokens[add(idx, *i)]);
+                            suggestions.push(tokens[add(idx, *i)].clone());
                         }
                     }
                 }
@@ -1477,13 +1465,13 @@ impl DPI {
     }
 
     #[allow(dead_code)]
-    fn suggest_from_sounds_like<'a>(word: &str, tokens: Vec<&'a str>) -> Vec<&'a str> {
-        let mut suggestions: Vec<&str> = Vec::new();
+    fn suggest_from_sounds_like(word: &str, tokens: Vec<String>) -> Vec<String> {
+        let mut suggestions: Vec<String> = Vec::new();
 
         for tkn in tokens.iter() {
             match Self::sounds_like(word, tkn) {
                 true => {
-                    suggestions.push(tkn);
+                    suggestions.push(tkn.to_string());
                 }
                 false => {}
             }
@@ -1493,12 +1481,12 @@ impl DPI {
     }
 
     #[allow(dead_code)]
-    fn suggest_from_levenshtein<'a>(word: &str, tokens: Vec<&'a str>) -> Vec<&'a str> {
-        let mut suggestions: Vec<&str> = Vec::new();
+    fn suggest_from_levenshtein(word: &str, tokens: Vec<String>) -> Vec<String> {
+        let mut suggestions: Vec<String> = Vec::new();
 
         for tkn in tokens.iter() {
             if (Self::levenshtein(word, tkn) / word.len()) as f64 <= Self::LEVENSHTEIN_LIMIT {
-                suggestions.push(tkn);
+                suggestions.push(tkn.to_string());
             }
         }
 
@@ -1547,7 +1535,7 @@ impl DPI {
         }
 
         docs.iter().for_each(|text| {
-            let tokens = Self::tokenize(&text);
+            let tokens = Self::tokenize(text.to_string());
             let rslts = Self::train_from_keys(keys.clone(), tokens);
             rslts.iter().for_each(|t| {
                 self.add_to_score_points(t.0.to_string(), t.1);
@@ -1638,6 +1626,7 @@ impl DPI {
     /// #Example
     ///
     /// ```rust
+    /// use pbd::to_vec_string;
     /// use pbd::dpi::DPI;
     /// use pbd::dpi::reference::Lib;
     ///
@@ -1645,9 +1634,9 @@ impl DPI {
     /// let patterns = vec![Lib::PTTRN_SSN_DASHES.to_string()];
     /// let mut dpi = DPI::with_key_patterns(patterns);
     ///   
-    /// println!("{:?}", DPI::train_for_key_patterns(dpi.key_patterns.clone().unwrap(), tokens));
+    /// println!("{:?}", DPI::train_for_key_patterns(dpi.key_patterns.clone().unwrap(), to_vec_string(tokens)));
     /// ```
-    pub fn train_for_key_patterns(pttrns: Vec<String>, tokens: Vec<&str>) -> Vec<(String, f64)> {
+    pub fn train_for_key_patterns(pttrns: Vec<String>, tokens: Vec<String>) -> Vec<(String, f64)> {
         pttrns
             .par_iter()
             .filter(|p| DPI::contains_key_pattern(p, tokens.clone()) > 0)
@@ -1666,6 +1655,7 @@ impl DPI {
     /// #Example
     ///
     /// ```rust
+    /// use pbd::to_vec_string;
     /// use pbd::dpi::DPI;
     /// use pbd::dpi::reference::Lib;
     ///
@@ -1673,9 +1663,9 @@ impl DPI {
     /// let regexs = vec![Lib::REGEX_SSN_DASHES.to_string()];
     /// let mut dpi = DPI::with_key_regexs(regexs);
     ///   
-    /// println!("{:?}", DPI::train_for_key_regexs(dpi.key_regexs.clone().unwrap(), tokens));
+    /// println!("{:?}", DPI::train_for_key_regexs(dpi.key_regexs.clone().unwrap(), to_vec_string(tokens)));
     /// ```
-    pub fn train_for_key_regexs(regexs: Vec<String>, tokens: Vec<&str>) -> Vec<(String, f64)> {
+    pub fn train_for_key_regexs(regexs: Vec<String>, tokens: Vec<String>) -> Vec<(String, f64)> {
         regexs
             .par_iter()
             .filter(|x| DPI::contains_key_regex(x, tokens.clone()) > 0)
@@ -1694,6 +1684,7 @@ impl DPI {
     /// #Example
     ///
     /// ```rust
+    /// use pbd::to_vec_string;
     /// use pbd::dpi::DPI;
     /// use pbd::dpi::reference::Lib;
     ///
@@ -1701,9 +1692,9 @@ impl DPI {
     /// let words = vec![Lib::TEXT_SSN_ABBR.to_string()];
     /// let dpi = DPI::with_key_words(words);
     ///
-    /// println!("{:?}", DPI::train_for_key_words(dpi.key_words.clone().unwrap(), tokens));
+    /// println!("{:?}", DPI::train_for_key_words(dpi.key_words.clone().unwrap(), to_vec_string(tokens)));
     /// ```
-    pub fn train_for_key_words(words: Vec<String>, tokens: Vec<&str>) -> Vec<(String, f64)> {
+    pub fn train_for_key_words(words: Vec<String>, tokens: Vec<String>) -> Vec<(String, f64)> {
         words
             .par_iter()
             .filter(|w| DPI::contains_key_word(w, tokens.clone()) > 0)
@@ -1727,7 +1718,7 @@ impl DPI {
     ///  impl Tokenizer for Tknzr{}
     ///
     ///  let text = "My ssn is 003-76-0098".to_string();
-    ///  let tokens = Tknzr::tokenize(&text);
+    ///  let tokens = Tknzr::tokenize(text);
     ///  let words = (100 as f64, vec![Lib::TEXT_SSN_ABBR.to_string()]);
     ///  let regexs = (90 as f64, vec![Lib::REGEX_SSN_DASHES.to_string()]);
     ///  let patterns = (80 as f64, vec![Lib::PTTRN_SSN_DASHES.to_string()]);
@@ -1737,7 +1728,10 @@ impl DPI {
     ///
     ///  println!("{:?}",rslts);
     /// ```
-    pub fn train_from_keys(keys: Vec<(f64, Vec<String>)>, tokens: Vec<&str>) -> Vec<(String, f64)> {
+    pub fn train_from_keys(
+        keys: Vec<(f64, Vec<String>)>,
+        tokens: Vec<String>,
+    ) -> Vec<(String, f64)> {
         let mut rtn: Vec<(String, f64)> = Vec::new();
         let pttrns: Vec<(f64, Vec<String>)> = keys
             .iter()
@@ -1881,7 +1875,7 @@ mod tests {
         String::from(r#"Here is my ssn that you requested: 003-75-9876."#)
     }
 
-    fn get_tokens() -> Vec<&'static str> {
+    fn get_tokens() -> Vec<String> {
         let v = vec![
             "Hello",
             "my",
@@ -1907,8 +1901,7 @@ mod tests {
             "is",
             "003-67-0998",
         ];
-        let _iter = v.par_iter().map(|t| t.to_string());
-        v
+        v.par_iter().map(|t| t.to_string()).collect()
     }
 
     #[test]
@@ -1952,7 +1945,7 @@ mod tests {
     #[test]
     fn test_dpi_contains_key_regex() {
         let mut tokens = get_tokens();
-        tokens.push("008-43-2213");
+        tokens.push("008-43-2213".to_string());
         assert_eq!(
             DPI::contains_key_regex(Lib::REGEX_SSN_DASHES.as_str().unwrap(), tokens),
             2
@@ -2008,10 +2001,10 @@ mod tests {
         let regex = "([Aa]..[aeiouAEIOU]{2}..)";
         let files = get_files();
         let mut rslts: BTreeMap<String, f64> = BTreeMap::new();
-        let mut docs: Vec<Vec<(&str, usize)>> = Vec::new();
+        let mut docs: Vec<Vec<(String, usize)>> = Vec::new();
 
         for content in files.iter() {
-            let tokens = Tknzr::tokenize(&content);
+            let tokens = Tknzr::tokenize(content.to_string());
             let feq_cnts = TfIdfzr::frequency_counts_as_vec(tokens.clone());
             docs.push(feq_cnts);
             let suggestions = DPI::suggest_from_key_regex(regex, tokens);
@@ -2060,7 +2053,8 @@ mod tests {
             "MN",
             "09887",
         ];
-        let suggestions = DPI::suggest_from_levenshtein("Robby", tokens);
+        let suggestions =
+            DPI::suggest_from_levenshtein("Robby", tokens.iter().map(|s| s.to_string()).collect());
         let expected = vec!["my", "Robert", "you", "would", "My", "Sunny", "Way"];
 
         assert_eq!(suggestions, expected);
@@ -2095,8 +2089,9 @@ mod tests {
             "MN",
             "09887",
         ];
-        let suggestions = DPI::suggest_from_sounds_like("Sunday", tokens);
-        let expected = vec!["Smith"];
+        let suggestions =
+            DPI::suggest_from_sounds_like("Sunday", tokens.iter().map(|s| s.to_string()).collect());
+        let expected = vec!["Smith".to_string()];
 
         assert_eq!(suggestions, expected);
     }
@@ -2112,10 +2107,10 @@ mod tests {
         let word = "account";
         let files = get_files();
         let mut rslts: BTreeMap<String, f64> = BTreeMap::new();
-        let mut docs: Vec<Vec<(&str, usize)>> = Vec::new();
+        let mut docs: Vec<Vec<(String, usize)>> = Vec::new();
 
         for content in files.iter() {
-            let tokens = Tknzr::tokenize(&content);
+            let tokens = Tknzr::tokenize(content.to_string());
             let feq_cnts = TfIdfzr::frequency_counts_as_vec(tokens.clone());
             docs.push(feq_cnts);
             let suggestions = DPI::suggest_from_key_word(word, tokens);
@@ -2189,7 +2184,10 @@ mod tests {
         let regexs = vec![Lib::REGEX_SSN_DASHES.to_string()];
         let dpi = DPI::with_key_regexs(regexs);
 
-        let rslts = DPI::train_for_key_regexs(dpi.key_regexs.clone().unwrap(), tokens);
+        let rslts = DPI::train_for_key_regexs(
+            dpi.key_regexs.clone().unwrap(),
+            tokens.iter().map(|s| s.to_string()).collect(),
+        );
 
         assert_eq!(rslts[0].1, 90.0);
     }
@@ -2200,7 +2198,10 @@ mod tests {
         let words = vec!["ssn".to_string()];
         let dpi = DPI::with_key_words(words);
 
-        let rslts = DPI::train_for_key_words(dpi.key_words.clone().unwrap(), tokens);
+        let rslts = DPI::train_for_key_words(
+            dpi.key_words.clone().unwrap(),
+            tokens.iter().map(|s| s.to_string()).collect(),
+        );
 
         assert_eq!(rslts[0].1, 100.0);
     }
@@ -2211,7 +2212,7 @@ mod tests {
         impl Tokenizer for Tknzr {}
 
         let text = get_text();
-        let tokens = Tknzr::tokenize(&text);
+        let tokens = Tknzr::tokenize(text.to_string());
         let words = (KEY_WORD_PNTS, vec![Lib::TEXT_SSN_ABBR.to_string()]);
         let regexs = (KEY_REGEX_PNTS, vec![Lib::REGEX_SSN_DASHES.to_string()]);
         let patterns = (KEY_PATTERN_PNTS, vec![Lib::PTTRN_SSN_DASHES.to_string()]);
@@ -2314,7 +2315,7 @@ mod tests {
         impl Tokenizer for Prcsr {}
 
         assert_eq!(
-            Prcsr::ngram("This is my private data", 2, "----"),
+            Prcsr::ngram("This is my private data".to_string(), 2, "----".to_string()),
             vec![
                 ["----", "This"],
                 ["This", "is"],
@@ -2338,7 +2339,7 @@ mod tests {
     fn test_pattern_analyze_entities() {
         let entities = get_tokens();
         let pttrn_def = PatternDefinition::new();
-        let rslt = pttrn_def.analyze_entities(entities);
+        let rslt = pttrn_def.analyze_entities(entities.iter().map(|s| s.as_str()).collect());
         let pttrns = vec![
             "Cvccv",
             "cc",
@@ -2463,11 +2464,11 @@ mod tests {
         impl Tokenizer for Prcsr {}
 
         assert_eq!(
-            Prcsr::tokenize("My personal data"),
+            Prcsr::tokenize("My personal data".to_string()),
             vec!["My", "personal", "data"]
         );
         assert_eq!(
-            Prcsr::tokenize(r#"{"ssn":"003-08-5546"}"#),
+            Prcsr::tokenize(r#"{"ssn":"003-08-5546"}"#.to_string()),
             vec!["ssn", "003-08-5546"]
         );
     }
@@ -2520,7 +2521,9 @@ mod tests {
         ];
 
         for tokens in tokens_list {
-            docs.push(FreqCnt::frequency_counts_as_vec(tokens));
+            docs.push(FreqCnt::frequency_counts_as_vec(
+                tokens.iter().map(|s| s.to_string()).collect(),
+            ));
         }
 
         assert_eq!(FreqCnt::tfidf("ssn", 2, docs.clone()), 1.0986122886681098);
