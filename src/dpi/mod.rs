@@ -897,6 +897,111 @@ impl Tokenizer for DPI {}
 impl Tfidf for DPI {}
 
 impl DPI {
+    /// The default points necessary for a suggestion to be applied for auto training
+    const TRAIN_LIMIT: f64 = 47.0;
+
+    /// Appends a key pattern to the DPI object's key list of patterns.
+    /// This is used to teach the object what new patterns to used as identifiers.
+    ///
+    /// # Arguments
+    ///
+    /// * pattern: String - A pattern to add to the list of patterns.</br>
+    ///
+    /// #Example
+    ///
+    /// ```rust
+    /// use pbd::dpi::DPI;
+    ///
+    /// let mut dpi = DPI::new();
+    /// dpi.append_key_pattern("vcccvcc".to_string());
+    ///
+    /// assert!(dpi.key_patterns.is_some());
+    /// ```
+    pub fn append_key_pattern(&mut self, pattern: String) {
+        match self.key_patterns.clone() {
+            Some(mut patterns) => {
+                // if pattern is already in the list, ignore it
+                if !patterns.contains(&pattern) {
+                    patterns.push(pattern.clone());
+                    self.key_patterns = Some(patterns);
+                }
+            }
+            None => {
+                self.key_patterns = Some(vec![pattern.clone()]);
+            }
+        }
+
+        self.add_to_score_points(pattern, KEY_PATTERN_PNTS);
+    }
+
+    /// Appends a key regex to the DPI object's key list of regexs.
+    /// This is used to teach the object what new regexs to used as identifiers.
+    ///
+    /// # Arguments
+    ///
+    /// * regex: String - A regex to add to the list of regexs.</br>
+    ///
+    /// #Example
+    ///
+    /// ```rust
+    /// use pbd::dpi::DPI;
+    ///
+    /// let mut dpi = DPI::new();
+    /// dpi.append_key_regex("^[aA-zZ]".to_string());
+    ///
+    /// assert!(dpi.key_regexs.is_some());
+    /// ```
+    pub fn append_key_regex(&mut self, regex: String) {
+        match self.key_regexs.clone() {
+            Some(mut regexs) => {
+                // if pattern is already in the list, ignore it
+                if !regexs.contains(&regex) {
+                    regexs.push(regex.clone());
+                    self.key_regexs = Some(regexs);
+                }
+            }
+            None => {
+                self.key_regexs = Some(vec![regex.clone()]);
+            }
+        }
+
+        self.add_to_score_points(regex, KEY_REGEX_PNTS);
+    }
+
+    /// Appends a key word to the DPI object's key list of words.
+    /// This is used to teach the object what new words to used as identifiers.
+    ///
+    /// # Arguments
+    ///
+    /// * word: String - A word to add to the list of words.</br>
+    ///
+    /// #Example
+    ///
+    /// ```rust
+    /// use pbd::dpi::DPI;
+    ///
+    /// let mut dpi = DPI::new();
+    /// dpi.append_key_word("address".to_string());
+    ///
+    /// assert!(dpi.key_words.is_some());
+    /// ```
+    pub fn append_key_word(&mut self, word: String) {
+        match self.key_words.clone() {
+            Some(mut words) => {
+                // if word is already in the list, ignore it
+                if !words.contains(&word) {
+                    words.push(word.clone());
+                    self.key_words = Some(words);
+                }
+            }
+            None => {
+                self.key_words = Some(vec![word.clone()]);
+            }
+        }
+
+        self.add_to_score_points(word, KEY_WORD_PNTS);
+    }
+
     /// Constructs a DPI object without using any predefined set of key words or patterns to learn from
     ///
     /// #Example
@@ -1489,6 +1594,39 @@ impl DPI {
         suggestions
     }
 
+    pub fn auto_train(&mut self, docs: Vec<String>) -> Vec<Suggestion> {
+        self.auto_train_with_limit(docs, Some(Self::TRAIN_LIMIT))
+    }
+
+    pub fn auto_train_with_limit(
+        &mut self,
+        docs: Vec<String>,
+        point_limit: Option<f64>,
+    ) -> Vec<Suggestion> {
+        let suggestions = self.train(docs);
+
+        let approved_suggestions: Vec<Suggestion> = match point_limit {
+            Some(pnt) => suggestions
+                .into_par_iter()
+                .filter(|v| v.1.points >= pnt)
+                .map(|v| v.1)
+                .collect(),
+            None => suggestions.into_par_iter().map(|v| v.1).collect(),
+        };
+
+        approved_suggestions.iter().for_each(|s| {
+            self.append_key_word(s.word.clone());
+            if s.regex.is_some() {
+                self.append_key_regex(s.regex.clone().unwrap());
+            }
+            if s.pattern.is_some() {
+                self.append_key_pattern(s.pattern.clone().unwrap());
+            }
+        });
+
+        approved_suggestions
+    }
+
     /// Trains the DPI object using its keys against a list of Strings as the sample content.
     /// Returns a `BTreeMap<String, f64>` of suggested key words with average Tfidf greater than Tfidf::TFIDF_LIMIT
     /// which are recommended as additional keys for consideration.
@@ -1931,6 +2069,46 @@ mod tests {
     }
 
     #[test]
+    fn test_const_points() {
+        assert_eq!(KEY_PATTERN_PNTS, 80.0);
+        assert_eq!(KEY_REGEX_PNTS, 90.0);
+        assert_eq!(KEY_WORD_PNTS, 100.0);
+    }
+
+    #[test]
+    fn test_dpi_append_key_pattern() {
+        let mut dpi = DPI::new();
+        assert!(dpi.key_patterns.is_none());
+
+        dpi.append_key_pattern("vcccvcc".to_string());
+        assert!(dpi.key_patterns.is_some());
+        assert_eq!(
+            dpi.get_score("vcccvcc".to_string()).points,
+            KEY_PATTERN_PNTS
+        );
+    }
+
+    #[test]
+    fn test_dpi_append_key_regex() {
+        let mut dpi = DPI::new();
+        assert!(dpi.key_regexs.is_none());
+
+        dpi.append_key_regex("^[aA-zZ]".to_string());
+        assert!(dpi.key_regexs.is_some());
+        assert_eq!(dpi.get_score("^[aA-zZ]".to_string()).points, KEY_REGEX_PNTS);
+    }
+
+    #[test]
+    fn test_dpi_append_key_word() {
+        let mut dpi = DPI::new();
+        assert!(dpi.key_words.is_none());
+
+        dpi.append_key_word("address".to_string());
+        assert!(dpi.key_words.is_some());
+        assert_eq!(dpi.get_score("address".to_string()).points, KEY_WORD_PNTS);
+    }
+
+    #[test]
     fn test_dpi_contains_key_pattern() {
         let tokens = get_tokens();
         assert_eq!(
@@ -2129,6 +2307,32 @@ mod tests {
         }
 
         assert_eq!(*rslts.get("statement").unwrap(), 67.13741764082893 as f64);
+    }
+
+    #[test]
+    fn test_dpi_auto_train() {
+        let files = get_files();
+        let mut docs: Vec<String> = Vec::new();
+        let words = Some(vec![
+            Lib::TEXT_ACCOUNT.to_string(),
+            "membership".to_string(),
+        ]);
+        let patterns = Some(vec![
+            Lib::PTTRN_ACCOUNT_CAMEL.to_string(),
+            Lib::PTTRN_ACCOUNT_UPPER.to_string(),
+            Lib::PTTRN_ACCOUNT_LOWER.to_string(),
+        ]);
+        let regexs = Some(vec![Lib::REGEX_ACCOUNT.to_string()]);
+        let mut dpi = DPI::with(words, regexs, patterns);
+
+        for content in files.iter() {
+            docs.push(content.to_string());
+        }
+
+        let applied = dpi.auto_train(docs);
+
+        println!("{:?}", applied);
+        assert!(true);
     }
 
     #[test]
