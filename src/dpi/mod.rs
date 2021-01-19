@@ -11,12 +11,11 @@
 //!
 
 /*
-** LOGIC
-** 1. Words that appear infrequently across multiple documents but frequently in a few documents are relevant (TF-IDF)
-**    (https://crates.io/crates/rust-tfidf)
-**    Use map reduce to multi-process the tokens for frequency counts.
-** 2. Patterns of words that appear within NGram of key words are relevant
-** 3. Words that are simalar (Sounds like or Levenstein distince) are slightly relevant
+** REFERENCE MATERIAL
+** 1. https://www.magnetforensics.com/blog/keywords-for-personally-identifiable-information-pii-in-magnet-axiom/
+** 2. https://www.investopedia.com/terms/p/personally-identifiable-information-pii.asp
+** 3. https://www.forensicfocus.com/forums/general/identifying-phi-and-pii-keyword-lists-and-regexp/
+** 4. https://dpi.wi.gov/sites/default/files/imce/wisedash/pdf/PII%20list%20of%20Examples.pdf
 */
 
 extern crate eddie;
@@ -1452,6 +1451,61 @@ impl DPI {
         rslts
     }
 
+    pub fn inspect(&mut self, doc: String) -> f64 {
+        // tokenize the doc
+        let tokens = Self::tokenize(doc);
+        let mut pnts = 0.00;
+
+        // get scores
+        if self.key_patterns.is_some() {
+            let found_patterns =
+                Self::inspect_for_patterns(self.key_patterns.clone().unwrap(), tokens.clone());
+            println!("FOUND PATTERNS:{:?}", found_patterns);
+            pnts += found_patterns.len() as f64 * KEY_PATTERN_PNTS;
+        }
+
+        if self.key_regexs.is_some() {
+            let found_regexs =
+                Self::inspect_for_regexs(self.key_regexs.clone().unwrap(), tokens.clone());
+            println!("FOUND PATTERNS:{:?}", found_regexs);
+            pnts += found_regexs.len() as f64 * KEY_REGEX_PNTS;
+        }
+
+        if self.key_words.is_some() {
+            let found_words = Self::inspect_for_words(self.key_words.clone().unwrap(), tokens);
+            println!("FOUND PATTERNS:{:?}", found_words);
+            pnts += found_words.len() as f64 * KEY_WORD_PNTS;
+        }
+
+        // get percentage score (score / possible score)
+        pnts
+    }
+
+    // only return list of patterns found within tokens
+    fn inspect_for_patterns(patterns: Vec<String>, tokens: Vec<String>) -> Vec<String> {
+        patterns
+            .par_iter()
+            .filter(|pattern| Self::contains_key_pattern(pattern, tokens.clone()) > 0)
+            .map(|pattern| pattern.to_string())
+            .collect()
+    }
+
+    fn inspect_for_regexs(regexs: Vec<String>, tokens: Vec<String>) -> Vec<String> {
+        regexs
+            .par_iter()
+            .filter(|regex| Self::contains_key_regex(regex, tokens.clone()) > 0)
+            .map(|regex| regex.to_string())
+            .collect()
+    }
+
+    fn inspect_for_words(words: Vec<String>, tokens: Vec<String>) -> Vec<String> {
+        words
+            .par_iter()
+            .filter(|word| Self::contains_key_word(word, tokens.clone()) > 0)
+            .map(|word| word.to_string())
+            .collect()
+    }
+
     fn push_suggestions(
         suggestions: Vec<String>,
         docs: Vec<Vec<(String, usize)>>,
@@ -1988,12 +2042,26 @@ mod tests {
         v
     }
 
-    fn get_files() -> Vec<String> {
+    fn get_training_files() -> Vec<String> {
         let files = vec![
             "acme_payment_notification.txt",
             "renewal_notification.txt",
             "statement_ready_notification.txt",
         ];
+        let mut docs: Vec<String> = Vec::new();
+
+        for file in files.iter() {
+            docs.push(
+                fs::read_to_string(format!("./tests/dpi/{}", file))
+                    .expect("File could not be read."),
+            );
+        }
+
+        docs
+    }
+
+    fn get_inspect_files() -> Vec<String> {
+        let files = vec!["personal_letter.txt"];
         let mut docs: Vec<String> = Vec::new();
 
         for file in files.iter() {
@@ -2158,6 +2226,33 @@ mod tests {
     }
 
     #[test]
+    fn test_dpi_inspect_with_training() {
+        let training_files = get_training_files();
+        let inspect_files = get_inspect_files();
+        let mut docs: Vec<String> = Vec::new();
+        let words = Some(vec![Lib::TEXT_ACCOUNT.to_string()]);
+        let patterns = Some(vec![
+            Lib::PTTRN_ACCOUNT_CAMEL.to_string(),
+            Lib::PTTRN_ACCOUNT_UPPER.to_string(),
+            Lib::PTTRN_ACCOUNT_LOWER.to_string(),
+        ]);
+        let regexs = Some(vec![Lib::REGEX_ACCOUNT.to_string()]);
+        let mut dpi = DPI::with(words, regexs, patterns);
+
+        for content in training_files.iter() {
+            docs.push(content.to_string());
+        }
+
+        let applied = dpi.auto_train(docs);
+
+        for content in inspect_files.iter() {
+            println!("INSPECTED POINTS: {}", dpi.inspect(content.to_string()));
+        }
+
+        assert!(true);
+    }
+
+    #[test]
     fn test_dpi_serialize_ok() {
         let serialized = "{\"key_patterns\":[\"###p##p####\"],\"key_regexs\":[\"^(?!b(d)1+-(d)1+-(d)1+b)(?!123-45-6789|219-09-9999|078-05-1120)(?!666|000|9d{2})d{3}-(?!00)d{2}-(?!0{4})d{4}$\"],\"key_words\":[\"ssn\"],\"scores\":{}}";
         let dpi = &mut get_dpi()[0];
@@ -2174,7 +2269,7 @@ mod tests {
         impl Tfidf for TfIdfzr {}
 
         let regex = "([Aa]..[aeiouAEIOU]{2}..)";
-        let files = get_files();
+        let files = get_training_files();
         let mut rslts: BTreeMap<String, f64> = BTreeMap::new();
         let mut docs: Vec<Vec<(String, usize)>> = Vec::new();
 
@@ -2183,6 +2278,40 @@ mod tests {
             let feq_cnts = TfIdfzr::frequency_counts_as_vec(tokens.clone());
             docs.push(feq_cnts);
             let suggestions = DPI::suggest_from_key_regex(regex, tokens);
+
+            for key in suggestions.iter() {
+                let mut n: f64 = 0.00;
+                for doc_idx in 0..docs.len() {
+                    n = n + TfIdfzr::tfidf(key, doc_idx, docs.clone());
+                }
+
+                if (n / docs.len() as f64) >= DPI::TFIDF_LIMIT as f64 {
+                    rslts.insert(key.to_string(), n / docs.len() as f64 * KEY_WORD_PNTS);
+                }
+            }
+        }
+
+        assert_eq!(*rslts.get("statement").unwrap(), 67.13741764082893 as f64);
+    }
+
+    #[test]
+    fn test_suggested_key_words() {
+        struct Tknzr;
+        impl Tokenizer for Tknzr {}
+
+        struct TfIdfzr;
+        impl Tfidf for TfIdfzr {}
+
+        let word = "account";
+        let files = get_training_files();
+        let mut rslts: BTreeMap<String, f64> = BTreeMap::new();
+        let mut docs: Vec<Vec<(String, usize)>> = Vec::new();
+
+        for content in files.iter() {
+            let tokens = Tknzr::tokenize(content.to_string());
+            let feq_cnts = TfIdfzr::frequency_counts_as_vec(tokens.clone());
+            docs.push(feq_cnts);
+            let suggestions = DPI::suggest_from_key_word(word, tokens);
 
             for key in suggestions.iter() {
                 let mut n: f64 = 0.00;
@@ -2276,42 +2405,8 @@ mod tests {
     }
 
     #[test]
-    fn test_suggested_key_words() {
-        struct Tknzr;
-        impl Tokenizer for Tknzr {}
-
-        struct TfIdfzr;
-        impl Tfidf for TfIdfzr {}
-
-        let word = "account";
-        let files = get_files();
-        let mut rslts: BTreeMap<String, f64> = BTreeMap::new();
-        let mut docs: Vec<Vec<(String, usize)>> = Vec::new();
-
-        for content in files.iter() {
-            let tokens = Tknzr::tokenize(content.to_string());
-            let feq_cnts = TfIdfzr::frequency_counts_as_vec(tokens.clone());
-            docs.push(feq_cnts);
-            let suggestions = DPI::suggest_from_key_word(word, tokens);
-
-            for key in suggestions.iter() {
-                let mut n: f64 = 0.00;
-                for doc_idx in 0..docs.len() {
-                    n = n + TfIdfzr::tfidf(key, doc_idx, docs.clone());
-                }
-
-                if (n / docs.len() as f64) >= DPI::TFIDF_LIMIT as f64 {
-                    rslts.insert(key.to_string(), n / docs.len() as f64 * KEY_WORD_PNTS);
-                }
-            }
-        }
-
-        assert_eq!(*rslts.get("statement").unwrap(), 67.13741764082893 as f64);
-    }
-
-    #[test]
     fn test_dpi_auto_train() {
-        let files = get_files();
+        let files = get_training_files();
         let mut docs: Vec<String> = Vec::new();
         let words = Some(vec![
             Lib::TEXT_ACCOUNT.to_string(),
@@ -2337,7 +2432,7 @@ mod tests {
 
     #[test]
     fn test_dpi_train() {
-        let files = get_files();
+        let files = get_training_files();
         let mut docs: Vec<String> = Vec::new();
         let words = Some(vec![
             Lib::TEXT_ACCOUNT.to_string(),
