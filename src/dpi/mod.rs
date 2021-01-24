@@ -1971,6 +1971,11 @@ impl Default for DPI {
             regexs.push(Lib::from_u16(i as u16).unwrap().to_string());
         }
 
+        // Regular Expressions for Health
+        for i in 26000..26008 {
+            regexs.push(Lib::from_u16(i as u16).unwrap().to_string());
+        }
+
         // Regular Expressions for PCI
         for i in 27000..27019 {
             regexs.push(Lib::from_u16(i as u16).unwrap().to_string());
@@ -2070,7 +2075,7 @@ mod tests {
     fn test_dpi_default() {
         let dpi = DPI::default();
         println!("{:?}", dpi.key_regexs);
-        assert_eq!(dpi.key_regexs.unwrap().len(), 102);
+        assert_eq!(dpi.key_regexs.unwrap().len(), 110);
     }
 
     #[test]

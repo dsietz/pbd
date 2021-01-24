@@ -203,7 +203,7 @@ lib_codes! {
     /// 25056 Titles (e.g.: Mr, Mrs, Ms, etc.)
     (25056, REGEX_TITLE, r"/\bmr\b|\bmrs\b|\bms\b||\bmiss\b|\bdr\b|\brev\b|\bmstr\b|\bprof\b|\bcapt\b|\blady\b|\blord\b|\brabbi\b|\bsir\b|\bmadam\b|\bmx\b/gim");
     /// 25057 Ethnicity
-    (25057, REGEX_ETHNICITY, r"/\bwhite\b|\bblack\b|\basian\b|\barab\b|\bhistpanic\b|\bnative\b|\bindian\b|\blatino\b/gim");
+    (25057, REGEX_ETHNICITY, r"/\brace\b|\bwhite\b|\bblack\b|\basian\b|\barab\b|\bhistpanic\b|\bnative\b|\bindian\b|\blatino\b/gim");
     /// 25058 Date of Birth
     (25058, REGEX_DOB, r"/(^[0-9]{1,2}.?[0-9]{1,2}.?[0-9]{2,4})|(^[0-9]{4}.?[0-9]{1,2}.?[0-9]{1,2})/gim");
     /// 25059 Passport
@@ -226,6 +226,25 @@ lib_codes! {
     (25067, REGEX_CONFIG, r"/config|\bconf\b|\bcfg\b/gim");
     /// 25068 ID
     (25068, REGEX_ID, r"/ident|\bid\b|\buid\b|\buuuid\b/gim");
+
+    /// 26000 Health Terms - On Forms
+    (26000, REGEX_HEALTH_FORMS, r"/|health|history|symptom|care|patient|address|referred|chart|bites|insurance|father|mother|sibling|weight|height|age|dob|hospital|primary|treat|physic|phycholog|social|develop|mental|surger|condition|head|ear|nose|sinus|injur/gim");
+    /// 26001 Health Terms - Common Symptoms
+    (26001, REGEX_HEALTH_SYMPTOMS, r"/flu|vomit|diarrhea|itch|allerg|faint|asthma|neuro|confus|diabetes|pneumo|pregnan|letharg|somnol|amnesia|stupor|polyuria|polydipsia|sympath|seizure|diaphoresis|agitatn|tremor|palpitation|insomnia|sleep|toilet|hypertension|copd|tia|disorder|sickness|kidney|thyroid|skin|muscular|/gim");
+    /// 26002 Health Terms - Common Immunization
+    (26002, REGEX_HEALTH_IMMUNIZATION, r"/tetanus|pertussis|diphtheria|measles|mumps|rubella|polio|pox|hepatitus|meningitis|influenza|hib|covid/gim");
+    /// 26003 Health Terms - Common Equipment
+    (26003, REGEX_HEALTH_EQUIP, r"/inject|epipen|tablet|pill/gim");
+    /// 26004 Health Terms - Senses
+    (26004, REGEX_HEALTH_SENSE, r"/sense|hear|smell|touch|vision|taste|blur|oral/gim");
+    /// 26005 Health Terms - Medications
+    (26005, REGEX_HEALTH_MEDS, r"/medica|prescript|rx|drug|\bdose\b|\bdoses\b|\bdosage\b|react/gim");
+    /// 26006 Health Terms - Blood
+    (26006, REGEX_HEALTH_BLOOD, r"/blood|pressure|heart|stroke|disease|hyperglycemic|hemoglobin|cholesterol/gim");
+    /// 26007 Health Terms - Respiratory
+    (26007, REGEX_HEALTH_RESPIRATORY, r"/breath|mouth|lung|respirat/gim");
+    /// 26008 Health Terms - DIET
+    (26008, REGEX_HEALTH_DIET, r"/diet|food|restrict|allerg|carb|gluten|diary|peanut|lactose|\bshellfish\b|\bnut\b/gim");
 
     /// 27000 Credit Card Number - Visa
     (27000, REGEX_CREDIT_VISA, r"4[0-9]{12}(?:[0-9]{3})?");
@@ -309,6 +328,7 @@ impl Error for InvalidCode {}
 /// 15xxx = Key Words for NPPI (Non-public Personal Information)
 /// 2xxxx = Regular Expressions for PII
 /// 25xxx = Regular Expressions for NPPI
+/// 26xxx = Regular Expressions for Health
 /// 27xxx = Regular Expressions for PCI
 /// 3xxxx = Pattern Definitions for PII
 /// 35xxx = Pattern Definitions for NPPI
