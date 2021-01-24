@@ -929,8 +929,6 @@ impl DPI {
                 self.key_patterns = Some(vec![pattern.clone()]);
             }
         }
-
-        self.add_to_score_points(pattern, KEY_PATTERN_PNTS);
     }
 
     /// Appends a key regex to the DPI object's key list of regexs.
@@ -963,8 +961,6 @@ impl DPI {
                 self.key_regexs = Some(vec![regex.clone()]);
             }
         }
-
-        self.add_to_score_points(regex, KEY_REGEX_PNTS);
     }
 
     /// Appends a key word to the DPI object's key list of words.
@@ -997,8 +993,6 @@ impl DPI {
                 self.key_words = Some(vec![word.clone()]);
             }
         }
-
-        self.add_to_score_points(word, KEY_WORD_PNTS);
     }
 
     /// Constructs a DPI object without using any predefined set of key words or patterns to learn from
@@ -1010,14 +1004,12 @@ impl DPI {
     /// let dpi = DPI::new();
     /// ```
     pub fn new() -> DPI {
-        let mut dpi = DPI {
+        DPI {
             key_patterns: None,
             key_regexs: None,
             key_words: None,
             scores: ScoreCard::new(),
-        };
-        dpi.init();
-        dpi
+        }
     }
 
     /// Constructs a DPI object using a predefined set of key words and patterns to learn from
@@ -1052,14 +1044,12 @@ impl DPI {
             }
         }
 
-        let mut dpi = DPI {
+        DPI {
             key_patterns: patterns,
             key_regexs: regexs,
             key_words: words,
             scores: ScoreCard::new(),
-        };
-        dpi.init();
-        dpi
+        }
     }
 
     /// Constructs a DPI object using a predefined set of key patterns to learn from
@@ -1080,14 +1070,12 @@ impl DPI {
     /// println!("Using {} patterns for learning.", dpi.key_patterns.unwrap().len());
     /// ```
     pub fn with_key_patterns(patterns: KeyPatternList) -> DPI {
-        let mut dpi = DPI {
+        DPI {
             key_patterns: Some(patterns),
             key_regexs: None,
             key_words: None,
             scores: ScoreCard::new(),
-        };
-        dpi.init();
-        dpi
+        }
     }
 
     /// Constructs a DPI object using a predefined set of key regular expressions to learn from
@@ -1115,14 +1103,12 @@ impl DPI {
             }
         }
 
-        let mut dpi = DPI {
+        DPI {
             key_patterns: None,
             key_regexs: Some(regexs),
             key_words: None,
             scores: ScoreCard::new(),
-        };
-        dpi.init();
-        dpi
+        }
     }
 
     /// Constructs a DPI object using a predefined set of key words to learn from
@@ -1145,53 +1131,14 @@ impl DPI {
     /// println!("Using {} words for learning.", dpi.key_words.unwrap().len());
     /// ```
     pub fn with_key_words(words: KeyWordList) -> DPI {
-        let mut dpi = DPI {
+        DPI {
             key_patterns: None,
             key_regexs: None,
             key_words: Some(words),
             scores: ScoreCard::new(),
-        };
-        dpi.init();
-        dpi
-    }
-
-    // Private funciton that initiates the DPI attributes
-    // Call this function from within the constructor functions
-    fn init(&mut self) {
-        self.init_words();
-        self.init_patterns();
-        self.init_regexs();
-    }
-
-    // Private functon that initiates the DPI key_words attribute
-    // Call this function from within the init function
-    fn init_words(&mut self) {
-        if self.key_words.is_some() {
-            for key in self.key_words.clone().unwrap().iter() {
-                self.add_to_score_points(key.to_string(), KEY_WORD_PNTS);
-            }
         }
     }
 
-    // Private function that initiates the DPI key_patterns attribute
-    // Call this function from within the init function
-    fn init_patterns(&mut self) {
-        if self.key_patterns.is_some() {
-            for pttrn in self.key_patterns.clone().unwrap().iter() {
-                self.add_to_score_points(pttrn.to_string(), KEY_PATTERN_PNTS);
-            }
-        }
-    }
-
-    // Private function that initiates the DPI key_regexs attribute
-    // Call this function from within the init function
-    fn init_regexs(&mut self) {
-        if self.key_regexs.is_some() {
-            for regex in self.key_regexs.clone().unwrap().iter() {
-                self.add_to_score_points(regex.to_string(), KEY_REGEX_PNTS);
-            }
-        }
-    }
 
     /// Constructs a DPI object from a serialized string
     ///
@@ -1725,10 +1672,7 @@ impl DPI {
         // traing for keys
         docs.iter().for_each(|text| {
             let tokens = Self::tokenize(text.to_string());
-            let rslts = Self::train_from_keys(keys.clone(), tokens);
-            rslts.iter().for_each(|t| {
-                self.add_to_score_points(t.0.to_string(), t.1);
-            });
+            let _rslts = Self::train_from_keys(keys.clone(), tokens);
         });
 
         // get suggested words
@@ -1805,7 +1749,7 @@ impl DPI {
     }
 
     /// Trains the DPI object using key patterns against a the list of words provided as the sample content and
-    /// returns a list of found patterns and points slices
+    /// returns a list of found patterns
     ///
     /// # Arguments
     ///
@@ -1825,16 +1769,16 @@ impl DPI {
     ///   
     /// println!("{:?}", DPI::train_for_key_patterns(dpi.key_patterns.clone().unwrap(), to_vec_string(tokens)));
     /// ```
-    pub fn train_for_key_patterns(pttrns: Vec<String>, tokens: Vec<String>) -> Vec<(String, f64)> {
+    pub fn train_for_key_patterns(pttrns: Vec<String>, tokens: Vec<String>) -> Vec<String> {
         pttrns
             .par_iter()
             .filter(|p| DPI::contains_key_pattern(p, tokens.clone()) > 0)
-            .map(|p| (p.to_string(), KEY_PATTERN_PNTS))
+            .map(|p| p.to_string())
             .collect()
     }
 
     /// Trains the DPI object using key regular expressions against a the list of words provided as the sample content and
-    /// returns a list of found regular expressions and points slices
+    /// returns a list of found regular expressions
     ///
     /// # Arguments
     ///
@@ -1854,16 +1798,16 @@ impl DPI {
     ///   
     /// println!("{:?}", DPI::train_for_key_regexs(dpi.key_regexs.clone().unwrap(), to_vec_string(tokens)));
     /// ```
-    pub fn train_for_key_regexs(regexs: Vec<String>, tokens: Vec<String>) -> Vec<(String, f64)> {
+    pub fn train_for_key_regexs(regexs: Vec<String>, tokens: Vec<String>) -> Vec<String> {
         regexs
             .par_iter()
             .filter(|x| DPI::contains_key_regex(x, tokens.clone()) > 0)
-            .map(|x| (x.to_string(), KEY_REGEX_PNTS))
+            .map(|x| x.to_string())
             .collect()
     }
 
     /// Trains the DPI object using key words against a the list of words provided as the sample content and
-    /// returns a list of found word and points slices
+    /// returns a list of found word
     ///
     /// # Arguments
     ///
@@ -1883,15 +1827,17 @@ impl DPI {
     ///
     /// println!("{:?}", DPI::train_for_key_words(dpi.key_words.clone().unwrap(), to_vec_string(tokens)));
     /// ```
-    pub fn train_for_key_words(words: Vec<String>, tokens: Vec<String>) -> Vec<(String, f64)> {
+    pub fn train_for_key_words(words: Vec<String>, tokens: Vec<String>) -> Vec<String> {
         words
             .par_iter()
             .filter(|w| DPI::contains_key_word(w, tokens.clone()) > 0)
-            .map(|w| (w.to_string(), KEY_WORD_PNTS))
+            .map(|w| w.to_string())
             .collect()
     }
 
-    /// Trains the DPI object using its key words against a String as the sample content
+    /// Trains the DPI object using its keys against a String as the sample content
+    /// and returns a list of the keys found in the sample. This allows keys that were not found 
+    /// in the sample to be removed if desired. 
     ///
     /// # Arguments
     ///
@@ -1920,38 +1866,39 @@ impl DPI {
     pub fn train_from_keys(
         keys: Vec<(f64, Vec<String>)>,
         tokens: Vec<String>,
-    ) -> Vec<(String, f64)> {
-        let mut rtn: Vec<(String, f64)> = Vec::new();
-        let pttrns: Vec<(f64, Vec<String>)> = keys
+    ) -> Vec<(f64, Vec<String>)> {
+        let mut rtn_pttrns: Vec<String> = Vec::new();
+        let mut rtn_regexs: Vec<String> = Vec::new();
+        let mut rtn_words: Vec<String> = Vec::new();
+        keys
             .iter()
             .filter(|(k, _)| k == &KEY_PATTERN_PNTS)
-            .map(|x| (x.0, x.1.clone()))
-            .collect();
-        let regexs: Vec<(f64, Vec<String>)> = keys
+            .for_each(|(_, v)| {
+                rtn_pttrns.append( &mut Self::train_for_key_patterns(
+                    v.to_vec(),
+                    tokens.clone(),
+                ));
+            });
+        keys
             .iter()
             .filter(|(k, _)| k == &KEY_REGEX_PNTS)
-            .map(|x| (x.0, x.1.clone()))
-            .collect();
-        let words: Vec<(f64, Vec<String>)> = keys
+            .for_each(|(_, v)| {
+                rtn_regexs.append( &mut Self::train_for_key_regexs(
+                    v.to_vec(),
+                    tokens.clone(),
+                ));
+            });
+        keys
             .iter()
             .filter(|(k, _)| k == &KEY_WORD_PNTS)
-            .map(|x| (x.0, x.1.clone()))
-            .collect();
+            .for_each(|(_, v)| {
+                rtn_words.append( &mut Self::train_for_key_words(
+                    v.to_vec(),
+                    tokens.clone(),
+                ));
+            });
 
-        pttrns.iter().for_each(|(_, v)| {
-            rtn.append(&mut Self::train_for_key_patterns(
-                v.to_vec(),
-                tokens.clone(),
-            ))
-        });
-        regexs.iter().for_each(|(_, v)| {
-            rtn.append(&mut Self::train_for_key_regexs(v.to_vec(), tokens.clone()))
-        });
-        words.iter().for_each(|(_, v)| {
-            rtn.append(&mut Self::train_for_key_words(v.to_vec(), tokens.clone()))
-        });
-
-        rtn
+        vec![(KEY_PATTERN_PNTS, rtn_pttrns), (KEY_REGEX_PNTS, rtn_regexs) , (KEY_WORD_PNTS, rtn_words)]
     }
 
     /// Update (if not exits then inserts) a Score object
@@ -2149,11 +2096,8 @@ mod tests {
         assert!(dpi.key_patterns.is_none());
 
         dpi.append_key_pattern("vcccvcc".to_string());
+        
         assert!(dpi.key_patterns.is_some());
-        assert_eq!(
-            dpi.get_score("vcccvcc".to_string()).points,
-            KEY_PATTERN_PNTS
-        );
     }
 
     #[test]
@@ -2163,7 +2107,6 @@ mod tests {
 
         dpi.append_key_regex("^[aA-zZ]".to_string());
         assert!(dpi.key_regexs.is_some());
-        assert_eq!(dpi.get_score("^[aA-zZ]".to_string()).points, KEY_REGEX_PNTS);
     }
 
     #[test]
@@ -2173,7 +2116,6 @@ mod tests {
 
         dpi.append_key_word("address".to_string());
         assert!(dpi.key_words.is_some());
-        assert_eq!(dpi.get_score("address".to_string()).points, KEY_WORD_PNTS);
     }
 
     #[test]
@@ -2224,7 +2166,7 @@ mod tests {
 
         assert_eq!(returned_score.points, 25.0);
     }
-
+/*
     #[test]
     fn test_dpi_inspect_with_training() {
         let training_files = get_training_files();
@@ -2243,15 +2185,15 @@ mod tests {
             docs.push(content.to_string());
         }
 
-        let applied = dpi.auto_train(docs);
+        let _applied = dpi.auto_train(docs);
 
         for content in inspect_files.iter() {
             println!("INSPECTED POINTS: {}", dpi.inspect(content.to_string()));
         }
 
-        assert!(true);
+        assert!(false);
     }
-
+*/
     #[test]
     fn test_dpi_serialize_ok() {
         let serialized = "{\"key_patterns\":[\"###p##p####\"],\"key_regexs\":[\"^(?!b(d)1+-(d)1+-(d)1+b)(?!123-45-6789|219-09-9999|078-05-1120)(?!666|000|9d{2})d{3}-(?!00)d{2}-(?!0{4})d{4}$\"],\"key_words\":[\"ssn\"],\"scores\":{}}";
@@ -2452,30 +2394,30 @@ mod tests {
 
         let suggestions = dpi.train(docs);
 
-        assert_eq!(dpi.get_score(Lib::TEXT_ACCOUNT.to_string()).points, 400.0);
-        assert_eq!(dpi.get_score(Lib::REGEX_ACCOUNT.to_string()).points, 360.0);
-        assert_eq!(
-            dpi.get_score(Lib::PTTRN_ACCOUNT_CAMEL.to_string()).points,
-            80.0
-        );
-        assert_eq!(
-            dpi.get_score(Lib::PTTRN_ACCOUNT_LOWER.to_string()).points,
-            240.0
-        );
-        assert_eq!(
-            dpi.get_score(Lib::PTTRN_ACCOUNT_UPPER.to_string()).points,
-            160.0
-        );
-        assert_eq!(
-            suggestions.get("statement").unwrap().points,
-            53.70993411266315
-        );
+        assert!(suggestions.get("statement").is_some());
 
         println!("SUGGESTIONS: {:?}", suggestions);
-        let _3869 = suggestions.get("3869").unwrap();
-        assert_eq!(_3869.points, 47.606532508951425);
-        assert_eq!(_3869.regex.as_ref().unwrap(), "[0-9][0-9][0-9][0-9]");
-        assert_eq!(_3869.pattern.as_ref().unwrap(), "####");
+        match suggestions.get("3869") {
+            Some(_3869) => {
+                assert_eq!(_3869.regex.as_ref().unwrap(), "[0-9][0-9][0-9][0-9]");
+                assert_eq!(_3869.pattern.as_ref().unwrap(), "####");
+            },
+            None => assert!(false),
+        }
+    }
+
+    #[test]
+    fn test_dpi_train_for_key_patterns() {
+        let tokens = vec!["My", "ssn", "is", "003-76-0098"];
+        let pttrns = vec![Lib::PTTRN_SSN_DASHES.to_string()];
+        let dpi = DPI::with_key_patterns(pttrns);
+
+        let rslts = DPI::train_for_key_patterns(
+            dpi.key_patterns.clone().unwrap(),
+            tokens.iter().map(|s| s.to_string()).collect(),
+        );
+
+        assert!(rslts.len() > 0);
     }
 
     #[test]
@@ -2489,7 +2431,7 @@ mod tests {
             tokens.iter().map(|s| s.to_string()).collect(),
         );
 
-        assert_eq!(rslts[0].1, 90.0);
+        assert!(rslts.len() > 0);
     }
 
     #[test]
@@ -2503,7 +2445,7 @@ mod tests {
             tokens.iter().map(|s| s.to_string()).collect(),
         );
 
-        assert_eq!(rslts[0].1, 100.0);
+        assert!(rslts.len() > 0);
     }
 
     #[test]
@@ -2513,15 +2455,16 @@ mod tests {
 
         let text = get_text();
         let tokens = Tknzr::tokenize(text.to_string());
-        let words = (KEY_WORD_PNTS, vec![Lib::TEXT_SSN_ABBR.to_string()]);
+        let words = (KEY_WORD_PNTS, vec![Lib::TEXT_SSN_ABBR.to_string(),"dummy".to_string()]);
         let regexs = (KEY_REGEX_PNTS, vec![Lib::REGEX_SSN_DASHES.to_string()]);
         let patterns = (KEY_PATTERN_PNTS, vec![Lib::PTTRN_SSN_DASHES.to_string()]);
 
-        let mut pnts: f64 = 0.0;
         let rslts = DPI::train_from_keys(vec![patterns, regexs, words], tokens);
-        rslts.iter().for_each(|x| pnts = pnts + x.1);
 
-        assert_eq!(pnts, 270.0);
+        assert_eq!(rslts.len(), 3);
+        assert_eq!(rslts[0].1.len(), 1);
+        assert_eq!(rslts[1].1.len(), 1);
+        assert_eq!(rslts[2].1.len(), 1);
     }
 
     #[test]
