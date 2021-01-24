@@ -23,6 +23,7 @@ extern crate levenshtein;
 extern crate regex;
 
 use super::*;
+use crate::dpi::reference::Lib;
 use levenshtein::levenshtein;
 use multimap::MultiMap;
 use rayon::prelude::*;
@@ -1035,8 +1036,8 @@ impl DPI {
     /// ```
     pub fn with(
         words: Option<KeyWordList>,
-        regexs: Option<KeyWordList>,
-        patterns: Option<KeyWordList>,
+        regexs: Option<KeyRegexList>,
+        patterns: Option<KeyPatternList>,
     ) -> DPI {
         if let Some(reg) = regexs.clone() {
             if let Err(err) = Self::validate_regexs(reg) {
@@ -1958,7 +1959,21 @@ impl DPI {
 
 impl Default for DPI {
     fn default() -> Self {
-        Self::new()
+        let mut regexs = Vec::new();
+
+        for i in 20001..20014 {
+            regexs.push(Lib::from_u16(i as u16).unwrap().to_string());
+        }
+
+        for i in 25000..25002 {
+            regexs.push(Lib::from_u16(i as u16).unwrap().to_string());
+        }
+
+        for i in 27000..27005 {
+            regexs.push(Lib::from_u16(i as u16).unwrap().to_string());
+        }
+
+        Self::with_key_regexs(regexs)
     }
 }
 
@@ -2051,9 +2066,8 @@ mod tests {
     #[test]
     fn test_dpi_default() {
         let dpi = DPI::default();
-
-        assert!(dpi.key_words.is_none());
-        assert!(dpi.key_patterns.is_none());
+        println!("{:?}", dpi.key_regexs);
+        assert_eq!(dpi.key_regexs.unwrap().len(), 20);
     }
 
     #[test]

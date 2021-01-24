@@ -49,14 +49,58 @@ lib_codes! {
     (15001, TEXT_SSN_ABBR, r"SSN");
     /// 15002 Account
     (15002, TEXT_ACCOUNT, r"account");
+
+    /// Regex PII
+    /// 20001 Avenue or Ave (case insensitive)
+    (20001, REGEX_ADDR_AVE, r"/avenue|\bave\b/gim");
+    /// 20002 Boulevard or Blvrd (case insensitive)
+    (20002, REGEX_ADDR_BLVD, r"/boulevard|\bblvd\b/gim");
+    /// 20003 Drive or Dr (case insensitive)
+    (20003, REGEX_ADDR_DR, r"/drive|\bdr\b/gim");
+    /// 20004 East(case insensitive)
+    (20004, REGEX_ADDR_EAST, r"/east/gim");
+    /// 20005 Highway or Hwy (case insensitive)
+    (20005, REGEX_ADDR_HWY, r"/highway|\bhwy\b/gim");
+    /// 20006 Lane or Ln (case insensitive)
+    (20006, REGEX_ADDR_LN, r"/lane|\bln\b/gim");
+    /// 20007 North (case insensitive)
+    (20007, REGEX_ADDR_NORTH, r"/north/gim");
+    /// 20008 Road or Rd (case insensitive)
+    (20008, REGEX_ADDR_RD, r"/road|\brd\b/gim");
+    /// 20009 South (case insensitive)
+    (20009, REGEX_ADDR_SOUTH, r"/south/gim");
+    /// 20010 Street or St or Str (case insensitive)
+    (20010, REGEX_ADDR_STR, r"/street|\bst\b|\bstr\b/gim");
+    /// 20011 Township or Twp (case insensitive)
+    (20011, REGEX_ADDR_TWP, r"/township|\btwp\b/gim");
+    /// 20012 West (case insensitive)
+    (20012, REGEX_ADDR_WEST, r"/west/gim");
+    /// 20013 US phone number
+    (20013, REGEX_US_PHONE, r"/([0-9]{10})|([0-9]{7})|^(\([0-9]{3}\))|([0-9]{3}-[0-9]{4})|([ext])/gim");
+    /// 20014 Email (case insensitive)
+    (20014, REGEX_EMAIL, r"/([\w\.-]+)@([\da-zA-Z\.-]+)\.([a-zA-Z\.]{2,6})/gim");
+
     /// 25000 Social Security Number with dashes
-    //(25000, REGEX_SSN_DASHES, r"^(?!b(d)1+-(d)1+-(d)1+b)(?!123-45-6789|219-09-9999|078-05-1120)(?!666|000|9d{2})d{3}-(?!00)d{2}-(?!0{4})d{4}$");
     (25000, REGEX_SSN_DASHES, r"^\d{3}-\d{2}-\d{4}$");
     /// 25000 Social Security Number without dashes
-    //(25001, REGEX_SSN_NODASHES, r"^(?!b(d)1+b)(?!123456789|219099999|078051120)(?!666|000|9d{2})d{3}(?!00)d{2}(?!0{4})d{4}$");
     (25001, REGEX_SSN_NODASHES, r"^\d{9}$");
-    /// 25002 Account
-    (25002, REGEX_ACCOUNT, r"([Aa]..[aeiouAEIOU]{2}..)");
+    /// 25002 Account - word
+    (25002, REGEX_ACCOUNT, r"/account|\bacct\b|\bacc\b|\ba/c\b/gim");
+    //(25002, REGEX_ACCOUNT, r"([Aa]..[aeiouAEIOU]{2}..)");
+
+    /// 27000 Credit Card Number - Visa
+    (27000, REGEX_CREDIT_VISA, r"4[0-9]{12}(?:[0-9]{3})?");
+    /// 27001 Credit Card Number - MasterCard
+    (27001, REGEX_CREDIT_MASTER, r"(?:5[1-5][0-9]{2}|222[1-9]|22[3-9][0-9]|2[3-6][0-9]{2}|27[01][0-9]|2720)[0-9]{12}");
+    /// 27002 Credit Card Number - AMEX
+    (27002, REGEX_CREDIT_AMEX, r"3[47][0-9]{13}");
+    /// 27003 Credit Card Number - Diners CLub
+    (27003, REGEX_CREDIT_DINERS, r"3(?:0[0-5]|[68][0-9])[0-9]{11}");
+    /// 27004 Credit Card Number - Discover
+    (27004, REGEX_CREDIT_DISCOVER, r"6(?:011|5[0-9]{2})[0-9]{12}");
+    /// 27005 Credit Card Number - JCB
+    (27005, REGEX_CREDIT_JCB, r"(?:2131|1800|35\d{3})\d{11}");
+
     /// 35000 Social Security Number with dashes
     (35000, PTTRN_SSN_DASHES, r"###@##@####");
     /// 35001 Social Security Number without dahses
@@ -93,11 +137,12 @@ impl Error for InvalidCode {}
 
 /// The codes used in the DPI library are catalogued based on type of codes:
 ///
-/// 1xxxx = Key Words
-/// 25xxx = Key Words for NPPI
-/// 2xxxx = Regular Expressions
+/// 1xxxx = Key Words for PII
+/// 15xxx = Key Words for NPPI (Non-public Personal Information)
+/// 2xxxx = Regular Expressions for PII
 /// 25xxx = Regular Expressions for NPPI
-/// 3xxxx = Pattern Definitions
+/// 27xxx = Regular Expressions for PCI
+/// 3xxxx = Pattern Definitions for PII
 /// 35xxx = Pattern Definitions for NPPI
 ///
 impl Lib {
