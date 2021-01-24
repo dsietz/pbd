@@ -51,6 +51,8 @@ lib_codes! {
     (15002, TEXT_ACCOUNT, r"account");
 
     /// Regex PII
+    /// 20000 Human Name
+    (20000, REGEX_HUMAN_NAME, r"^[a-zA-Z]+(([',. -][a-zA-Z ])?[a-zA-Z]*)*$");
     /// 20001 Avenue or Ave (case insensitive)
     (20001, REGEX_ADDR_AVE, r"/avenue|\bave\b/gim");
     /// 20002 Boulevard or Blvrd (case insensitive)
@@ -76,9 +78,14 @@ lib_codes! {
     /// 20012 West (case insensitive)
     (20012, REGEX_ADDR_WEST, r"/west/gim");
     /// 20013 US phone number
-    (20013, REGEX_US_PHONE, r"/([0-9]{10})|([0-9]{7})|^(\([0-9]{3}\))|([0-9]{3}-[0-9]{4})|([ext])/gim");
+    //(20013, REGEX_US_PHONE, r"/([0-9]{10})|([0-9]{7})|^(\([0-9]{3}\))|([0-9]{3}-[0-9]{4})|([ext])/gim");
+    (20013, REGEX_US_PHONE, r"^([0-9]( |-)?)?(\(?[0-9]{3}\)?|[0-9]{3})( |-)?([0-9]{3}( |-)?[0-9]{4}|[a-zA-Z0-9]{7})$");
     /// 20014 Email (case insensitive)
     (20014, REGEX_EMAIL, r"/([\w\.-]+)@([\da-zA-Z\.-]+)\.([a-zA-Z\.]{2,6})/gim");
+    /// 20015 Zipcode
+    (20015, REGEX_ZIPCODE, r"^\d{5}-\d{4}|\d{5}|[A-Z]\d[A-Z] \d[A-Z]\d$");
+    /// 20016 IP address
+    (20016, REGEX_IP, r"^(\d{1,2}|1\d\d|2[0-4]\d|25[0-5])\.(\d{1,2}|1\d\d|2[0-4]\d|25[0-5])\.(\d{1,2}|1\d\d|2[0-4]\d|25[0-5])\.(\d{1,2}|1\d\d|2[0-4]\d|25[0-5])$");
 
     /// 25000 Social Security Number with dashes
     (25000, REGEX_SSN_DASHES, r"^\d{3}-\d{2}-\d{4}$");
@@ -86,7 +93,139 @@ lib_codes! {
     (25001, REGEX_SSN_NODASHES, r"^\d{9}$");
     /// 25002 Account - word
     (25002, REGEX_ACCOUNT, r"/account|\bacct\b|\bacc\b|\ba/c\b/gim");
-    //(25002, REGEX_ACCOUNT, r"([Aa]..[aeiouAEIOU]{2}..)");
+    /// 25003 Driver's License - AL
+    (25003, REGEX_DRV_LIC_AL, r"^[0-9]{1,7}$");
+    /// 25004 Driver's License - AK
+    (25004, REGEX_DRV_LIC_AK, r"^[0-9]{1,7}$");
+    /// 25005 Driver's License - AZ
+    (25005, REGEX_DRV_LIC_AZ, r"(^[A-Z]{1}[0-9]{1,8}$)|(^[A-Z]{2}[0-9]{2,5}$)|(^[0-9]{9}$)");
+    /// 25006 Driver's License - AR
+    (25006, REGEX_DRV_LIC_AR, r"^[0-9]{4,9}$");
+    /// 25007 Driver's License - CA
+    (25007, REGEX_DRV_LIC_CA, r"^[A-Z]{1}[0-9]{7}$");
+    /// 25008 Driver's License - CO
+    (25008, REGEX_DRV_LIC_CO, r"(^[0-9]{9}$)|(^[A-Z]{1}[0-9]{3,6}$)|(^[A-Z]{2}[0-9]{2,5}$)");
+    /// 25009 Driver's License - CT
+    (25009, REGEX_DRV_LIC_CT, r"^[0-9]{9}$");
+    /// 25010 Driver's License - DE
+    (25010, REGEX_DRV_LIC_DE, r"^[0-9]{1,7}$");
+    /// 25011 Driver's License - DC
+    (25011, REGEX_DRV_LIC_DC, r"(^[0-9]{7}$)|(^[0-9]{9}$)");
+    /// 25012 Driver's License - FL
+    (25012, REGEX_DRV_LIC_FL, r"^[A-Z]{1}[0-9]{12}$");
+    /// 25013 Driver's License - GA
+    (25013, REGEX_DRV_LIC_GA, r"^[0-9]{7,9}$");
+    /// 25014 Driver's License - GU
+    (25014, REGEX_DRV_LIC_GU, r"^[A-Z]{1}[0-9]{14}$");
+    /// 25015 Driver's License - HI
+    (25015, REGEX_DRV_LIC_HI, r"(^[A-Z]{1}[0-9]{8}$)|(^[0-9]{9}$)");
+    /// 25016 Driver's License - ID
+    (25016, REGEX_DRV_LIC_ID, r"(^[A-Z]{2}[0-9]{6}[A-Z]{1}$)|(^[0-9]{9}$)");
+    /// 25017 Driver's License - IL
+    (25017, REGEX_DRV_LIC_IL, r"^[A-Z]{1}[0-9]{11,12}$");
+    /// 25018 Driver's License - IN
+    (25018, REGEX_DRV_LIC_IN, r"(^[A-Z]{1}[0-9]{9}$)|(^[0-9]{9,10}$)");
+    /// 25019 Driver's License - IA
+    (25019, REGEX_DRV_LIC_IA, r"^([0-9]{9}|([0-9]{3}[A-Z]{2}[0-9]{4}))$");
+    /// 25020 Driver's License - KS
+    (25020, REGEX_DRV_LIC_KS, r"(^([A-Z]{1}[0-9]{1}){2}[A-Z]{1}$)|(^[A-Z]{1}[0-9]{8}$)|(^[0-9]{9}$)");
+    /// 25021 Driver's License - KY
+    (25021, REGEX_DRV_LIC_KY, r"(^[A_Z]{1}[0-9]{8,9}$)|(^[0-9]{9}$)");
+    /// 25022 Driver's License - LA
+    (25022, REGEX_DRV_LIC_LA, r"^[0-9]{1,9}$");
+    /// 25023 Driver's License - ME
+    (25023, REGEX_DRV_LIC_ME, r"(^[0-9]{7,8}$)|(^[0-9]{7}[A-Z]{1}$)");
+    /// 25024 Driver's License - MD
+    (25024, REGEX_DRV_LIC_MD, r"^[A-Z]{1}[0-9]{12}$");
+    /// 25025 Driver's License - MA
+    (25025, REGEX_DRV_LIC_MA, r"(^[A-Z]{1}[0-9]{8}$)|(^[0-9]{9}$)");
+    /// 25026 Driver's License - MI
+    (25026, REGEX_DRV_LIC_MI, r"(^[A-Z]{1}[0-9]{10}$)|(^[A-Z]{1}[0-9]{12}$)");
+    /// 25027 Driver's License - MN
+    (25027, REGEX_DRV_LIC_MN, r"^[A-Z]{1}[0-9]{12}$");
+    /// 25028 Driver's License - MS
+    (25028, REGEX_DRV_LIC_MS, r"^[0-9]{9}$");
+    /// 25029 Driver's License - MO
+    (25029, REGEX_DRV_LIC_MO, r"(^[A-Z]{1}[0-9]{5,9}$)|(^[A-Z]{1}[0-9]{6}[R]{1}$)|(^[0-9]{8}[A-Z]{2}$)|(^[0-9]{9}[A-Z]{1}$)|(^[0-9]{9}$)");
+    /// 25030 Driver's License - MT
+    (25030, REGEX_DRV_LIC_MT, r"(^[A-Z]{1}[0-9]{8}$)|(^[0-9]{13}$)|(^[0-9]{9}$)|(^[0-9]{14}$)");
+    /// 25031 Driver's License - NE
+    (25031, REGEX_DRV_LIC_NE, r"^[0-9]{1,7}$");
+    /// 25032 Driver's License - NV
+    (25032, REGEX_DRV_LIC_NV, r"(^[0-9]{9,10}$)|(^[0-9]{12}$)|(^[X]{1}[0-9]{8}$)");
+    /// 25033 Driver's License - NH
+    (25033, REGEX_DRV_LIC_NH, r"^[0-9]{2}[A-Z]{3}[0-9]{5}$");
+    /// 250x34Driver's License - NJ
+    (25034, REGEX_DRV_LIC_NJ, r"^[A-Z]{1}[0-9]{14}$");
+    /// 25035 Driver's License - NM
+    (25035, REGEX_DRV_LIC_NM, r"^[0-9]{8,9}$");
+    /// 25036 Driver's License - NC
+    (25036, REGEX_DRV_LIC_NC, r"^[0-9]{1,12}$");
+    /// 25037 Driver's License - ND
+    (25037, REGEX_DRV_LIC_ND, r"(^[A-Z]{3}[0-9]{6}$)|(^[0-9]{9}$)");
+    /// 25038 Driver's License - OH
+    (25038, REGEX_DRV_LIC_OH, r"(^[A-Z]{1}[0-9]{4,8}$)|(^[A-Z]{2}[0-9]{3,7}$)|(^[0-9]{8}$)");
+    /// 25039 Driver's License - OK
+    (25039, REGEX_DRV_LIC_OK, r"(^[A-Z]{1}[0-9]{9}$)|(^[0-9]{9}$)");
+    /// 25040 Driver's License - OR
+    (25040, REGEX_DRV_LIC_OR, r"^[0-9]{1,9}$");
+    /// 25041 Driver's License - PA
+    (25041, REGEX_DRV_LIC_PA, r"^[0-9]{8}$");
+    /// 25042 Driver's License - PR
+    (25042, REGEX_DRV_LIC_PR, r"(^[0-9]{9}$)|(^[0-9]{5,7}$)");
+    /// 25043 Driver's License - RI
+    (25043, REGEX_DRV_LIC_RI, r"^([0-9]{7}$)|(^[A-Z]{1}[0-9]{6}$)");
+    /// 25044 Driver's License - SC
+    (25044, REGEX_DRV_LIC_SC, r"^[0-9]{5,11}$");
+    /// 25045 Driver's License - SD
+    (25045, REGEX_DRV_LIC_SD, r"(^[0-9]{6,10}$)|(^[0-9]{12}$)");
+    /// 25046 Driver's License - TN
+    (25046, REGEX_DRV_LIC_TN, r"^[0-9]{7,9}$");
+    /// 25047 Driver's License - TX
+    (25047, REGEX_DRV_LIC_TX, r"^[0-9]{7,8}$");
+    /// 25048 Driver's License - UT
+    (25048, REGEX_DRV_LIC_UT, r"^[0-9]{4,10}$");
+    /// 25049 Driver's License - VT
+    (25049, REGEX_DRV_LIC_VT, r"(^[0-9]{8}$)|(^[0-9]{7}[A]$)");
+    /// 25050 Driver's License - VA
+    (25050, REGEX_DRV_LIC_VA, r"(^[A-Z]{1}[0-9]{8,11}$)|(^[0-9]{9}$)");
+    /// 25051 Driver's License - WA
+    (25051, REGEX_DRV_LIC_WA, r"\b[A-Z]{1,7}[\w|*]{12}\b");
+    //(25051, REGEX_DRV_LIC_WA, r"(^[A-Z]{1,7}[A-Z0-9\\*]{4,11}$)");
+    /// 25052 Driver's License - WV
+    (25052, REGEX_DRV_LIC_WV, r"(^[0-9]{7}$)|(^[A-Z]{1,2}[0-9]{5,6}$)");
+    /// 25053 Driver's License - WI
+    (25053, REGEX_DRV_LIC_WI, r"^[A-Z]{1}[0-9]{13}$");
+    /// 25054 Driver's License - WY
+    (25054, REGEX_DRV_LIC_WY, r"^[0-9]{9,10}$");
+    /// 25055 Gender
+    (25055, REGEX_GENDER, r"/\bmale\b|\bfemale\b|\btransgender\b|\bgender\b/gim");
+    /// 25056 Titles (e.g.: Mr, Mrs, Ms, etc.)
+    (25056, REGEX_TITLE, r"/\bmr\b|\bmrs\b|\bms\b||\bmiss\b|\bdr\b|\brev\b|\bmstr\b|\bprof\b|\bcapt\b|\blady\b|\blord\b|\brabbi\b|\bsir\b|\bmadam\b|\bmx\b/gim");
+    /// 25057 Ethnicity
+    (25057, REGEX_ETHNICITY, r"/\bwhite\b|\bblack\b|\basian\b|\barab\b|\bhistpanic\b|\bnative\b|\bindian\b|\blatino\b/gim");
+    /// 25058 Date of Birth
+    (25058, REGEX_DOB, r"/(^[0-9]{1,2}.?[0-9]{1,2}.?[0-9]{2,4})|(^[0-9]{4}.?[0-9]{1,2}.?[0-9]{1,2})/gim");
+    /// 25059 Passport
+    (25059, REGEX_PASSPORT, r"^[A-Z0-9<]{9}[0-9]{1}[A-Z]{3}[0-9]{7}[A-Z]{1}[0-9]{7}[A-Z0-9<]{14}[0-9]{2}$");
+    /// 25060 Access
+    (25060, REGEX_ACCESS, r"/\baccess\b/gim");
+    /// 25061 Authorize
+    (25061, REGEX_AUTHORIZE, r"/authoriz/gim");
+    /// 25062 Authenticate
+    (25062, REGEX_AUTHENTICATE, r"/authent/gim");
+    /// 25063 Auth
+    (25063, REGEX_AUTH, r"/\bauth\b/gim");
+    /// 25064 Biometric
+    (25064, REGEX_BIOMETRIC, r"/biometric/gim");
+    /// 25065 Cert
+    (25065, REGEX_CERT, r"/certif|\bcert\b/gim");
+    /// 25066 Confidential
+    (25066, REGEX_CONFIDENTIAL, r"/confidential/gim");
+    /// 25067 Config
+    (25067, REGEX_CONFIG, r"/config|\bconf\b|\bcfg\b/gim");
+    /// 25068 ID
+    (25068, REGEX_ID, r"/ident|\bid\b|\buid\b|\buuuid\b/gim");
 
     /// 27000 Credit Card Number - Visa
     (27000, REGEX_CREDIT_VISA, r"4[0-9]{12}(?:[0-9]{3})?");
@@ -100,6 +239,35 @@ lib_codes! {
     (27004, REGEX_CREDIT_DISCOVER, r"6(?:011|5[0-9]{2})[0-9]{12}");
     /// 27005 Credit Card Number - JCB
     (27005, REGEX_CREDIT_JCB, r"(?:2131|1800|35\d{3})\d{11}");
+    /// 27006 Bank Number - IBAN Czech
+    (27006, REGEX_BANK_IBAN_CZECH, r"CZ\d{2}[ ]\d{4}[ ]\d{4}[ ]\d{4}[ ]\d{4}[ ]\d{4}|CZ\d{22}");
+    /// 27007 Bank Number - IBAN Slovak
+    (27007, REGEX_BANK_IBAN_SLOVAK, r"SK\d{2}[ ]\d{4}[ ]\d{4}[ ]\d{4}[ ]\d{4}[ ]\d{4}|SK\d{22}");
+    /// 27008 Bank Number - IBAN Sweden
+    (27008, REGEX_BANK_IBAN_SE, r"SE\d{2}[ ]\d{4}[ ]\d{4}[ ]\d{4}[ ]\d{4}[ ]\d{4}|SE\d{22}");
+    /// 27009 Bank Number - IBAN Switz
+    (27009, REGEX_BANK_IBAN_CH, r"CH\d{2}[ ]\d{4}[ ]\d{4}[ ]\d{4}[ ]\d{4}[ ]\d{1}|CH\d{19} ");
+    /// 27010 Bank Number - IBAN Germany
+    (27010, REGEX_BANK_IBAN_DE, r"DE\d{2}[ ]\d{4}[ ]\d{4}[ ]\d{4}[ ]\d{4}[ ]\d{2}|DE\d{20}");
+    /// 27011 Bank Number - IBAN Spain
+    (27011, REGEX_BANK_IBAN_ES, r"ES\d{2}[ ]\d{4}[ ]\d{4}[ ]\d{4}[ ]\d{4}[ ]\d{4}|ES\d{22}");
+    /// 27012 Bank Number - IBAN Poland
+    (27012, REGEX_BANK_IBAN_PL, r"PL\d{2}[ ]\d{4}[ ]\d{4}[ ]\d{4}[ ]\d{4}[ ]\d{4}[ ]\d{4}|PL\d{26}");
+    /// 27013 Bank Number - IBAN Italy
+    (27013, REGEX_BANK_IBAN_IT, r"IT\d{2}[ ][a-zA-Z]\d{3}[ ]\d{4}[ ]\d{4}[ ]\d{4}[ ]\d{4}[ ]\d{3}|IT\d{2}[a-zA-Z]\d{22}");
+    /// 27014 Bank Routing Transit Number
+    (27014, REGEX_BANK_RTN, r"^((0[0-9])|(1[0-2])|(2[1-9])|(3[0-2])|(6[1-9])|(7[0-2])|80)([0-9]{7})$");
+    /// 27015 Bank Code - Germany
+    (27015, REGEX_BANK_BLZ, r"[1-8][0-9]{2}[0-9]{5}");
+    /// 27016 Bank Sort Code - UK
+    (27016, REGEX_BANK_UK_SORT, r"^[0-9]{2}[-][0-9]{2}[-][0-9]{2}$");
+    /// 27017 Bank Account Number - UK
+    (27017, REGEX_BANK_UK_ACCNT, r"^(\d){8}$");
+    /// 27018 Swift Number
+    (27018, REGEX_BANK_SWIFT, r"^[a-zA-Z]{4}[a-zA-Z]{2}[a-zA-Z0-9]{2}[XXX0-9]{0,3}");
+    /// 27019 Invoice
+    (27019, REGEX_INVOICE, r"/invoic|receipt|bill/gim");
+
 
     /// 35000 Social Security Number with dashes
     (35000, PTTRN_SSN_DASHES, r"###@##@####");

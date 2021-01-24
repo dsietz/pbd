@@ -1961,15 +1961,18 @@ impl Default for DPI {
     fn default() -> Self {
         let mut regexs = Vec::new();
 
-        for i in 20001..20014 {
+        // Regular Expressions for PII
+        for i in 20001..20016 {
             regexs.push(Lib::from_u16(i as u16).unwrap().to_string());
         }
 
-        for i in 25000..25002 {
+        // Regular Expressions for NPPI
+        for i in 25000..25068 {
             regexs.push(Lib::from_u16(i as u16).unwrap().to_string());
         }
 
-        for i in 27000..27005 {
+        // Regular Expressions for PCI
+        for i in 27000..27019 {
             regexs.push(Lib::from_u16(i as u16).unwrap().to_string());
         }
 
@@ -2067,7 +2070,7 @@ mod tests {
     fn test_dpi_default() {
         let dpi = DPI::default();
         println!("{:?}", dpi.key_regexs);
-        assert_eq!(dpi.key_regexs.unwrap().len(), 20);
+        assert_eq!(dpi.key_regexs.unwrap().len(), 102);
     }
 
     #[test]
