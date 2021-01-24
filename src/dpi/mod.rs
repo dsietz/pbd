@@ -921,12 +921,12 @@ impl DPI {
             Some(mut patterns) => {
                 // if pattern is already in the list, ignore it
                 if !patterns.contains(&pattern) {
-                    patterns.push(pattern.clone());
+                    patterns.push(pattern);
                     self.key_patterns = Some(patterns);
                 }
             }
             None => {
-                self.key_patterns = Some(vec![pattern.clone()]);
+                self.key_patterns = Some(vec![pattern]);
             }
         }
     }
@@ -953,12 +953,12 @@ impl DPI {
             Some(mut regexs) => {
                 // if pattern is already in the list, ignore it
                 if !regexs.contains(&regex) {
-                    regexs.push(regex.clone());
+                    regexs.push(regex);
                     self.key_regexs = Some(regexs);
                 }
             }
             None => {
-                self.key_regexs = Some(vec![regex.clone()]);
+                self.key_regexs = Some(vec![regex]);
             }
         }
     }
@@ -985,12 +985,12 @@ impl DPI {
             Some(mut words) => {
                 // if word is already in the list, ignore it
                 if !words.contains(&word) {
-                    words.push(word.clone());
+                    words.push(word);
                     self.key_words = Some(words);
                 }
             }
             None => {
-                self.key_words = Some(vec![word.clone()]);
+                self.key_words = Some(vec![word]);
             }
         }
     }
@@ -1138,7 +1138,6 @@ impl DPI {
             scores: ScoreCard::new(),
         }
     }
-
 
     /// Constructs a DPI object from a serialized string
     ///
@@ -1836,8 +1835,8 @@ impl DPI {
     }
 
     /// Trains the DPI object using its keys against a String as the sample content
-    /// and returns a list of the keys found in the sample. This allows keys that were not found 
-    /// in the sample to be removed if desired. 
+    /// and returns a list of the keys found in the sample. This allows keys that were not found
+    /// in the sample to be removed if desired.
     ///
     /// # Arguments
     ///
@@ -1870,35 +1869,30 @@ impl DPI {
         let mut rtn_pttrns: Vec<String> = Vec::new();
         let mut rtn_regexs: Vec<String> = Vec::new();
         let mut rtn_words: Vec<String> = Vec::new();
-        keys
-            .iter()
+        keys.iter()
             .filter(|(k, _)| k == &KEY_PATTERN_PNTS)
             .for_each(|(_, v)| {
-                rtn_pttrns.append( &mut Self::train_for_key_patterns(
+                rtn_pttrns.append(&mut Self::train_for_key_patterns(
                     v.to_vec(),
                     tokens.clone(),
                 ));
             });
-        keys
-            .iter()
+        keys.iter()
             .filter(|(k, _)| k == &KEY_REGEX_PNTS)
             .for_each(|(_, v)| {
-                rtn_regexs.append( &mut Self::train_for_key_regexs(
-                    v.to_vec(),
-                    tokens.clone(),
-                ));
+                rtn_regexs.append(&mut Self::train_for_key_regexs(v.to_vec(), tokens.clone()));
             });
-        keys
-            .iter()
+        keys.iter()
             .filter(|(k, _)| k == &KEY_WORD_PNTS)
             .for_each(|(_, v)| {
-                rtn_words.append( &mut Self::train_for_key_words(
-                    v.to_vec(),
-                    tokens.clone(),
-                ));
+                rtn_words.append(&mut Self::train_for_key_words(v.to_vec(), tokens.clone()));
             });
 
-        vec![(KEY_PATTERN_PNTS, rtn_pttrns), (KEY_REGEX_PNTS, rtn_regexs) , (KEY_WORD_PNTS, rtn_words)]
+        vec![
+            (KEY_PATTERN_PNTS, rtn_pttrns),
+            (KEY_REGEX_PNTS, rtn_regexs),
+            (KEY_WORD_PNTS, rtn_words),
+        ]
     }
 
     /// Update (if not exits then inserts) a Score object
@@ -2096,7 +2090,7 @@ mod tests {
         assert!(dpi.key_patterns.is_none());
 
         dpi.append_key_pattern("vcccvcc".to_string());
-        
+
         assert!(dpi.key_patterns.is_some());
     }
 
@@ -2166,34 +2160,34 @@ mod tests {
 
         assert_eq!(returned_score.points, 25.0);
     }
-/*
-    #[test]
-    fn test_dpi_inspect_with_training() {
-        let training_files = get_training_files();
-        let inspect_files = get_inspect_files();
-        let mut docs: Vec<String> = Vec::new();
-        let words = Some(vec![Lib::TEXT_ACCOUNT.to_string()]);
-        let patterns = Some(vec![
-            Lib::PTTRN_ACCOUNT_CAMEL.to_string(),
-            Lib::PTTRN_ACCOUNT_UPPER.to_string(),
-            Lib::PTTRN_ACCOUNT_LOWER.to_string(),
-        ]);
-        let regexs = Some(vec![Lib::REGEX_ACCOUNT.to_string()]);
-        let mut dpi = DPI::with(words, regexs, patterns);
+    /*
+        #[test]
+        fn test_dpi_inspect_with_training() {
+            let training_files = get_training_files();
+            let inspect_files = get_inspect_files();
+            let mut docs: Vec<String> = Vec::new();
+            let words = Some(vec![Lib::TEXT_ACCOUNT.to_string()]);
+            let patterns = Some(vec![
+                Lib::PTTRN_ACCOUNT_CAMEL.to_string(),
+                Lib::PTTRN_ACCOUNT_UPPER.to_string(),
+                Lib::PTTRN_ACCOUNT_LOWER.to_string(),
+            ]);
+            let regexs = Some(vec![Lib::REGEX_ACCOUNT.to_string()]);
+            let mut dpi = DPI::with(words, regexs, patterns);
 
-        for content in training_files.iter() {
-            docs.push(content.to_string());
+            for content in training_files.iter() {
+                docs.push(content.to_string());
+            }
+
+            let _applied = dpi.auto_train(docs);
+
+            for content in inspect_files.iter() {
+                println!("INSPECTED POINTS: {}", dpi.inspect(content.to_string()));
+            }
+
+            assert!(false);
         }
-
-        let _applied = dpi.auto_train(docs);
-
-        for content in inspect_files.iter() {
-            println!("INSPECTED POINTS: {}", dpi.inspect(content.to_string()));
-        }
-
-        assert!(false);
-    }
-*/
+    */
     #[test]
     fn test_dpi_serialize_ok() {
         let serialized = "{\"key_patterns\":[\"###p##p####\"],\"key_regexs\":[\"^(?!b(d)1+-(d)1+-(d)1+b)(?!123-45-6789|219-09-9999|078-05-1120)(?!666|000|9d{2})d{3}-(?!00)d{2}-(?!0{4})d{4}$\"],\"key_words\":[\"ssn\"],\"scores\":{}}";
@@ -2401,7 +2395,7 @@ mod tests {
             Some(_3869) => {
                 assert_eq!(_3869.regex.as_ref().unwrap(), "[0-9][0-9][0-9][0-9]");
                 assert_eq!(_3869.pattern.as_ref().unwrap(), "####");
-            },
+            }
             None => assert!(false),
         }
     }
@@ -2455,7 +2449,10 @@ mod tests {
 
         let text = get_text();
         let tokens = Tknzr::tokenize(text.to_string());
-        let words = (KEY_WORD_PNTS, vec![Lib::TEXT_SSN_ABBR.to_string(),"dummy".to_string()]);
+        let words = (
+            KEY_WORD_PNTS,
+            vec![Lib::TEXT_SSN_ABBR.to_string(), "dummy".to_string()],
+        );
         let regexs = (KEY_REGEX_PNTS, vec![Lib::REGEX_SSN_DASHES.to_string()]);
         let patterns = (KEY_PATTERN_PNTS, vec![Lib::PTTRN_SSN_DASHES.to_string()]);
 

@@ -366,4 +366,28 @@ mod tests {
         assert_eq!(code.get_value(), Some(r"SSN"));
         assert_eq!(Lib::from_u16(15001).unwrap(), Lib::TEXT_SSN_ABBR);
     }
+
+    #[test]
+    fn test_try_from_lib() {
+        let try_successful_lib = Lib::try_from(Lib::TEXT_SSN_ABBR);
+        assert!(try_successful_lib.is_ok());
+    }
+
+    #[test]
+    fn test_try_from_str() {
+        let try_successful_str = Lib::try_from("15000");
+        assert!(try_successful_str.is_ok());
+    }
+
+    #[test]
+    fn test_try_from_u8() {
+        let try_successful_u8 = Lib::try_from("15000".as_bytes());
+        assert!(try_successful_u8.is_ok());
+    }
+
+    #[test]
+    fn test_try_from_u16() {
+        let try_successful_u16 = Lib::try_from(15000 as u16);
+        assert!(try_successful_u16.is_ok());
+    }
 }
