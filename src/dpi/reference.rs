@@ -1,16 +1,48 @@
+use std::collections::BTreeMap;
 use std::convert::TryFrom;
 use std::error::Error;
 use std::fmt;
 use std::num::NonZeroU16;
 use std::str::FromStr;
-use std::collections::BTreeMap;
 
+/// The collection of methods that enable a structure to find retrieve lists of lib codes (logic)
+/// used to identify private data.
 pub trait IdentifierLogic {
-    /// This function retreives all the words, regexs, 
-    /// and patterns that are used to identify Health related data.
-    /// 
+    /// This function retrieve a list of the lib codes
+    ///
     /// #Example
-    /// 
+    ///
+    /// ```rust
+    /// use pbd::dpi::DPI;
+    /// use pbd::dpi::reference::{IdentifierLogic, Lib};
+    ///
+    /// struct Logic {}
+    /// impl IdentifierLogic for Logic {}
+    /// let lists = Logic::get_list(26000, 26002);
+    ///
+    /// assert_eq!(lists.len(), 3);
+    /// ```
+    fn get_list(min: u16, max: u16) -> Vec<String> {
+        let mut list = Vec::new();
+
+        for l in min..max + 1 {
+            match Lib::from_u16(l) {
+                Ok(val) => match val.to_string() == *"<unknown code>" {
+                    true => break,
+                    false => list.push(val.to_string()),
+                },
+                Err(_err) => break,
+            }
+        }
+
+        list
+    }
+
+    /// This function retreives all the words, regexs,
+    /// and patterns that are used to identify Health related data.
+    ///
+    /// #Example
+    ///
     /// ```rust
     /// use pbd::dpi::DPI;
     /// use pbd::dpi::reference::{IdentifierLogic, Lib};
@@ -18,65 +50,27 @@ pub trait IdentifierLogic {
     /// struct Logic {}
     /// impl IdentifierLogic for Logic {}
     /// let lists = Logic::health_list();
-    /// 
+    ///
     /// assert_eq!(lists.len(), 3);
     /// assert_eq!(lists.get("words").unwrap().len(), 0);
     /// assert_eq!(lists.get("regexs").unwrap().len(), 9);
     /// assert_eq!(lists.get("patterns").unwrap().len(), 0);
     /// ```
-    fn health_list() -> BTreeMap<String, Vec<String>>{
+    fn health_list() -> BTreeMap<String, Vec<String>> {
         let mut lists = BTreeMap::new();
-        let mut words = Vec::new();
-        let mut regexs = Vec::new();
-        let mut patterns = Vec::new();
 
-        for w in 0..1 {
-            match Lib::from_u16(w) {
-                Ok(val) => {
-                    match val.to_string() == *"<unknown code>" {
-                        true => break,
-                        false => words.push(val.to_string()),
-                    }
-                },
-                Err(_err) => break,
-            }
-        }        
-        
-        for r in 26000..26999 {
-            match Lib::from_u16(r) {
-                Ok(val) => {
-                    match val.to_string() == *"<unknown code>" {
-                        true => break,
-                        false => regexs.push(val.to_string()),
-                    }
-                },
-                Err(_err) => break,
-            }
-        }
+        lists.insert("words".to_string(), Self::get_list(0, 1));
+        lists.insert("regexs".to_string(), Self::get_list(26000, 26999));
+        lists.insert("patterns".to_string(), Self::get_list(0, 1));
 
-        for p in 0..1 {
-            match Lib::from_u16(p) {
-                Ok(val) => {
-                    match val.to_string() == *"<unknown code>" {
-                        true => break,
-                        false => patterns.push(val.to_string()),
-                    }
-                },
-                Err(_err) => break,
-            }
-        }
-
-        lists.insert("words".to_string(), words);
-        lists.insert("regexs".to_string(),regexs);
-        lists.insert("patterns".to_string(),patterns);
         lists
     }
 
-    /// This function retreives all the words, regexs, 
+    /// This function retreives all the words, regexs,
     /// and patterns that are used to identify NPPI data.
-    /// 
+    ///
     /// #Example
-    /// 
+    ///
     /// ```rust
     /// use pbd::dpi::DPI;
     /// use pbd::dpi::reference::{IdentifierLogic, Lib};
@@ -84,65 +78,27 @@ pub trait IdentifierLogic {
     /// struct Logic {}
     /// impl IdentifierLogic for Logic {}
     /// let lists = Logic::nppi_list();
-    /// 
+    ///
     /// assert_eq!(lists.len(), 3);
     /// assert_eq!(lists.get("words").unwrap().len(), 3);
     /// assert_eq!(lists.get("regexs").unwrap().len(), 69);
     /// assert_eq!(lists.get("patterns").unwrap().len(), 5);
     /// ```
-    fn nppi_list() -> BTreeMap<String, Vec<String>>{
+    fn nppi_list() -> BTreeMap<String, Vec<String>> {
         let mut lists = BTreeMap::new();
-        let mut words = Vec::new();
-        let mut regexs = Vec::new();
-        let mut patterns = Vec::new();
 
-        for w in 15000..15999 {
-            match Lib::from_u16(w) {
-                Ok(val) => {
-                    match val.to_string() == *"<unknown code>" {
-                        true => break,
-                        false => words.push(val.to_string()),
-                    }
-                },
-                Err(_err) => break,
-            }
-        }        
-        
-        for r in 25000..25999 {
-            match Lib::from_u16(r) {
-                Ok(val) => {
-                    match val.to_string() == *"<unknown code>" {
-                        true => break,
-                        false => regexs.push(val.to_string()),
-                    }
-                },
-                Err(_err) => break,
-            }
-        }
+        lists.insert("words".to_string(), Self::get_list(15000, 15999));
+        lists.insert("regexs".to_string(), Self::get_list(25000, 25999));
+        lists.insert("patterns".to_string(), Self::get_list(35000, 35999));
 
-        for p in 35000..35999 {
-            match Lib::from_u16(p) {
-                Ok(val) => {
-                    match val.to_string() == *"<unknown code>" {
-                        true => break,
-                        false => patterns.push(val.to_string()),
-                    }
-                },
-                Err(_err) => break,
-            }
-        }
-
-        lists.insert("words".to_string(), words);
-        lists.insert("regexs".to_string(),regexs);
-        lists.insert("patterns".to_string(),patterns);
         lists
     }
 
-    /// This function retreives all the words, regexs, 
+    /// This function retreives all the words, regexs,
     /// and patterns that are used to identify PCI data.
-    /// 
+    ///
     /// #Example
-    /// 
+    ///
     /// ```rust
     /// use pbd::dpi::DPI;
     /// use pbd::dpi::reference::{IdentifierLogic, Lib};
@@ -150,60 +106,21 @@ pub trait IdentifierLogic {
     /// struct Logic {}
     /// impl IdentifierLogic for Logic {}
     /// let lists = Logic::pci_list();
-    /// 
+    ///
     /// assert_eq!(lists.len(), 3);
     /// assert_eq!(lists.get("words").unwrap().len(), 0);
     /// assert_eq!(lists.get("regexs").unwrap().len(), 20);
     /// assert_eq!(lists.get("patterns").unwrap().len(), 0);
     /// ```
-    fn pci_list() -> BTreeMap<String, Vec<String>>{
+    fn pci_list() -> BTreeMap<String, Vec<String>> {
         let mut lists = BTreeMap::new();
-        let mut words = Vec::new();
-        let mut regexs = Vec::new();
-        let mut patterns = Vec::new();      
-        
-        for w in 0..1 {
-            match Lib::from_u16(w) {
-                Ok(val) => {
-                    match val.to_string() == *"<unknown code>" {
-                        true => break,
-                        false => words.push(val.to_string()),
-                    }
-                },
-                Err(_err) => break,
-            }
-        }  
 
-        for r in 27000..27999 {
-            match Lib::from_u16(r) {
-                Ok(val) => {
-                    match val.to_string() == *"<unknown code>" {
-                        true => break,
-                        false => regexs.push(val.to_string()),
-                    }
-                },
-                Err(_err) => break,
-            }
-        }  
-        
-        for p in 0..1 {
-            match Lib::from_u16(p) {
-                Ok(val) => {
-                    match val.to_string() == *"<unknown code>" {
-                        true => break,
-                        false => patterns.push(val.to_string()),
-                    }
-                },
-                Err(_err) => break,
-            }
-        }
+        lists.insert("words".to_string(), Self::get_list(0, 1));
+        lists.insert("regexs".to_string(), Self::get_list(27000, 27999));
+        lists.insert("patterns".to_string(), Self::get_list(0, 1));
 
-        lists.insert("words".to_string(), words);
-        lists.insert("regexs".to_string(),regexs);
-        lists.insert("patterns".to_string(),patterns);
         lists
     }
-
 }
 
 /// Represents a DPI Library Code
@@ -825,7 +742,6 @@ mod tests {
         assert_eq!(lists.get("regexs").unwrap().len(), 69);
         assert_eq!(lists.get("patterns").unwrap().len(), 5);
     }
-
 
     #[test]
     fn test_pci_list() {
