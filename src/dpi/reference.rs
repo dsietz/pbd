@@ -39,6 +39,35 @@ pub trait IdentifierLogic {
     }
 
     /// This function retreives all the words, regexs,
+    /// and patterns that are used to identify basic private data
+    /// such as names and addresses.
+    ///
+    /// #Example
+    ///
+    /// ```rust
+    /// use pbd::dpi::DPI;
+    /// use pbd::dpi::reference::{IdentifierLogic, Lib};
+    ///
+    /// struct Logic {}
+    /// impl IdentifierLogic for Logic {}
+    /// let lists = Logic::basic_list();
+    ///
+    /// assert_eq!(lists.len(), 3);
+    /// assert_eq!(lists.get("words").unwrap().len(), 0);
+    /// assert_eq!(lists.get("regexs").unwrap().len(), 17);
+    /// assert_eq!(lists.get("patterns").unwrap().len(), 0);
+    /// ```
+    fn basic_list() -> BTreeMap<String, Vec<String>> {
+        let mut lists = BTreeMap::new();
+
+        lists.insert("words".to_string(), Self::get_list(10000, 10999));
+        lists.insert("regexs".to_string(), Self::get_list(20000, 20999));
+        lists.insert("patterns".to_string(), Self::get_list(30000, 30999));
+
+        lists
+    }
+
+    /// This function retreives all the words, regexs,
     /// and patterns that are used to identify Health related data.
     ///
     /// #Example
@@ -717,6 +746,18 @@ mod tests {
         let code = Lib::TEXT_SSN_ABBR;
         assert_eq!(code.get_value(), Some(r"SSN"));
         assert_eq!(Lib::from_u16(15001).unwrap(), Lib::TEXT_SSN_ABBR);
+    }
+
+    #[test]
+    fn test_basic_list() {
+        struct Logic {}
+        impl IdentifierLogic for Logic {}
+        let lists = Logic::basic_list();
+
+        assert_eq!(lists.len(), 3);
+        assert_eq!(lists.get("words").unwrap().len(), 0);
+        assert_eq!(lists.get("regexs").unwrap().len(), 17);
+        assert_eq!(lists.get("patterns").unwrap().len(), 0);
     }
 
     #[test]

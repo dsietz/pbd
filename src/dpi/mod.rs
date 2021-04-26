@@ -12,6 +12,9 @@
 //!
 //! ### Usage
 //!
+//! #### Using the default logic
+//!
+//! #### Custom logic
 //!
 
 /*
@@ -27,7 +30,7 @@ extern crate levenshtein;
 extern crate regex;
 
 use super::*;
-use crate::dpi::reference::Lib;
+use crate::dpi::reference::IdentifierLogic;
 use levenshtein::levenshtein;
 use multimap::MultiMap;
 use rayon::prelude::*;
@@ -896,6 +899,7 @@ pub struct DPI {
     pub scores: ScoreCard,
 }
 
+impl IdentifierLogic for DPI {}
 impl Phonetic for DPI {}
 impl Tokenizer for DPI {}
 impl Tfidf for DPI {}
@@ -1405,31 +1409,35 @@ impl DPI {
     pub fn inspect(&mut self, doc: String) -> f64 {
         // tokenize the doc
         let tokens = Self::tokenize(doc);
+        let mut possible_pnts = 0.00;
         let mut pnts = 0.00;
 
         // get scores
         if self.key_patterns.is_some() {
             let found_patterns =
                 Self::inspect_for_patterns(self.key_patterns.clone().unwrap(), tokens.clone());
-            println!("FOUND PATTERNS:{:?}", found_patterns);
+            debug!("FOUND PATTERNS:{:?}", found_patterns);
             pnts += found_patterns.len() as f64 * KEY_PATTERN_PNTS;
+            possible_pnts += self.key_patterns.clone().unwrap().len() as f64 * KEY_PATTERN_PNTS;
         }
 
         if self.key_regexs.is_some() {
             let found_regexs =
                 Self::inspect_for_regexs(self.key_regexs.clone().unwrap(), tokens.clone());
-            println!("FOUND PATTERNS:{:?}", found_regexs);
+            debug!("FOUND PATTERNS:{:?}", found_regexs);
             pnts += found_regexs.len() as f64 * KEY_REGEX_PNTS;
+            possible_pnts += self.key_regexs.clone().unwrap().len() as f64 * KEY_REGEX_PNTS;
         }
 
         if self.key_words.is_some() {
             let found_words = Self::inspect_for_words(self.key_words.clone().unwrap(), tokens);
-            println!("FOUND PATTERNS:{:?}", found_words);
+            debug!("FOUND PATTERNS:{:?}", found_words);
             pnts += found_words.len() as f64 * KEY_WORD_PNTS;
+            possible_pnts += self.key_words.clone().unwrap().len() as f64 * KEY_WORD_PNTS;
         }
 
         // get percentage score (score / possible score)
-        pnts
+        (((possible_pnts - pnts) / possible_pnts) * 100.0).round()
     }
 
     // only return list of patterns found within tokens
@@ -1599,10 +1607,12 @@ impl DPI {
         suggestions
     }
 
+    /// needs doc
     pub fn auto_train(&mut self, docs: Vec<String>) -> Vec<Suggestion> {
         self.auto_train_with_limit(docs, Some(Self::TRAIN_LIMIT))
     }
 
+    /// needs doc
     pub fn auto_train_with_limit(
         &mut self,
         docs: Vec<String>,
@@ -1962,30 +1972,42 @@ impl DPI {
 }
 
 impl Default for DPI {
+    /// Default constructor of a DPI object automatically applies all the logic to
+    /// identify basic PII, NPPI, PCI and Health related data.
+    ///
+    /// #Example
+    ///
+    /// ```rust
+    /// use pbd::dpi::DPI;
+    ///
+    /// let mut dpi = DPI::default();
+    ///
+    /// assert!(dpi.key_patterns.is_some());
+    /// ```
     fn default() -> Self {
+        let mut words = Vec::new();
         let mut regexs = Vec::new();
+        let mut patterns = Vec::new();
+        let mut lists = Vec::new();
 
-        // Regular Expressions for PII
-        for i in 20001..20016 {
-            regexs.push(Lib::from_u16(i as u16).unwrap().to_string());
+        lists.push(Self::basic_list());
+        lists.push(Self::health_list());
+        lists.push(Self::nppi_list());
+        lists.push(Self::pci_list());
+
+        for list in lists.iter() {
+            for elem in list.get("words").unwrap().iter() {
+                words.push(elem.to_string());
+            }
+            for elem in list.get("regexs").unwrap().iter() {
+                regexs.push(elem.to_string());
+            }
+            for elem in list.get("patterns").unwrap().iter() {
+                patterns.push(elem.to_string());
+            }
         }
 
-        // Regular Expressions for NPPI
-        for i in 25000..25068 {
-            regexs.push(Lib::from_u16(i as u16).unwrap().to_string());
-        }
-
-        // Regular Expressions for Health
-        for i in 26000..26008 {
-            regexs.push(Lib::from_u16(i as u16).unwrap().to_string());
-        }
-
-        // Regular Expressions for PCI
-        for i in 27000..27019 {
-            regexs.push(Lib::from_u16(i as u16).unwrap().to_string());
-        }
-
-        Self::with_key_regexs(regexs)
+        Self::with(Some(words), Some(regexs), Some(patterns))
     }
 }
 
@@ -2076,13 +2098,6 @@ mod tests {
     }
 
     #[test]
-    fn test_dpi_default() {
-        let dpi = DPI::default();
-        println!("{:?}", dpi.key_regexs);
-        assert_eq!(dpi.key_regexs.unwrap().len(), 110);
-    }
-
-    #[test]
     fn test_dpi_new() {
         let dpi = DPI::new();
 
@@ -2090,13 +2105,24 @@ mod tests {
         assert!(dpi.key_patterns.is_none());
     }
 
-    // #[test]
-    // fn test_dpi_new_pci() {
-    //     let dpi = DPI::new_pci();
+    #[test]
+    fn test_dpi_default() {
+        let mut dpi = DPI::default();
 
-    //     assert!(dpi.key_words.is_none());
-    //     assert!(dpi.key_patterns.is_none());
-    // }
+        let score = dpi.inspect(
+            r#"
+        My name is John Smith and my address is 16 Main Street Oldtown, CA 044456. 
+        My SSN# is 005-67-8976. My DOB is 3/16/1999. 
+        I have asthma.
+        Card Number: 4993 7491 1336 2209        
+        CVV: 293        
+        Expiration: 08 / 2024        
+        Name: Keira Rice"#
+                .to_string(),
+        );
+
+        assert_eq!(score, 84.0);
+    }
 
     #[test]
     fn test_dpi_add_to_score_points() {
