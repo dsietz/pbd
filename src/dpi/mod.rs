@@ -3,11 +3,15 @@
 //! - Control
 //! - Enforce
 //!
-//! Explanation goes here ...
+//! Data Driven solutions, (e.g.: Data as  Service) requires that the dynamic nature of the system includes the
+//! ability to identify and manage data based on its characteristics. A vital characteristic is if the data is determined private - PII.
+//! DPI is a semi-supervised machine learning PbD feature that provides the ability to score that probability of data being private and
+//! categorizing it accordingly, (e.g.: NPPI, PCI, Public, Confidential, Restricted).   
 //!
 //! Special thanks to [`rs-natural`](https://crates.io/crates/natural) for their work on Phonetics, NGrams, Tokenization, and Tf-ldf.
 //!
 //! ### Usage
+//!
 //!
 
 /*
@@ -277,8 +281,8 @@ pub trait Phonetic {
     /// assert_eq!(Prcsr::strip_similar_chars(vec!['h', 'e', 'l', 'l', 'o']), vec!['h', '4']);
     /// ```
     fn strip_similar_chars(chars: Vec<char>) -> Vec<char> {
-        let mut enc_chars = Vec::new();
-        enc_chars.push(chars[0]);
+        let mut enc_chars = vec![chars[0]];
+
         for c in chars.iter().skip(1) {
             enc_chars.push(Self::get_char_digit(*c));
         }
@@ -1725,29 +1729,6 @@ impl DPI {
         rtn
     }
 
-    fn word_to_pattern(word: String) -> String {
-        let pttrn = PatternDefinition::new();
-        pttrn.analyze(&word)
-    }
-
-    fn word_to_regex(word: String) -> String {
-        let mut rtn = String::new();
-
-        word.chars().for_each(|c| {
-            if c.is_alphabetic() {
-                rtn.push_str("[aA-zZ]");
-            }
-            if c.is_ascii_digit() {
-                rtn.push_str("[0-9]");
-            }
-            if !c.is_ascii_alphanumeric() {
-                rtn.push_str("[^a-zA-Z\\d\\s:]");
-            }
-        });
-
-        rtn
-    }
-
     /// Trains the DPI object using key patterns against a the list of words provided as the sample content and
     /// returns a list of found patterns
     ///
@@ -1915,6 +1896,29 @@ impl DPI {
     /// ```
     pub fn upsert_score(&mut self, score: Score) {
         self.scores.insert(score.key_value.clone(), score);
+    }
+
+    fn word_to_pattern(word: String) -> String {
+        let pttrn = PatternDefinition::new();
+        pttrn.analyze(&word)
+    }
+
+    fn word_to_regex(word: String) -> String {
+        let mut rtn = String::new();
+
+        word.chars().for_each(|c| {
+            if c.is_alphabetic() {
+                rtn.push_str("[aA-zZ]");
+            }
+            if c.is_ascii_digit() {
+                rtn.push_str("[0-9]");
+            }
+            if !c.is_ascii_alphanumeric() {
+                rtn.push_str("[^a-zA-Z\\d\\s:]");
+            }
+        });
+
+        rtn
     }
 
     /// Checks the list of regular expressions to make sure they are valid.
@@ -2085,6 +2089,14 @@ mod tests {
         assert!(dpi.key_words.is_none());
         assert!(dpi.key_patterns.is_none());
     }
+
+    // #[test]
+    // fn test_dpi_new_pci() {
+    //     let dpi = DPI::new_pci();
+
+    //     assert!(dpi.key_words.is_none());
+    //     assert!(dpi.key_patterns.is_none());
+    // }
 
     #[test]
     fn test_dpi_add_to_score_points() {
