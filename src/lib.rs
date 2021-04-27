@@ -39,7 +39,12 @@ extern crate serde_json;
 #[allow(dead_code)]
 fn add(u: usize, i: i8) -> usize {
     if i.is_negative() {
-        u - i.wrapping_abs() as u8 as usize
+        match u >= i.wrapping_abs() as usize {
+            true => u - i.wrapping_abs() as u8 as usize,
+            false => {
+                u
+            },
+        }
     } else {
         u + i as usize
     }

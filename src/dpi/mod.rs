@@ -312,7 +312,7 @@ pub trait Tfidf {
     /// The default tf limit before the term is considered relevant
     const TF_LIMIT: f64 = 0.15;
 
-    /// Determines how important a term is in a document compared to other documents.
+    /// Takes a list of words and returns a BTreeMap of key words with the number of times they appear in the list.
     ///
     /// # Arguments
     ///
@@ -326,32 +326,21 @@ pub trait Tfidf {
     ///
     /// struct FreqCnt {}
     /// impl Tfidf for FreqCnt {}
+    /// let tokens = vec!["Hello","my","name","is","John","What","is","your","name","A","name","is","a","personal","identifier","Never","share","your","name","My","ssn","is","003-67-0998"];
+    /// let counts = FreqCnt::frequency_counts(to_vec_string(tokens));
     ///
-    /// let mut docs = Vec::new();
-    /// let tokens_list = vec![
-    ///   vec!["Hello","my","name","is","John","What","is","your","name"],
-    ///   vec!["A","name","is","a","personal","identifier","Never","share","your","name"],
-    ///   vec!["My","ssn","is","003-67-0998"]
-    /// ];
-    ///
-    /// for tokens in tokens_list {
-    ///   docs.push(FreqCnt::frequency_counts_as_vec(to_vec_string(tokens)));
-    /// }
-    ///
-    /// assert_eq!(FreqCnt::tfidf("ssn", 2, docs.clone()), 1.0986122886681098);
-    /// assert_eq!(FreqCnt::tfidf("name", 1, docs.clone()), 0.4054651081081644);
-    /// assert_eq!(FreqCnt::tfidf("your", 1, docs), 0.3040988310811233);
-    /// ```  
-    fn tfidf(term: &str, doc_idx: usize, docs: Vec<Vec<(String, usize)>>) -> f64 {
-        let d = docs
-            .iter()
-            .map(|v| {
-                v.iter()
-                    .map(|s| (s.0.as_str(), s.1))
-                    .collect::<Vec<(&str, usize)>>()
-            })
-            .collect::<Vec<_>>();
-        TfIdfDefault::tfidf(term, &d[doc_idx], d.iter())
+    /// assert_eq!(*counts.get("name").unwrap(), 4 as usize);
+    /// ```
+    fn frequency_counts(tokens: Vec<String>) -> BTreeMap<String, usize> {
+        let counts: Vec<(String, usize)> = Self::frequency_counts_as_vec(tokens);
+
+        // Convert to BTreeMap
+        let mut list = BTreeMap::new();
+        for count in counts.iter() {
+            list.insert(count.0.clone(), count.1);
+        }
+
+        list
     }
 
     /// Takes a list of words and returns a distinct list of words with the number of times they appear in the list.
@@ -411,7 +400,7 @@ pub trait Tfidf {
         counts
     }
 
-    /// Takes a list of words and returns a BTreeMap of key words with the number of times they appear in the list.
+    /// Determines how important a term is in a document compared to other documents.
     ///
     /// # Arguments
     ///
@@ -425,26 +414,75 @@ pub trait Tfidf {
     ///
     /// struct FreqCnt {}
     /// impl Tfidf for FreqCnt {}
-    /// let tokens = vec!["Hello","my","name","is","John","What","is","your","name","A","name","is","a","personal","identifier","Never","share","your","name","My","ssn","is","003-67-0998"];
-    /// let counts = FreqCnt::frequency_counts(to_vec_string(tokens));
     ///
-    /// assert_eq!(*counts.get("name").unwrap(), 4 as usize);
-    /// ```
-    fn frequency_counts(tokens: Vec<String>) -> BTreeMap<String, usize> {
-        let counts: Vec<(String, usize)> = Self::frequency_counts_as_vec(tokens);
-
-        // Convert to BTreeMap
-        let mut list = BTreeMap::new();
-        for count in counts.iter() {
-            list.insert(count.0.clone(), count.1);
-        }
-
-        list
+    /// let mut docs = Vec::new();
+    /// let tokens_list = vec![
+    ///   vec!["Hello","my","name","is","John","What","is","your","name"],
+    ///   vec!["A","name","is","a","personal","identifier","Never","share","your","name"],
+    ///   vec!["My","ssn","is","003-67-0998"]
+    /// ];
+    ///
+    /// for tokens in tokens_list {
+    ///   docs.push(FreqCnt::frequency_counts_as_vec(to_vec_string(tokens)));
+    /// }
+    ///
+    /// assert_eq!(FreqCnt::tfidf("ssn", 2, docs.clone()), 1.0986122886681098);
+    /// assert_eq!(FreqCnt::tfidf("name", 1, docs.clone()), 0.4054651081081644);
+    /// assert_eq!(FreqCnt::tfidf("your", 1, docs), 0.3040988310811233);
+    /// ```  
+    fn tfidf(term: &str, doc_idx: usize, docs: Vec<Vec<(String, usize)>>) -> f64 {
+        let d = docs
+            .iter()
+            .map(|v| {
+                v.iter()
+                    .map(|s| (s.0.as_str(), s.1))
+                    .collect::<Vec<(&str, usize)>>()
+            })
+            .collect::<Vec<_>>();
+        TfIdfDefault::tfidf(term, &d[doc_idx], d.iter())
     }
 }
 
 /// The collection of methods that enable a structure to tokenize and convert text to ngrams
 pub trait Tokenizer {
+
+    /// Indicates if a char is one of the predefined delimiters that is used to spearate words
+    ///
+    /// # Arguments
+    ///
+    /// * c: char - A character to be checked.</br>
+    ///
+    /// #Example
+    ///
+    /// ```rust
+    /// use pbd::dpi::Tokenizer;
+    ///
+    /// struct Tknzr;
+    /// impl Tokenizer for Tknzr {}
+    ///     
+    /// assert_eq!(Tknzr::is_match(' '), true);
+    /// ```
+    fn is_match(c: char) -> bool {
+        matches!(
+            c,
+            ' ' | ','
+                | '.'
+                | '!'
+                | '?'
+                | ';'
+                | '\''
+                | '"'
+                | ':'
+                | '\t'
+                | '\n'
+                | '\r'
+                | '('
+                | ')'
+                | '{'
+                | '}'
+        )
+    }
+
     /// Creates the NGram
     ///
     /// # Arguments
@@ -532,43 +570,6 @@ pub trait Tokenizer {
             .filter(|s| !s.is_empty())
             .map(|s| s.to_string())
             .collect()
-    }
-
-    /// Indicates if a char is one of the predefined delimiters that is used to spearate words
-    ///
-    /// # Arguments
-    ///
-    /// * c: char - A character to be checked.</br>
-    ///
-    /// #Example
-    ///
-    /// ```rust
-    /// use pbd::dpi::Tokenizer;
-    ///
-    /// struct Tknzr;
-    /// impl Tokenizer for Tknzr {}
-    ///     
-    /// assert_eq!(Tknzr::is_match(' '), true);
-    /// ```
-    fn is_match(c: char) -> bool {
-        matches!(
-            c,
-            ' ' | ','
-                | '.'
-                | '!'
-                | '?'
-                | ';'
-                | '\''
-                | '"'
-                | ':'
-                | '\t'
-                | '\n'
-                | '\r'
-                | '('
-                | ')'
-                | '{'
-                | '}'
-        )
     }
 }
 
@@ -906,7 +907,35 @@ impl Tfidf for DPI {}
 
 impl DPI {
     /// The default points necessary for a suggestion to be applied for auto training
-    const TRAIN_LIMIT: f64 = 47.0;
+    pub const TRAIN_LIMIT: f64 = 47.0;
+
+    /// Adds points to an existing Score object
+    ///
+    /// # Arguments
+    ///
+    /// * key: String - The key that identifies the Score object.</br>
+    /// * pnts: f64 - The points to add to the Score object.</br>
+    ///
+    /// #Example
+    ///
+    /// ```rust
+    /// use pbd::dpi::{DPI, Score, ScoreKey};
+    ///
+    /// let score = Score::new(ScoreKey::KeyWord, "ssn".to_string(), 25.0);
+    /// let mut dpi = DPI::new();
+    ///
+    /// dpi.upsert_score(score);
+    /// dpi.add_to_score_points("ssn".to_string(), 5.5);
+    ///
+    /// let returned_score = dpi.get_score("ssn".to_string());
+    ///   
+    /// assert_eq!(returned_score.points, 30.5);
+    /// ```
+    pub fn add_to_score_points(&mut self, key: String, pnts: f64) {
+        let mut score = self.get_score(key);
+        score.points += pnts;
+        self.upsert_score(score);
+    }
 
     /// Appends a key pattern to the DPI object's key list of patterns.
     /// This is used to teach the object what new patterns to used as identifiers.
@@ -1004,30 +1033,11 @@ impl DPI {
         }
     }
 
-    /// Constructs a DPI object without using any predefined set of key words or patterns to learn from
-    ///
-    /// #Example
-    ///
-    /// ```rust
-    /// use pbd::dpi::DPI;
-    /// let dpi = DPI::new();
-    /// ```
-    pub fn new() -> DPI {
-        DPI {
-            key_patterns: None,
-            key_regexs: None,
-            key_words: None,
-            scores: ScoreCard::new(),
-        }
-    }
-
-    /// Constructs a DPI object using a predefined set of key words and patterns to learn from
+    /// Automatically trains the DPI object to the default limit of DPI::TRAIN_LIMIT.
     ///
     /// # Arguments
     ///
-    /// * words: Option<KeyWordList> - A vector of words that are known identifiers for private data.</br>
-    /// * regexs: Option<KeyRegexList> - A vector of regular expressions that are known identifiers for private data.</br>
-    /// * patterns: Option<KeyPatternList> - A vector of patterns that are known identifiers for private data.</br>
+    /// * docs: Vec<String> - A list of sample document textual content. </br>
     ///
     /// #Example
     ///
@@ -1035,215 +1045,75 @@ impl DPI {
     /// use pbd::dpi::DPI;
     /// use pbd::dpi::reference::Lib;
     ///
-    /// let words = Some(vec![Lib::TEXT_SSN_ABBR.to_string()]);
-    /// let regexs = Some(vec![Lib::REGEX_SSN_DASHES.to_string()]);
-    /// let patterns = Some(vec![Lib::PTTRN_SSN_DASHES.to_string()]);
-    /// let dpi = DPI::with(words, regexs, patterns);
-    ///     
-    /// println!("Using {} words and {} patterns for learning.", dpi.key_words.unwrap().len(), dpi.key_patterns.unwrap().len());
-    /// ```
-    pub fn with(
-        words: Option<KeyWordList>,
-        regexs: Option<KeyRegexList>,
-        patterns: Option<KeyPatternList>,
-    ) -> DPI {
-        if let Some(reg) = regexs.clone() {
-            if let Err(err) = Self::validate_regexs(reg) {
-                panic!("Bad Regex: {:?}", err);
-            }
-        }
-
-        DPI {
-            key_patterns: patterns,
-            key_regexs: regexs,
-            key_words: words,
-            scores: ScoreCard::new(),
-        }
-    }
-
-    /// Constructs a DPI object using a predefined set of key patterns to learn from
-    ///
-    /// # Arguments
-    ///
-    /// * patterns: KeyPatternList - A vector of patterns that are known identifiers for private data.</br>
-    ///
-    /// #Example
-    ///
-    /// ```rust
-    /// use pbd::dpi::DPI;
-    /// use pbd::dpi::reference::Lib;
-    ///
-    /// let patterns = vec![Lib::PTTRN_SSN_DASHES.to_string()];
-    /// let dpi = DPI::with_key_patterns(patterns);
-    ///     
-    /// println!("Using {} patterns for learning.", dpi.key_patterns.unwrap().len());
-    /// ```
-    pub fn with_key_patterns(patterns: KeyPatternList) -> DPI {
-        DPI {
-            key_patterns: Some(patterns),
-            key_regexs: None,
-            key_words: None,
-            scores: ScoreCard::new(),
-        }
-    }
-
-    /// Constructs a DPI object using a predefined set of key regular expressions to learn from
-    ///
-    /// # Arguments
-    ///
-    /// * regexs: KeyRegexList - A vector of Regex patterns that are known identifiers for private data.</br>
-    ///
-    /// #Example
-    ///
-    /// ```rust
-    /// use pbd::dpi::DPI;
-    /// use pbd::dpi::reference::Lib;
-    ///
-    /// let regexs = vec![Lib::REGEX_SSN_DASHES.to_string()];
-    /// let dpi = DPI::with_key_regexs(regexs);
-    ///     
-    /// println!("Using {} regexs for learning.", dpi.key_regexs.unwrap().len());
-    /// ```
-    pub fn with_key_regexs(regexs: KeyRegexList) -> DPI {
-        match Self::validate_regexs(regexs.clone()) {
-            Ok(_) => {}
-            Err(err) => {
-                panic!("Bad Regex: {:?}", err);
-            }
-        }
-
-        DPI {
-            key_patterns: None,
-            key_regexs: Some(regexs),
-            key_words: None,
-            scores: ScoreCard::new(),
-        }
-    }
-
-    /// Constructs a DPI object using a predefined set of key words to learn from
-    ///
-    /// # Arguments
-    ///
-    /// * words: KeyWordList - A vector of words that are known identifiers for private data.</br>
-    ///
-    /// #Example
-    ///
-    /// ```rust
-    /// extern crate pbd;
-    ///
-    /// use pbd::dpi::DPI;
-    /// use pbd::dpi::reference::Lib;
-    ///
-    /// let words = vec![Lib::TEXT_SSN_ABBR.to_string()];
-    /// let dpi = DPI::with_key_words(words);
-    ///     
-    /// println!("Using {} words for learning.", dpi.key_words.unwrap().len());
-    /// ```
-    pub fn with_key_words(words: KeyWordList) -> DPI {
-        DPI {
-            key_patterns: None,
-            key_regexs: None,
-            key_words: Some(words),
-            scores: ScoreCard::new(),
-        }
-    }
-
-    /// Constructs a DPI object from a serialized string
-    ///
-    /// # Arguments
-    ///
-    /// * serialized: &str - The string that represents the serialized object.</br>
-    ///
-    /// #Example
-    ///
-    /// ```rust
-    /// use pbd::dpi::DPI;
-    ///
-    /// let serialized = r#"{"key_words":["SSN"],"key_patterns":["^(?!666|000|9\\d{2})\\d{3}-(?!00)\\d{2}-(?!0{4})\\d{4}$"],"scores":{}}"#;
-    /// let dpi = DPI::from_serialized(&serialized);
-    ///     
-    /// println!("{:?}", dpi);
-    /// ```
-    pub fn from_serialized(serialized: &str) -> DPI {
-        serde_json::from_str(&serialized).unwrap()
-    }
-
-    /// Serialize a DPI object
-    ///
-    /// # Arguments
-    ///
-    /// * serialized: &str - The string that represents the serialized object.</br>
-    ///
-    /// #Example
-    ///
-    /// ```rust
-    /// use pbd::dpi::DPI;
-    ///
-    /// let mut dpi = DPI::with(
-    ///     Some(vec!["SSN".to_string()]),
-    ///     Some(vec![r"^\d{3}-\d{2}-\d{4}$".to_string()]),
-    ///     Some(vec!["###p##p####".to_string()])
-    ///   );
-    ///
-    /// println!("{:?}", dpi.serialize());
-    /// ```
-    pub fn serialize(&mut self) -> String {
-        serde_json::to_string(&self).unwrap()
-    }
-
-    /// Retreives the Score object based on the specified key
-    ///
-    /// # Arguments
-    ///
-    /// * key: String - The key that identifies the Score object.</br>
-    ///
-    /// #Example
-    ///
-    /// ```rust
-    /// use pbd::dpi::{DPI, Score, ScoreKey};
-    ///
-    /// let score = Score::new(ScoreKey::KeyWord, "ssn".to_string(), 25.0);
     /// let mut dpi = DPI::new();
+    /// // look for human names, streets, and words related to diet
+    /// dpi.append_key_regex(Lib::REGEX_HUMAN_NAME.to_string());
+    /// dpi.append_key_regex(Lib::REGEX_ADDR_STR.to_string());
+    /// dpi.append_key_regex(Lib::REGEX_HEALTH_DIET.to_string());
+    /// // sample of content that is known to have human names, streets, and words related to diet
+    /// let mut docs: Vec<String> = vec!["My name is Mr. John Smith.".to_string(), "14 Main Stree Newtown CA 56743".to_string(), "I have dietary needs.".to_string()];
+    /// let applied = dpi.auto_train(docs);
     ///
-    /// dpi.upsert_score(score);
+    /// println!("Training limit is {}", DPI::TRAIN_LIMIT);
+    /// println!("Suggested words that were automatically applied during training: {:?}", applied);
     ///
-    /// let returned_score = dpi.get_score("ssn".to_string());
-    ///   
-    /// assert_eq!(returned_score.points, 25.0);
     /// ```
-    pub fn get_score(&mut self, key: String) -> Score {
-        match self.scores.get_mut(&key) {
-            Some(s) => s.clone(),
-            None => Score::new(ScoreKey::KeyWord, key, 0 as f64),
-        }
+    pub fn auto_train(&mut self, docs: Vec<String>) -> Vec<Suggestion> {
+        self.auto_train_with_limit(docs, Some(Self::TRAIN_LIMIT))
     }
 
-    /// Adds points to an existing Score object
+    /// Automatically trains the DPI object to the default limit of DPI::TRAIN_LIMIT.
     ///
     /// # Arguments
     ///
-    /// * key: String - The key that identifies the Score object.</br>
-    /// * pnts: f64 - The points to add to the Score object.</br>
+    /// * docs: Vec<String> - A list of sample document textual content. </br>
+    /// * point_limit: Option<f64> - The points to reach before stopping the automated training
     ///
     /// #Example
     ///
     /// ```rust
-    /// use pbd::dpi::{DPI, Score, ScoreKey};
+    /// use pbd::dpi::DPI;
+    /// use pbd::dpi::reference::Lib;
     ///
-    /// let score = Score::new(ScoreKey::KeyWord, "ssn".to_string(), 25.0);
     /// let mut dpi = DPI::new();
+    /// // look for human names, streets, and words related to diet
+    /// dpi.append_key_regex(Lib::REGEX_HUMAN_NAME.to_string());
+    /// dpi.append_key_regex(Lib::REGEX_ADDR_STR.to_string());
+    /// dpi.append_key_regex(Lib::REGEX_HEALTH_DIET.to_string());
+    /// // sample of content that is known to have human names, streets, and words related to diet
+    /// let mut docs: Vec<String> = vec!["My name is Mr. John Smith.".to_string(), "14 Main Stree Newtown CA 56743".to_string(), "I have dietary needs.".to_string()];
+    /// let applied = dpi.auto_train_with_limit(docs, Some(50.0));
     ///
-    /// dpi.upsert_score(score);
-    /// dpi.add_to_score_points("ssn".to_string(), 5.5);
+    /// println!("Suggested words that were automatically applied during training: {:?}", applied);
     ///
-    /// let returned_score = dpi.get_score("ssn".to_string());
-    ///   
-    /// assert_eq!(returned_score.points, 30.5);
     /// ```
-    pub fn add_to_score_points(&mut self, key: String, pnts: f64) {
-        let mut score = self.get_score(key);
-        score.points += pnts;
-        self.upsert_score(score);
+    pub fn auto_train_with_limit(
+        &mut self,
+        docs: Vec<String>,
+        point_limit: Option<f64>,
+    ) -> Vec<Suggestion> {
+        let suggestions = self.train(docs);
+
+        let approved_suggestions: Vec<Suggestion> = match point_limit {
+            Some(pnt) => suggestions
+                .into_par_iter()
+                .filter(|v| v.1.points >= pnt)
+                .map(|v| v.1)
+                .collect(),
+            None => suggestions.into_par_iter().map(|v| v.1).collect(),
+        };
+
+        approved_suggestions.iter().for_each(|s| {
+            self.append_key_word(s.word.clone());
+            if s.regex.is_some() {
+                self.append_key_regex(s.regex.clone().unwrap());
+            }
+            if s.pattern.is_some() {
+                self.append_key_pattern(s.pattern.clone().unwrap());
+            }
+        });
+
+        approved_suggestions
     }
 
     /// Determines how many times a pattern appears in a list of tokens
@@ -1339,8 +1209,56 @@ impl DPI {
                 TfIdfzr::frequency_counts_as_vec(tokens)
             })
             .collect()
+    }    
+
+    /// Constructs a DPI object from a serialized string
+    ///
+    /// # Arguments
+    ///
+    /// * serialized: &str - The string that represents the serialized object.</br>
+    ///
+    /// #Example
+    ///
+    /// ```rust
+    /// use pbd::dpi::DPI;
+    ///
+    /// let serialized = r#"{"key_words":["SSN"],"key_patterns":["^(?!666|000|9\\d{2})\\d{3}-(?!00)\\d{2}-(?!0{4})\\d{4}$"],"scores":{}}"#;
+    /// let dpi = DPI::from_serialized(&serialized);
+    ///     
+    /// println!("{:?}", dpi);
+    /// ```
+    pub fn from_serialized(serialized: &str) -> DPI {
+        serde_json::from_str(&serialized).unwrap()
     }
 
+    /// Retreives the Score object based on the specified key
+    ///
+    /// # Arguments
+    ///
+    /// * key: String - The key that identifies the Score object.</br>
+    ///
+    /// #Example
+    ///
+    /// ```rust
+    /// use pbd::dpi::{DPI, Score, ScoreKey};
+    ///
+    /// let score = Score::new(ScoreKey::KeyWord, "ssn".to_string(), 25.0);
+    /// let mut dpi = DPI::new();
+    ///
+    /// dpi.upsert_score(score);
+    ///
+    /// let returned_score = dpi.get_score("ssn".to_string());
+    ///   
+    /// assert_eq!(returned_score.points, 25.0);
+    /// ```
+    pub fn get_score(&mut self, key: String) -> Score {
+        match self.scores.get_mut(&key) {
+            Some(s) => s.clone(),
+            None => Score::new(ScoreKey::KeyWord, key, 0 as f64),
+        }
+    }
+
+    
     fn get_suggested_words_from_patterns(
         key_patterns: Vec<String>,
         docs: Vec<String>,
@@ -1437,7 +1355,7 @@ impl DPI {
         }
 
         // get percentage score (score / possible score)
-        (((possible_pnts - pnts) / possible_pnts) * 100.0).round()
+        ((pnts / possible_pnts) * 100.0).round()
     }
 
     // only return list of patterns found within tokens
@@ -1465,6 +1383,23 @@ impl DPI {
             .collect()
     }
 
+    /// Constructs a DPI object without using any predefined set of key words or patterns to learn from
+    ///
+    /// #Example
+    ///
+    /// ```rust
+    /// use pbd::dpi::DPI;
+    /// let dpi = DPI::new();
+    /// ```
+    pub fn new() -> DPI {
+        DPI {
+            key_patterns: None,
+            key_regexs: None,
+            key_words: None,
+            scores: ScoreCard::new(),
+        }
+    }
+    
     fn push_suggestions(
         suggestions: Vec<String>,
         docs: Vec<Vec<(String, usize)>>,
@@ -1485,6 +1420,29 @@ impl DPI {
         }
     }
 
+    /// Serialize a DPI object
+    ///
+    /// # Arguments
+    ///
+    /// * serialized: &str - The string that represents the serialized object.</br>
+    ///
+    /// #Example
+    ///
+    /// ```rust
+    /// use pbd::dpi::DPI;
+    ///
+    /// let mut dpi = DPI::with(
+    ///     Some(vec!["SSN".to_string()]),
+    ///     Some(vec![r"^\d{3}-\d{2}-\d{4}$".to_string()]),
+    ///     Some(vec!["###p##p####".to_string()])
+    ///   );
+    ///
+    /// println!("{:?}", dpi.serialize());
+    /// ```
+    pub fn serialize(&mut self) -> String {
+        serde_json::to_string(&self).unwrap()
+    }
+
     fn suggest_from_key_pattern(pattern: &str, tokens: Vec<String>) -> Vec<String> {
         let mut suggestions: Vec<String> = Vec::new();
         struct Tknzr {}
@@ -1497,7 +1455,11 @@ impl DPI {
             if pttrn_def.analyze(tkn) == pattern {
                 let idx_scope: Vec<i8> = vec![-2, -1, 1, 2];
                 for i in &idx_scope {
-                    let word = tokens[add(idx, *i)].clone();
+                    let t = match add(idx, *i) >= tokens.len() {
+                        true => tokens.len() -1,
+                        false => add(idx, *i),
+                    };
+                    let word = tokens[t].clone();
                     let cnt = freq_counts.get(&word).unwrap();
                     if (cnt / total_count) <= Self::TF_LIMIT as usize {
                         suggestions.push(word.clone());
@@ -1527,7 +1489,11 @@ impl DPI {
             if Regex::new(regex).unwrap().is_match(tkn) {
                 let idx_scope: Vec<i8> = vec![-2, -1, 1, 2];
                 for i in &idx_scope {
-                    let word = tokens[add(idx, *i)].clone();
+                    let t = match add(idx, *i) >= tokens.len() {
+                        true => tokens.len() -1,
+                        false => add(idx, *i),
+                    };
+                    let word = tokens[t].clone();
                     let cnt = freq_counts.get(&word).unwrap();
                     if (cnt / total_count) <= Self::TF_LIMIT as usize {
                         suggestions.push(word.clone());
@@ -1559,7 +1525,11 @@ impl DPI {
                     let idx_scope: Vec<i8> = vec![-2, -1, 1, 2];
 
                     for i in &idx_scope {
-                        let word = tokens[add(idx, *i)].clone();
+                        let t = match add(idx, *i) >= tokens.len() {
+                            true => tokens.len() -1,
+                            false => add(idx, *i),
+                        };
+                        let word = tokens[t].clone();
                         let cnt = freq_counts.get(&word).unwrap();
                         if (cnt / total_count) <= Self::TF_LIMIT as usize {
                             suggestions.push(word.clone());
@@ -1580,6 +1550,18 @@ impl DPI {
         suggestions
     }
 
+    fn suggest_from_levenshtein(word: String, tokens: Vec<String>) -> Vec<String> {
+        let mut suggestions: Vec<String> = Vec::new();
+
+        for tkn in tokens.iter() {
+            if (Self::levenshtein(&word, tkn) / word.len()) as f64 <= Self::LEVENSHTEIN_LIMIT {
+                suggestions.push(tkn.to_string());
+            }
+        }
+
+        suggestions
+    }
+
     fn suggest_from_sounds_like(word: String, tokens: Vec<String>) -> Vec<String> {
         let mut suggestions: Vec<String> = Vec::new();
 
@@ -1593,53 +1575,6 @@ impl DPI {
         }
 
         suggestions
-    }
-
-    fn suggest_from_levenshtein(word: String, tokens: Vec<String>) -> Vec<String> {
-        let mut suggestions: Vec<String> = Vec::new();
-
-        for tkn in tokens.iter() {
-            if (Self::levenshtein(&word, tkn) / word.len()) as f64 <= Self::LEVENSHTEIN_LIMIT {
-                suggestions.push(tkn.to_string());
-            }
-        }
-
-        suggestions
-    }
-
-    /// needs doc
-    pub fn auto_train(&mut self, docs: Vec<String>) -> Vec<Suggestion> {
-        self.auto_train_with_limit(docs, Some(Self::TRAIN_LIMIT))
-    }
-
-    /// needs doc
-    pub fn auto_train_with_limit(
-        &mut self,
-        docs: Vec<String>,
-        point_limit: Option<f64>,
-    ) -> Vec<Suggestion> {
-        let suggestions = self.train(docs);
-
-        let approved_suggestions: Vec<Suggestion> = match point_limit {
-            Some(pnt) => suggestions
-                .into_par_iter()
-                .filter(|v| v.1.points >= pnt)
-                .map(|v| v.1)
-                .collect(),
-            None => suggestions.into_par_iter().map(|v| v.1).collect(),
-        };
-
-        approved_suggestions.iter().for_each(|s| {
-            self.append_key_word(s.word.clone());
-            if s.regex.is_some() {
-                self.append_key_regex(s.regex.clone().unwrap());
-            }
-            if s.pattern.is_some() {
-                self.append_key_pattern(s.pattern.clone().unwrap());
-            }
-        });
-
-        approved_suggestions
     }
 
     /// Trains the DPI object using its keys against a list of Strings as the sample content.
@@ -1887,25 +1822,103 @@ impl DPI {
         ]
     }
 
-    /// Update (if not exits then inserts) a Score object
+    /// Constructs a DPI object using a predefined set of key words and patterns to learn from
     ///
     /// # Arguments
     ///
-    /// * score: Score - The Score object to upsert.</br>
+    /// * words: Option<KeyWordList> - A vector of words that are known identifiers for private data.</br>
+    /// * regexs: Option<KeyRegexList> - A vector of regular expressions that are known identifiers for private data.</br>
+    /// * patterns: Option<KeyPatternList> - A vector of patterns that are known identifiers for private data.</br>
     ///
     /// #Example
     ///
     /// ```rust
-    /// use pbd::dpi::{DPI, Score, ScoreKey};
+    /// use pbd::dpi::DPI;
+    /// use pbd::dpi::reference::Lib;
     ///
-    /// let score = Score::new(ScoreKey::KeyWord, "ssn".to_string(), 25.0);
-    /// let mut dpi = DPI::new();
-    /// dpi.upsert_score(score);
+    /// let words = Some(vec![Lib::TEXT_SSN_ABBR.to_string()]);
+    /// let regexs = Some(vec![Lib::REGEX_SSN_DASHES.to_string()]);
+    /// let patterns = Some(vec![Lib::PTTRN_SSN_DASHES.to_string()]);
+    /// let dpi = DPI::with(words, regexs, patterns);
     ///     
-    /// assert_eq!(dpi.get_score("ssn".to_string()).points, 25.0);
+    /// println!("Using {} words and {} patterns for learning.", dpi.key_words.unwrap().len(), dpi.key_patterns.unwrap().len());
     /// ```
-    pub fn upsert_score(&mut self, score: Score) {
-        self.scores.insert(score.key_value.clone(), score);
+    pub fn with(
+        words: Option<KeyWordList>,
+        regexs: Option<KeyRegexList>,
+        patterns: Option<KeyPatternList>,
+    ) -> DPI {
+        if let Some(reg) = regexs.clone() {
+            if let Err(err) = Self::validate_regexs(reg) {
+                panic!("Bad Regex: {:?}", err);
+            }
+        }
+
+        DPI {
+            key_patterns: patterns,
+            key_regexs: regexs,
+            key_words: words,
+            scores: ScoreCard::new(),
+        }
+    }
+
+    /// Constructs a DPI object using a predefined set of key patterns to learn from
+    ///
+    /// # Arguments
+    ///
+    /// * patterns: KeyPatternList - A vector of patterns that are known identifiers for private data.</br>
+    ///
+    /// #Example
+    ///
+    /// ```rust
+    /// use pbd::dpi::DPI;
+    /// use pbd::dpi::reference::Lib;
+    ///
+    /// let patterns = vec![Lib::PTTRN_SSN_DASHES.to_string()];
+    /// let dpi = DPI::with_key_patterns(patterns);
+    ///     
+    /// println!("Using {} patterns for learning.", dpi.key_patterns.unwrap().len());
+    /// ```
+    pub fn with_key_patterns(patterns: KeyPatternList) -> DPI {
+        DPI {
+            key_patterns: Some(patterns),
+            key_regexs: None,
+            key_words: None,
+            scores: ScoreCard::new(),
+        }
+    }
+
+    /// Constructs a DPI object using a predefined set of key regular expressions to learn from
+    ///
+    /// # Arguments
+    ///
+    /// * regexs: KeyRegexList - A vector of Regex patterns that are known identifiers for private data.</br>
+    ///
+    /// #Example
+    ///
+    /// ```rust
+    /// use pbd::dpi::DPI;
+    /// use pbd::dpi::reference::Lib;
+    ///
+    /// let regexs = vec![Lib::REGEX_SSN_DASHES.to_string()];
+    /// let dpi = DPI::with_key_regexs(regexs);
+    ///     
+    /// println!("Using {} regexs for learning.", dpi.key_regexs.unwrap().len());
+    /// ```
+    pub fn with_key_regexs(regexs: KeyRegexList) -> DPI {
+        match Self::validate_regexs(regexs.clone()) {
+            Ok(_) => {}
+            Err(err) => {
+                panic!("Bad Regex: {:?}", err);
+            }
+        }
+
+        DPI {
+            key_patterns: None,
+            key_regexs: Some(regexs),
+            key_words: None,
+            scores: ScoreCard::new(),
+        }
     }
 
     fn word_to_pattern(word: String) -> String {
@@ -1929,6 +1942,55 @@ impl DPI {
         });
 
         rtn
+    }
+
+    /// Constructs a DPI object using a predefined set of key words to learn from
+    ///
+    /// # Arguments
+    ///
+    /// * words: KeyWordList - A vector of words that are known identifiers for private data.</br>
+    ///
+    /// #Example
+    ///
+    /// ```rust
+    /// extern crate pbd;
+    ///
+    /// use pbd::dpi::DPI;
+    /// use pbd::dpi::reference::Lib;
+    ///
+    /// let words = vec![Lib::TEXT_SSN_ABBR.to_string()];
+    /// let dpi = DPI::with_key_words(words);
+    ///     
+    /// println!("Using {} words for learning.", dpi.key_words.unwrap().len());
+    /// ```
+    pub fn with_key_words(words: KeyWordList) -> DPI {
+        DPI {
+            key_patterns: None,
+            key_regexs: None,
+            key_words: Some(words),
+            scores: ScoreCard::new(),
+        }
+    }
+
+    /// Update (if not exits then inserts) a Score object
+    ///
+    /// # Arguments
+    ///
+    /// * score: Score - The Score object to upsert.</br>
+    ///
+    /// #Example
+    ///
+    /// ```rust
+    /// use pbd::dpi::{DPI, Score, ScoreKey};
+    ///
+    /// let score = Score::new(ScoreKey::KeyWord, "ssn".to_string(), 25.0);
+    /// let mut dpi = DPI::new();
+    /// dpi.upsert_score(score);
+    ///     
+    /// assert_eq!(dpi.get_score("ssn".to_string()).points, 25.0);
+    /// ```
+    pub fn upsert_score(&mut self, score: Score) {
+        self.scores.insert(score.key_value.clone(), score);
     }
 
     /// Checks the list of regular expressions to make sure they are valid.
@@ -2121,7 +2183,7 @@ mod tests {
                 .to_string(),
         );
 
-        assert_eq!(score, 84.0);
+        assert_eq!(score, 16.0);
     }
 
     #[test]
@@ -2220,34 +2282,7 @@ mod tests {
 
         assert_eq!(returned_score.points, 25.0);
     }
-    /*
-        #[test]
-        fn test_dpi_inspect_with_training() {
-            let training_files = get_training_files();
-            let inspect_files = get_inspect_files();
-            let mut docs: Vec<String> = Vec::new();
-            let words = Some(vec![Lib::TEXT_ACCOUNT.to_string()]);
-            let patterns = Some(vec![
-                Lib::PTTRN_ACCOUNT_CAMEL.to_string(),
-                Lib::PTTRN_ACCOUNT_UPPER.to_string(),
-                Lib::PTTRN_ACCOUNT_LOWER.to_string(),
-            ]);
-            let regexs = Some(vec![Lib::REGEX_ACCOUNT.to_string()]);
-            let mut dpi = DPI::with(words, regexs, patterns);
 
-            for content in training_files.iter() {
-                docs.push(content.to_string());
-            }
-
-            let _applied = dpi.auto_train(docs);
-
-            for content in inspect_files.iter() {
-                println!("INSPECTED POINTS: {}", dpi.inspect(content.to_string()));
-            }
-
-            assert!(false);
-        }
-    */
     #[test]
     fn test_dpi_serialize_ok() {
         let serialized = "{\"key_patterns\":[\"###p##p####\"],\"key_regexs\":[\"^(?!b(d)1+-(d)1+-(d)1+b)(?!123-45-6789|219-09-9999|078-05-1120)(?!666|000|9d{2})d{3}-(?!00)d{2}-(?!0{4})d{4}$\"],\"key_words\":[\"ssn\"],\"scores\":{}}";
