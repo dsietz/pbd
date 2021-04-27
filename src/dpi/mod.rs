@@ -1198,7 +1198,22 @@ impl DPI {
             .len()
     }
 
-    fn convert_docs_to_frequency_count_docs(docs: Vec<String>) -> Vec<Vec<(String, usize)>> {
+    /// Converts list of document content to a list of frequency counts document lists
+    ///
+    /// # Arguments
+    ///
+    /// * docs: Vec<String> - The list of content to be converted.</br>
+    ///
+    /// #Example
+    ///
+    /// ```rust
+    /// use pbd::dpi::DPI;
+    ///
+    /// let docs = vec!["My ssn is 003-76-0098".to_string(),"Let me know if you need my son's ssn".to_string()];
+    ///     
+    /// println!("{:?}", DPI::convert_docs_to_frequency_count_docs(docs));
+    /// ```
+    pub fn convert_docs_to_frequency_count_docs(docs: Vec<String>) -> Vec<Vec<(String, usize)>> {
         struct TfIdfzr;
         impl Tfidf for TfIdfzr {}
 
@@ -1257,7 +1272,26 @@ impl DPI {
         }
     }
 
-    fn get_suggested_words_from_patterns(
+    /// Retrieve a list of suggested words to use for identifying private data based 
+    /// on the sample document content based on patterns
+    ///
+    /// # Arguments
+    ///
+    /// * key_patterns: Vec<String> - A list of patterns to use to seed the search for suggestions.</br>
+    /// * docs: Vec<String> - A list of content to use as the sample to find suggested identifying words.</br>
+    ///
+    /// #Example
+    ///
+    /// ```rust
+    /// use pbd::dpi::DPI;
+    /// use pbd::dpi::reference::Lib;
+    /// 
+    /// let patterns = vec![Lib::PTTRN_SSN_DASHES.to_string()];
+    /// let docs = vec!["My ssn is 003-76-0098".to_string(),"Let me know if you need my son's ssn".to_string()];
+    /// 
+    /// println!("{:?}",DPI::get_suggested_words_from_patterns(patterns, docs));
+    /// ```
+    pub fn get_suggested_words_from_patterns(
         key_patterns: Vec<String>,
         docs: Vec<String>,
     ) -> Vec<(String, f64)> {
@@ -1278,7 +1312,26 @@ impl DPI {
         rslts
     }
 
-    fn get_suggested_words_from_regexs(
+    /// Retrieve a list of suggested words to use for identifying private data based 
+    /// on the sample document content based on regex
+    ///
+    /// # Arguments
+    ///
+    /// * key_regexs: Vec<String> - A list of regex to use to seed the search for suggestions.</br>
+    /// * docs: Vec<String> - A list of content to use as the sample to find suggested identifying words.</br>
+    ///
+    /// #Example
+    ///
+    /// ```rust
+    /// use pbd::dpi::DPI;
+    /// use pbd::dpi::reference::Lib;
+    /// 
+    /// let regexs = vec![Lib::REGEX_SSN_DASHES.to_string()];
+    /// let docs = vec!["My ssn is 003-76-0098".to_string(),"Let me know if you need my son's ssn".to_string()];
+    /// 
+    /// println!("{:?}",DPI::get_suggested_words_from_regexs(regexs, docs));
+    /// ```
+    pub fn get_suggested_words_from_regexs(
         key_regexs: Vec<String>,
         docs: Vec<String>,
     ) -> Vec<(String, f64)> {
@@ -1300,7 +1353,26 @@ impl DPI {
         rslts
     }
 
-    fn get_suggested_words_from_words(
+    /// Retrieve a list of suggested words to use for identifying private data based 
+    /// on the sample document content based on key words
+    ///
+    /// # Arguments
+    ///
+    /// * key_words: Vec<String> - A list of key words to use to seed the search for suggestions.</br>
+    /// * docs: Vec<String> - A list of content to use as the sample to find suggested identifying words.</br>
+    ///
+    /// #Example
+    ///
+    /// ```rust
+    /// use pbd::dpi::DPI;
+    /// use pbd::dpi::reference::Lib;
+    /// 
+    /// let words = vec![Lib::TEXT_SSN_ABBR.to_string()];
+    /// let docs = vec!["My ssn is 003-76-0098".to_string(),"Let me know if you need my son's ssn".to_string()];
+    /// 
+    /// println!("{:?}",DPI::get_suggested_words_from_words(words, docs));
+    /// ```
+    pub fn get_suggested_words_from_words(
         key_words: Vec<String>,
         docs: Vec<String>,
     ) -> Vec<(String, f64)> {
