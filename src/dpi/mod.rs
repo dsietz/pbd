@@ -445,7 +445,6 @@ pub trait Tfidf {
 
 /// The collection of methods that enable a structure to tokenize and convert text to ngrams
 pub trait Tokenizer {
-
     /// Indicates if a char is one of the predefined delimiters that is used to spearate words
     ///
     /// # Arguments
@@ -1209,7 +1208,7 @@ impl DPI {
                 TfIdfzr::frequency_counts_as_vec(tokens)
             })
             .collect()
-    }    
+    }
 
     /// Constructs a DPI object from a serialized string
     ///
@@ -1258,7 +1257,6 @@ impl DPI {
         }
     }
 
-    
     fn get_suggested_words_from_patterns(
         key_patterns: Vec<String>,
         docs: Vec<String>,
@@ -1399,7 +1397,7 @@ impl DPI {
             scores: ScoreCard::new(),
         }
     }
-    
+
     fn push_suggestions(
         suggestions: Vec<String>,
         docs: Vec<Vec<(String, usize)>>,
@@ -1456,7 +1454,7 @@ impl DPI {
                 let idx_scope: Vec<i8> = vec![-2, -1, 1, 2];
                 for i in &idx_scope {
                     let t = match add(idx, *i) >= tokens.len() {
-                        true => tokens.len() -1,
+                        true => tokens.len() - 1,
                         false => add(idx, *i),
                     };
                     let word = tokens[t].clone();
@@ -1490,7 +1488,7 @@ impl DPI {
                 let idx_scope: Vec<i8> = vec![-2, -1, 1, 2];
                 for i in &idx_scope {
                     let t = match add(idx, *i) >= tokens.len() {
-                        true => tokens.len() -1,
+                        true => tokens.len() - 1,
                         false => add(idx, *i),
                     };
                     let word = tokens[t].clone();
@@ -1526,7 +1524,7 @@ impl DPI {
 
                     for i in &idx_scope {
                         let t = match add(idx, *i) >= tokens.len() {
-                            true => tokens.len() -1,
+                            true => tokens.len() - 1,
                             false => add(idx, *i),
                         };
                         let word = tokens[t].clone();
