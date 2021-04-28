@@ -12,10 +12,67 @@
 //!
 //! ### Usage
 //!
-//! #### Using the default logic
+//! #### Default logic
+//! You can start inspecting content for private data using the default logic.
+//!
+//! ```rust
+//! use pbd::dpi::DPI;
+//!
+//! let mut dpi = DPI::default();
+//! let doc = r#"
+//! Dear Aunt Bertha,
+//!
+//! I can't believe it has already been 10 years since we moved to back to the Colorado.
+//! I love Boulder and haven't thought of leaving since. So please don't worry when I tell you that we are moving in less than a week.
+//! We will be upgrading to a larger home on the other side of the city on Peak Crest Lane.
+//! It have a great view of the mountains and we will have a two car garage.
+//!
+//! We will have the same phone number, so you can still reach us. But our new address with be 1345 Peak Crest Lane Boulder, Colorado 125468.
+//!
+//! Let us know if you ever want to vist us.
+//!
+//! Sincerely,
+//! Robert
+//! "#.to_string();
+//!
+//! println!("Score: {}", dpi.inspect(doc));
+//! ```
 //!
 //! #### Custom logic
+//! You can also build you own custom DPI and then train it based upon sample content before using it to inspect documents.
 //!
+//! ```rust
+//! use pbd::dpi::DPI;
+//!
+//! let words = vec!["home".to_string(),"address".to_string()];
+//! let mut dpi = DPI::with_key_words(words);
+//!
+//! // train it
+//! let mut samples: Vec<String> = vec!["Our home has a garage".to_string(), "My address is 14 Main Stree Newtown CA 56743".to_string(), "My home phone number is (689) 225-9696".to_string()];
+//! let suggestions = dpi.auto_train(samples);
+//!
+//! println!("Training limit is {}", DPI::TRAIN_LIMIT);
+//! println!("Suggested words that were automatically applied during training: {:?}", suggestions);
+//!
+//! // use it
+//! let doc = r#"
+//! Dear Aunt Bertha,
+//!
+//! I can't believe it has already been 10 years since we moved to back to the Colorado.
+//! I love Boulder and haven't thought of leaving since. So please don't worry when I tell you that we are moving in less than a week.
+//! We will be upgrading to a larger home on the other side of the city on Peak Crest Lane.
+//! It have a great view of the mountains and we will have a two car garage.
+//!
+//! We will have the same phone number, so you can still reach us. But our new address with be 1345 Peak Crest Lane Boulder, Colorado 125468.
+//!
+//! Let us know if you ever want to vist us.
+//!
+//! Sincerely,
+//! Robert
+//! "#.to_string();
+//!
+//! println!("Score: {}", dpi.inspect(doc));
+//! ```
 
 /*
 ** REFERENCE MATERIAL
@@ -38,6 +95,9 @@ use regex::Regex;
 use std::cmp::Ordering;
 use std::collections::BTreeMap;
 use tfidf::{TfIdf, TfIdfDefault};
+
+use std::sync::mpsc::channel;
+use std::sync::Arc;
 
 const KEY_PATTERN_PNTS: f64 = 80_f64;
 const KEY_REGEX_PNTS: f64 = 90_f64;
@@ -1272,7 +1332,7 @@ impl DPI {
         }
     }
 
-    /// Retrieve a list of suggested words to use for identifying private data based 
+    /// Retrieve a list of suggested words to use for identifying private data based
     /// on the sample document content based on patterns
     ///
     /// # Arguments
@@ -1285,10 +1345,10 @@ impl DPI {
     /// ```rust
     /// use pbd::dpi::DPI;
     /// use pbd::dpi::reference::Lib;
-    /// 
+    ///
     /// let patterns = vec![Lib::PTTRN_SSN_DASHES.to_string()];
     /// let docs = vec!["My ssn is 003-76-0098".to_string(),"Let me know if you need my son's ssn".to_string()];
-    /// 
+    ///
     /// println!("{:?}",DPI::get_suggested_words_from_patterns(patterns, docs));
     /// ```
     pub fn get_suggested_words_from_patterns(
@@ -1312,7 +1372,7 @@ impl DPI {
         rslts
     }
 
-    /// Retrieve a list of suggested words to use for identifying private data based 
+    /// Retrieve a list of suggested words to use for identifying private data based
     /// on the sample document content based on regex
     ///
     /// # Arguments
@@ -1325,10 +1385,10 @@ impl DPI {
     /// ```rust
     /// use pbd::dpi::DPI;
     /// use pbd::dpi::reference::Lib;
-    /// 
+    ///
     /// let regexs = vec![Lib::REGEX_SSN_DASHES.to_string()];
     /// let docs = vec!["My ssn is 003-76-0098".to_string(),"Let me know if you need my son's ssn".to_string()];
-    /// 
+    ///
     /// println!("{:?}",DPI::get_suggested_words_from_regexs(regexs, docs));
     /// ```
     pub fn get_suggested_words_from_regexs(
@@ -1353,7 +1413,7 @@ impl DPI {
         rslts
     }
 
-    /// Retrieve a list of suggested words to use for identifying private data based 
+    /// Retrieve a list of suggested words to use for identifying private data based
     /// on the sample document content based on key words
     ///
     /// # Arguments
@@ -1366,10 +1426,10 @@ impl DPI {
     /// ```rust
     /// use pbd::dpi::DPI;
     /// use pbd::dpi::reference::Lib;
-    /// 
+    ///
     /// let words = vec![Lib::TEXT_SSN_ABBR.to_string()];
     /// let docs = vec!["My ssn is 003-76-0098".to_string(),"Let me know if you need my son's ssn".to_string()];
-    /// 
+    ///
     /// println!("{:?}",DPI::get_suggested_words_from_words(words, docs));
     /// ```
     pub fn get_suggested_words_from_words(
@@ -1394,41 +1454,93 @@ impl DPI {
         rslts
     }
 
+    /// Inspects a document for private data and returns a score based on its findings.
+    ///
+    /// # Arguments
+    ///
+    /// * doc: String - Content to inspect for private data.</br>
+    ///
+    /// #Example
+    ///
+    /// ```rust
+    /// use pbd::dpi::DPI;
+    ///
+    /// let mut dpi = DPI::default();
+    /// let doc = "My ssn is 003-76-0098. Let me know if you need my son's ssn as well.".to_string();
+    ///
+    /// println!("Score: {}", dpi.inspect(doc));
+    /// ```
     pub fn inspect(&mut self, doc: String) -> f64 {
-        // tokenize the doc
-        let tokens = Self::tokenize(doc);
         let mut possible_pnts = 0.00;
         let mut pnts = 0.00;
+        let (sender, receiver) = channel();
+        let sender2 = sender.clone();
+        let sender3 = sender.clone();
+        let doc2 = doc.clone();
+        let doc3 = doc.clone();
+        let dpiarc = Arc::<&DPI>::new(&self);
+        let self1 = Arc::clone(&dpiarc);
+        let self2 = Arc::clone(&dpiarc);
+        let self3 = Arc::clone(&dpiarc);
 
-        // get scores
-        if self.key_patterns.is_some() {
-            let found_patterns =
-                Self::inspect_for_patterns(self.key_patterns.clone().unwrap(), tokens.clone());
-            debug!("FOUND PATTERNS:{:?}", found_patterns);
-            pnts += found_patterns.len() as f64 * KEY_PATTERN_PNTS;
-            possible_pnts += self.key_patterns.clone().unwrap().len() as f64 * KEY_PATTERN_PNTS;
-        }
+        rayon::scope(|s| {
+            s.spawn(move |_| {
+                if self1.key_patterns.is_some() {
+                    let tokens = DPI::tokenize(doc);
+                    let mut possible_pnts = 0.00;
+                    let mut pnts = 0.00;
+                    let found_patterns = DPI::inspect_for_patterns(
+                        self1.key_patterns.clone().unwrap(),
+                        tokens.clone(),
+                    );
+                    debug!("FOUND PATTERNS:{:?}", found_patterns);
+                    pnts += found_patterns.len() as f64 * KEY_PATTERN_PNTS;
+                    possible_pnts +=
+                        self1.key_patterns.clone().unwrap().len() as f64 * KEY_PATTERN_PNTS;
+                    sender.send((pnts, possible_pnts)).unwrap();
+                }
+            });
 
-        if self.key_regexs.is_some() {
-            let found_regexs =
-                Self::inspect_for_regexs(self.key_regexs.clone().unwrap(), tokens.clone());
-            debug!("FOUND PATTERNS:{:?}", found_regexs);
-            pnts += found_regexs.len() as f64 * KEY_REGEX_PNTS;
-            possible_pnts += self.key_regexs.clone().unwrap().len() as f64 * KEY_REGEX_PNTS;
-        }
+            s.spawn(move |_| {
+                if self2.key_regexs.is_some() {
+                    let tokens = DPI::tokenize(doc2);
+                    let mut possible_pnts = 0.00;
+                    let mut pnts = 0.00;
+                    let found_regexs =
+                        DPI::inspect_for_regexs(self2.key_regexs.clone().unwrap(), tokens.clone());
+                    debug!("FOUND PATTERNS:{:?}", found_regexs);
+                    pnts += found_regexs.len() as f64 * KEY_REGEX_PNTS;
+                    possible_pnts +=
+                        self2.key_regexs.clone().unwrap().len() as f64 * KEY_REGEX_PNTS;
+                    sender2.send((pnts, possible_pnts)).unwrap();
+                }
+            });
 
-        if self.key_words.is_some() {
-            let found_words = Self::inspect_for_words(self.key_words.clone().unwrap(), tokens);
-            debug!("FOUND PATTERNS:{:?}", found_words);
-            pnts += found_words.len() as f64 * KEY_WORD_PNTS;
-            possible_pnts += self.key_words.clone().unwrap().len() as f64 * KEY_WORD_PNTS;
+            s.spawn(move |_| {
+                if self3.key_words.is_some() {
+                    let tokens = DPI::tokenize(doc3);
+                    let mut possible_pnts = 0.00;
+                    let mut pnts = 0.00;
+                    let found_words =
+                        DPI::inspect_for_words(self3.key_words.clone().unwrap(), tokens);
+                    debug!("FOUND PATTERNS:{:?}", found_words);
+                    pnts += found_words.len() as f64 * KEY_WORD_PNTS;
+                    possible_pnts += self3.key_words.clone().unwrap().len() as f64 * KEY_WORD_PNTS;
+                    sender3.send((pnts, possible_pnts)).unwrap();
+                }
+            });
+        });
+
+        for _ in 0..3 {
+            let rslts = receiver.recv().unwrap();
+            pnts += rslts.0;
+            possible_pnts += rslts.1;
         }
 
         // get percentage score (score / possible score)
         ((pnts / possible_pnts) * 100.0).round()
     }
 
-    // only return list of patterns found within tokens
     fn inspect_for_patterns(patterns: Vec<String>, tokens: Vec<String>) -> Vec<String> {
         patterns
             .par_iter()
@@ -2170,20 +2282,6 @@ mod tests {
             "renewal_notification.txt",
             "statement_ready_notification.txt",
         ];
-        let mut docs: Vec<String> = Vec::new();
-
-        for file in files.iter() {
-            docs.push(
-                fs::read_to_string(format!("./tests/dpi/{}", file))
-                    .expect("File could not be read."),
-            );
-        }
-
-        docs
-    }
-
-    fn get_inspect_files() -> Vec<String> {
-        let files = vec!["personal_letter.txt"];
         let mut docs: Vec<String> = Vec::new();
 
         for file in files.iter() {
