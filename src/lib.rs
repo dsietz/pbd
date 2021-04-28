@@ -39,10 +39,34 @@ extern crate serde_json;
 #[allow(dead_code)]
 fn add(u: usize, i: i8) -> usize {
     if i.is_negative() {
-        u - i.wrapping_abs() as u8 as usize
+        match u >= i.wrapping_abs() as usize {
+            true => u - i.wrapping_abs() as u8 as usize,
+            false => u,
+        }
     } else {
         u + i as usize
     }
+}
+
+/// Takes a list of &str and returns a list of String
+///
+/// # Arguments
+///
+/// * list: Vec<&str> - The list of &str to convert to String.</br>
+///
+/// #Example
+///
+/// ```rust
+/// use pbd::to_vec_string;
+///
+/// assert_eq!(
+///     to_vec_string(vec!["one", "two", "three"]),
+///     vec!["one".to_string(), "two".to_string(), "three".to_string()]
+/// );
+/// ```
+#[allow(dead_code)]
+pub fn to_vec_string(list: Vec<&str>) -> Vec<String> {
+    list.iter().map(|s| s.to_string()).collect()
 }
 
 // Modules
@@ -65,5 +89,13 @@ mod tests {
         let x: usize = 2;
         let y: i8 = -1;
         assert_eq!(add(x, y), 1);
+    }
+
+    #[test]
+    fn test_to_vec_string() {
+        assert_eq!(
+            to_vec_string(vec!["one", "two", "three"]),
+            vec!["one".to_string(), "two".to_string(), "three".to_string()]
+        );
     }
 }

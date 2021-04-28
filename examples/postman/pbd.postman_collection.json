@@ -18,10 +18,42 @@
 					},
 					{
 						"key": "Data-Usage-Agreement",
-						"value": "[{\"agreement_name\":\"billing\",\"location\":\"www.dua.org/billing.pdf\",\"agreed_dtm\": 1553988607}]",
+						"value": "[{\"agreement_name\":\"billing\",\"location\":\"https://github.com/dsietz/pbd/blob/master/tests/duas/Patient%20Data%20Use%20Agreement.pdf\",\"agreed_dtm\": 1553988607}]",
 						"type": "text"
 					}
 				],
+				"url": {
+					"raw": "http://localhost:8088",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8088"
+				},
+				"description": "Make a call to a service that requires a Data-Usage-Agreement header"
+			},
+			"response": []
+		},
+		{
+			"name": "example data-privacy-inspector",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"type": "text",
+						"value": "plain/text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "Dear Aunt Bertha,\r\n\r\nI can't believe it has already been 10 years since we moved to back to the Colorado. \r\nI love Boulder and haven't thought of leaving since. So please don't worry when I tell you that we are moving in less than a week.\r\nWe will be upgrading to a larger home on the other side of the city on Peak Crest Lane. \r\nIt have a great view of the mountains and we will have a two car garage.\r\n\r\nWe will have the same phone number, so you can still reach us. But our new address with be 1345 Peak Crest Lane Boulder, Colorado 125468.\r\n\r\nLet us know if you ever want to vist us. \r\n\r\nSincerely,\r\nRobert",
+					"options": {
+						"raw": {
+							"language": "text"
+						}
+					}
+				},
 				"url": {
 					"raw": "http://localhost:8088",
 					"protocol": "http",
@@ -90,6 +122,5 @@
 			},
 			"response": []
 		}
-	],
-	"protocolProfileBehavior": {}
+	]
 }
