@@ -1,5 +1,6 @@
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![Coverage Status](https://coveralls.io/repos/github/dsietz/pbd/badge.svg?branch=master)](https://coveralls.io/github/dsietz/pbd?branch=master)
+[![Discussions](https://img.shields.io/github/discussions/dsietz/pbd)](https://github.com/dsietz/pbd/discussions)
 [![Docs.rs](https://docs.rs/pbd/badge.svg)](https://docs.rs/pbd)
 
 Linux: [![Build Status](https://github.com/dsietz/pbd/workflows/Master/badge.svg)](https://github.com/dsietz/pbd/actions?query=workflow%3AMaster)
@@ -22,9 +23,9 @@ For software development teams who implement Privacy by Design practices, this P
 
 ## What's New
 
-Here's whats new in 0.4.0:
+Here's whats new in 0.4.1:
 
-We've added a new feature to our SDK - the Data Privacy Inspector!
+We've performed minor upgrades of the versions of our dependencies in order to keep up with their latest versions.
 
 ## Features
 
