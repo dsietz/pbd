@@ -2,12 +2,12 @@ environment:
   matrix:
   - TARGET: x86_64-pc-windows-msvc
     BITS: 64
-    OPENSSL_VERSION: 1_1_1k
+    OPENSSL_VERSION: 1_1_1L
     OPENSSL_DIR: C:\OpenSSL
     CHANNEL: stable
   - TARGET: i686-pc-windows-msvc
     BITS: 32
-    OPENSSL_VERSION: 1_1_1k
+    OPENSSL_VERSION: 1_1_1L
     OPENSSL_DIR: C:\OpenSSL
     CHANNEL: stable 
   RUST_BACKTRACE: full
