@@ -66,9 +66,8 @@
 #![allow(clippy::complexity)]
 use super::*;
 use crate::dua::extractor::actix::DUAs;
-use actix_service::{Service, Transform};
-use actix_web::dev::{ServiceRequest, ServiceResponse};
-use actix_web::{Error, HttpResponse};
+use actix_web::dev::{Response, ServiceRequest, ServiceResponse, Service, Transform};
+use actix_web::{Error};
 use futures::future::{ok, Either, Ready};
 use rayon::prelude::*;
 use reqwest::StatusCode;
@@ -100,13 +99,12 @@ impl Default for DUAEnforcer {
 }
 
 // `B` - type of response's body
-impl<S, B> Transform<S> for DUAEnforcer
+impl<S, B> Transform<S, ServiceRequest> for DUAEnforcer
 where
-    S: Service<Request = ServiceRequest, Response = ServiceResponse<B>, Error = Error>,
+    S: Service<ServiceRequest, Response = ServiceResponse<B>, Error = Error>,
     S::Future: 'static,
     B: 'static,
 {
-    type Request = ServiceRequest;
     type Response = ServiceResponse<B>;
     type Error = Error;
     type InitError = ();
@@ -126,22 +124,21 @@ pub struct DUAEnforcerMiddleware<S> {
     validation_level: u8,
 }
 
-impl<S, B> Service for DUAEnforcerMiddleware<S>
+impl<S, B> Service<ServiceRequest> for DUAEnforcerMiddleware<S>
 where
-    S: Service<Request = ServiceRequest, Response = ServiceResponse<B>, Error = Error>,
+    S: Service<ServiceRequest, Response = ServiceResponse<B>, Error = Error>,
     S::Future: 'static,
     B: 'static,
 {
-    type Request = ServiceRequest;
     type Response = ServiceResponse<B>;
     type Error = Error;
     type Future = Either<S::Future, Ready<Result<ServiceResponse<B>, Self::Error>>>;
 
-    fn poll_ready(&mut self, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
+    fn poll_ready(&self, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
         self.service.poll_ready(cx)
     }
 
-    fn call(&mut self, req: ServiceRequest) -> Self::Future {
+    fn call(&self, req: ServiceRequest) -> Self::Future {
         debug!("VALIDATION LEVEL: {}", self.validation_level);
 
         if self.validation_level == VALIDATION_NONE {
@@ -186,16 +183,15 @@ where
                     }
                 }
 
-                if valid_ind {
-                    Either::Left(self.service.call(req))
-                } else {
-                    Either::Right(ok(
-                        req.into_response(HttpResponse::BadRequest().finish().into_body())
+                match valid_ind {
+                    true => Either::Left(self.service.call(req)),
+                    false => Either::Right(ok(
+                        req.into_response(Response::bad_request().into())
                     ))
                 }
             }
             None => Either::Right(ok(
-                req.into_response(HttpResponse::BadRequest().finish().into_body())
+                req.into_response(Response::bad_request().into())
             )),
         }
     }
@@ -205,17 +201,25 @@ where
 mod tests {
     use super::*;
     use actix_web::http::StatusCode;
-    use actix_web::{http, test, web, App, HttpRequest, HttpResponse};
+    use actix_web::{
+        http, 
+        http::header::ContentType, 
+        test, 
+        web, 
+        App, 
+        HttpRequest, 
+        HttpResponse
+    };
 
     // supporting functions
-    fn index_middleware_dua(_req: HttpRequest) -> HttpResponse {
+    async fn index_middleware_dua(_req: HttpRequest) -> HttpResponse {
         HttpResponse::Ok()
             .header(http::header::CONTENT_TYPE, "application/json")
             .body(r#"{"status":"Ok"}"#)
     }
 
     #[test]
-    fn test_add_middleware() {
+    async fn test_add_middleware() {
         let _app = App::new()
             .wrap(DUAEnforcer::default())
             .service(web::resource("/").route(web::get().to(index_middleware_dua)));
@@ -308,7 +312,7 @@ mod tests {
     }
 
     #[test]
-    fn test_dua_default_validation_level() {
+    async fn test_dua_default_validation_level() {
         let dflt = DUAEnforcer::default();
         assert_eq!(dflt.validation_level, 1);
     }
@@ -322,8 +326,11 @@ mod tests {
         )
         .await;
         let req = test::TestRequest::post().uri("/")
-            .header("content-type", "application/json")
-            .header(DUA_HEADER, r#"[{"agreement_name":"patient data use","location":"https://github.com/dsietz/pbd/blob/master/tests/duas/Patient%20Data%20Use%20Agreement.pdf","agreed_dtm": 1553988607}]"#)
+            .insert_header(ContentType::json())
+            .insert_header(
+                (DUA_HEADER, 
+                r#"[{"agreement_name":"patient data use","location":"https://github.com/dsietz/pbd/blob/master/tests/duas/Patient%20Data%20Use%20Agreement.pdf","agreed_dtm": 1553988607}]"#)
+                )
             .to_request();
         let resp = test::call_service(&mut app, req).await;
 

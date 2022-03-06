@@ -128,7 +128,7 @@ impl Default for DUAs {
 }
 
 impl FromRequest for DUAs {
-    type Config = ();
+    // type Config = ();
     type Future = Ready<Result<Self, Self::Error>>;
     type Error = LocalError;
     // convert request to future self
