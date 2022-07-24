@@ -66,10 +66,11 @@
 use super::*;
 use crate::dtc::extractor::actix::TrackerHeader;
 use crate::dtc::Tracker;
-use actix_web::dev::{Response, ServiceRequest, ServiceResponse, Service, Transform};
-use actix_web::{Error};
+use actix_web::dev::{forward_ready, Response, ServiceRequest, ServiceResponse, Service, Transform};
+use actix_web::{Error, HttpResponse};
+use actix_web::http::header::ContentType;
 use futures::future::{ok, Either, Ready};
-use std::task::{Context, Poll};
+// use std::task::{Context, Poll};
 
 #[derive(Clone)]
 pub struct DTCEnforcer {
@@ -125,11 +126,13 @@ where
 {
     type Response = ServiceResponse<B>;
     type Error = Error;
-    type Future = Either<S::Future, Ready<Result<ServiceResponse<B>, Self::Error>>>;
+    type Future = Either<S::Future, Ready<Result<Self::Response, Self::Error>>>;
 
-    fn poll_ready(&self, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
-        self.service.poll_ready(cx)
-    }
+    // fn poll_ready(&self, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
+    //     self.service.poll_ready(cx)
+    // }
+
+    forward_ready!(service);
 
     fn call(&self, req: ServiceRequest) -> Self::Future {
         debug!("VALIDATION LEVEL: {}", self.validation_level);
@@ -140,38 +143,48 @@ where
 
         match req.headers().get(DTC_HEADER) {
             Some(header_value) => {
-                let mut valid_ind: bool = false;
-
-                match Tracker::tracker_from_header_value(header_value) {
+                let mut valid_ind: bool = match Tracker::tracker_from_header_value(header_value) {
                     Ok(tracker) => {
                         // Level 1 Validation: Check to see if there are DTC is provided
-                        if self.validation_level >= VALIDATION_LOW {
-                            valid_ind = true;
-                        }
-
-                        // Level 2 Validation: Check to see if the DUAs provided are valid ones
-                        if valid_ind && self.validation_level >= VALIDATION_HIGH {
-                            if !tracker.is_valid() {
-                                warn!("{}", crate::dtc::error::Error::BadDTC);
-                                valid_ind = false;
-                            } else {
-                                valid_ind = true;
+                        match self.validation_level >= VALIDATION_LOW {
+                            true => {
+                                // Level 2 Validation: Check to see if the DUAs provided are valid ones
+                                match self.validation_level >= VALIDATION_HIGH {
+                                    true => {
+                                        match !tracker.is_valid() {
+                                            true => {
+                                                warn!("{}", crate::dtc::error::Error::BadDTC);
+                                                false
+                                            },
+                                            false => true,
+                                        }
+                                    },
+                                    false => true,
+                                }
                             }
+                            false => false,
                         }
-
-                        match valid_ind {
-                            true => Either::Left(self.service.call(req)),
-                            false => Either::Right(ok(
-                                req.into_response(Response::bad_request().into())
-                            ))
-                        }
-                    }
+                    },
                     Err(e) => {
                         warn!("{}", e);
-                        Either::Right(ok(
+                        false
+                    }
+                };
+
+                match valid_ind {
+                    true => {
+                        Either::Left(self.service.call(req))
+                    },
+                    false => {
+                        let (request, _pl) = req.into_parts();
+                        let response = HttpResponse::BadRequest()
+                            .insert_header(ContentType::json())
+                            .finish();
+                        Either::Right(ok(                            
+                            // req.into_response(ServiceResponse::new(request, response))
                             req.into_response(Response::bad_request().into())
                         ))
-                    }
+                    },
                 }
             }
             None => Either::Right(ok(
@@ -180,6 +193,32 @@ where
         }
     }
 }
+
+/**
+                         match valid_ind {
+                            true => Either::Left(self.service.call(req)),
+                            false => {
+                                let (request, _pl) = req.into_parts();
+                                let response = HttpResponse::BadRequest()
+                .insert_header(ContentType::json())
+                // .body("Bad Request");
+                .finish();
+                // constructed responses map to "right" body
+                // .map_into_right_body();
+                                    Either::Right(ok(
+                                    // req.into_response(ServiceResponse::new(request, response))
+                                    ServiceResponse::new(request, response)
+                                    // req.into_response(Response::bad_request().into())
+                                ))
+                            }
+                        }
+
+
+                        Either::Right(ok(
+                            req.into_response(Response::bad_request().into())
+                        ))
+ * 
+ */
 
 pub struct DTCEnforcerMiddleware<S> {
     service: S,

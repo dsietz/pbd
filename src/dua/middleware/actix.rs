@@ -202,7 +202,6 @@ mod tests {
     use super::*;
     use actix_web::http::StatusCode;
     use actix_web::{
-        http, 
         http::header::ContentType, 
         test, 
         web, 
@@ -214,7 +213,7 @@ mod tests {
     // supporting functions
     async fn index_middleware_dua(_req: HttpRequest) -> HttpResponse {
         HttpResponse::Ok()
-            .header(http::header::CONTENT_TYPE, "application/json")
+            .insert_header(ContentType::json())
             .body(r#"{"status":"Ok"}"#)
     }
 
@@ -237,7 +236,7 @@ mod tests {
         .await;
         let req = test::TestRequest::post()
             .uri("/")
-            .header("content-type", "application/json")
+            .insert_header(ContentType::json())
             .to_request();
         let resp = test::call_service(&mut app, req).await;
         assert_eq!(resp.status(), StatusCode::OK);
@@ -252,8 +251,9 @@ mod tests {
         )
         .await;
         let req = test::TestRequest::post().uri("/")
-            .header("content-type", "application/json")
-            .header(DUA_HEADER, r#"[{"agreement_name":"patient data use","location":"https://github.com/dsietz/pbd/blob/master/tests/duas/Patient%20Data%20Use%20Agreement.pdf","agreed_dtm": 1553988607}]"#)
+            .insert_header(ContentType::json())
+            .insert_header((DUA_HEADER, 
+                r#"[{"agreement_name":"patient data use","location":"https://github.com/dsietz/pbd/blob/master/tests/duas/Patient%20Data%20Use%20Agreement.pdf","agreed_dtm": 1553988607}]"#))
             .to_request();
         let resp = test::call_service(&mut app, req).await;
 
@@ -270,8 +270,8 @@ mod tests {
         .await;
         let req = test::TestRequest::post()
             .uri("/")
-            .header("content-type", "application/json")
-            .header(DUA_HEADER, r#"[]"#)
+            .insert_header(ContentType::json())
+            .insert_header((DUA_HEADER, r#"[]"#))
             .to_request();
         let resp = test::call_service(&mut app, req).await;
 
@@ -287,8 +287,9 @@ mod tests {
         )
         .await;
         let req = test::TestRequest::post().uri("/")
-            .header("content-type", "application/json")
-            .header(DUA_HEADER, r#"[{"agreement_name":"patient data use","location":"https://example.com/invalid.pdf","agreed_dtm": 1553988607},{"agreement_name":"patient data use","location":"https://github.com/dsietz/pbd/blob/master/tests/duas/Patient%20Data%20Use%20Agreement.pdf","agreed_dtm": 1553988607}]"#)
+            .insert_header(ContentType::json())
+            .insert_header((DUA_HEADER, 
+                r#"[{"agreement_name":"patient data use","location":"https://example.com/invalid.pdf","agreed_dtm": 1553988607},{"agreement_name":"patient data use","location":"https://github.com/dsietz/pbd/blob/master/tests/duas/Patient%20Data%20Use%20Agreement.pdf","agreed_dtm": 1553988607}]"#))
             .to_request();
         let resp = test::call_service(&mut app, req).await;
 
@@ -305,7 +306,7 @@ mod tests {
         .await;
         let req = test::TestRequest::post()
             .uri("/")
-            .header("content-type", "application/json")
+            .insert_header(ContentType::json())
             .to_request();
         let resp = test::call_service(&mut app, req).await;
         assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
@@ -347,8 +348,8 @@ mod tests {
         .await;
         let req = test::TestRequest::post()
             .uri("/")
-            .header("content-type", "application/json")
-            .header(DUA_HEADER, r#"[]"#)
+            .insert_header(ContentType::json())
+            .insert_header((DUA_HEADER, r#"[]"#))
             .to_request();
         let resp = test::call_service(&mut app, req).await;
 
@@ -364,8 +365,9 @@ mod tests {
         )
         .await;
         let req = test::TestRequest::post().uri("/")
-            .header("content-type", "application/json")
-            .header(DUA_HEADER, r#"[{"agreement_name":"patient data use","location":"https://example.com/invalid.pdf","agreed_dtm": 1553988607},{"agreement_name":"patient data use","location":"https://github.com/dsietz/pbd/blob/master/tests/duas/Patient%20Data%20Use%20Agreement.pdf","agreed_dtm": 1553988607}]"#)
+            .insert_header(ContentType::json())
+            .insert_header((DUA_HEADER, 
+                r#"[{"agreement_name":"patient data use","location":"https://example.com/invalid.pdf","agreed_dtm": 1553988607},{"agreement_name":"patient data use","location":"https://github.com/dsietz/pbd/blob/master/tests/duas/Patient%20Data%20Use%20Agreement.pdf","agreed_dtm": 1553988607}]"#))
             .to_request();
         let resp = test::call_service(&mut app, req).await;
 
@@ -382,7 +384,7 @@ mod tests {
         .await;
         let req = test::TestRequest::post()
             .uri("/")
-            .header("content-type", "application/json")
+            .insert_header(ContentType::json())
             .to_request();
         let resp = test::call_service(&mut app, req).await;
         assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
@@ -397,8 +399,9 @@ mod tests {
         )
         .await;
         let req = test::TestRequest::post().uri("/")
-            .header("content-type", "application/json")
-            .header(DUA_HEADER, r#"[{"agreement_name":"patient data use","location":"https://github.com/dsietz/pbd/blob/master/tests/duas/Patient%20Data%20Use%20Agreement.pdf","agreed_dtm": 1553988607}]"#)
+            .insert_header(ContentType::json())
+            .insert_header((DUA_HEADER, 
+                r#"[{"agreement_name":"patient data use","location":"https://github.com/dsietz/pbd/blob/master/tests/duas/Patient%20Data%20Use%20Agreement.pdf","agreed_dtm": 1553988607}]"#))
             .to_request();
         let resp = test::call_service(&mut app, req).await;
 
@@ -415,8 +418,8 @@ mod tests {
         .await;
         let req = test::TestRequest::post()
             .uri("/")
-            .header("content-type", "application/json")
-            .header(DUA_HEADER, r#"[]"#)
+            .insert_header(ContentType::json())
+            .insert_header((DUA_HEADER, r#"[]"#))
             .to_request();
         let resp = test::call_service(&mut app, req).await;
 
@@ -432,8 +435,9 @@ mod tests {
         )
         .await;
         let req = test::TestRequest::post().uri("/")
-            .header("content-type", "application/json")
-            .header(DUA_HEADER, r#"[{"agreement_name":"patient data use","location":"https://example.com/invalid.pdf","agreed_dtm": 1553988607},{"agreement_name":"patient data use","location":"https://github.com/dsietz/pbd/blob/master/tests/duas/Patient%20Data%20Use%20Agreement.pdf","agreed_dtm": 1553988607}]"#)
+            .insert_header(ContentType::json())
+            .insert_header((DUA_HEADER, 
+                r#"[{"agreement_name":"patient data use","location":"https://example.com/invalid.pdf","agreed_dtm": 1553988607},{"agreement_name":"patient data use","location":"https://github.com/dsietz/pbd/blob/master/tests/duas/Patient%20Data%20Use%20Agreement.pdf","agreed_dtm": 1553988607}]"#))
             .to_request();
         let resp = test::call_service(&mut app, req).await;
 
@@ -450,7 +454,7 @@ mod tests {
         .await;
         let req = test::TestRequest::post()
             .uri("/")
-            .header("content-type", "application/json")
+            .insert_header(ContentType::json())
             .to_request();
         let resp = test::call_service(&mut app, req).await;
         assert_eq!(resp.status(), StatusCode::BAD_REQUEST);

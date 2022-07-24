@@ -141,24 +141,25 @@ impl FromRequest for DUAs {
 mod tests {
     use super::*;
     use actix_web::http::StatusCode;
-    use actix_web::{http, test, web, App, HttpRequest, HttpResponse};
+    use actix_web::http::header::ContentType;
+    use actix_web::{test, web, App, HttpRequest, HttpResponse};
 
     // supporting functions
-    fn index_extract_dua(duas: DUAs, _req: HttpRequest) -> HttpResponse {
+    async fn index_extract_dua(duas: DUAs, _req: HttpRequest) -> HttpResponse {
         if duas.vec().len() > 0 {
             return HttpResponse::Ok()
-                .header(http::header::CONTENT_TYPE, "application/json")
+                .insert_header(ContentType::json())
                 .body(format!("{}", duas));
         } else {
             return HttpResponse::BadRequest()
-                .header(http::header::CONTENT_TYPE, "application/json")
+            .insert_header(ContentType::json())
                 .body(format!("{}", LocalError::BadDUA));
         }
     }
 
     // tests
     #[test]
-    fn test_http_header_name() {
+    async fn test_http_header_name() {
         assert_eq!(DUA_HEADER, "Data-Usage-Agreement");
     }
 
@@ -167,8 +168,8 @@ mod tests {
         let mut app =
             test::init_service(App::new().route("/", web::get().to(index_extract_dua))).await;
         let req = test::TestRequest::get().uri("/")
-            .header("content-type", "application/json")
-            .header(DUA_HEADER, r#"[{"agreement_name":"billing","location":"www.dua.org/billing.pdf","agreed_dtm": 1553988607}]"#)
+            .insert_header(ContentType::json())
+            .insert_header((DUA_HEADER, r#"[{"agreement_name":"billing","location":"www.dua.org/billing.pdf","agreed_dtm": 1553988607}]"#))
             .to_request();
         let resp = test::call_service(&mut app, req).await;
         assert_eq!(resp.status(), StatusCode::OK);
@@ -179,8 +180,11 @@ mod tests {
         let mut app =
             test::init_service(App::new().route("/", web::get().to(index_extract_dua))).await;
         let req = test::TestRequest::get().uri("/")
-            .header("content-type", "application/json")
-            .header(DUA_HEADER, r#"[{"agreement_name":"billing""location":"www.dua.org/billing.pdf","agreed_dtm": 1553988607}]"#)
+            .insert_header(ContentType::json())
+            .insert_header(
+                (DUA_HEADER, 
+                r#"[{"agreement_name":"billing""location":"www.dua.org/billing.pdf","agreed_dtm": 1553988607}]"#)
+            )
             .to_request();
         let resp = test::call_service(&mut app, req).await;
         assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
@@ -192,7 +196,7 @@ mod tests {
             test::init_service(App::new().route("/", web::get().to(index_extract_dua))).await;
         let req = test::TestRequest::get()
             .uri("/")
-            .header("content-type", "application/json")
+            .insert_header(ContentType::json())
             .to_request();
         let resp = test::call_service(&mut app, req).await;
         assert_eq!(resp.status(), StatusCode::BAD_REQUEST);

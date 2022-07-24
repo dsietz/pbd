@@ -2,6 +2,7 @@ extern crate actix_web;
 extern crate pbd;
 
 use actix_web::{http, web, App, Error, HttpResponse, HttpServer};
+use actix_web::http::header::ContentType;
 use futures::StreamExt;
 use pbd::dpi::DPI;
 
@@ -19,7 +20,7 @@ async fn index(mut body: web::Payload) -> Result<HttpResponse, Error> {
     );
 
     return Ok(HttpResponse::Ok()
-        .header(http::header::CONTENT_TYPE, "plain/text")
+        .insert_header(ContentType::plaintext())
         .body(r#"Hello World!"#));
 }
 

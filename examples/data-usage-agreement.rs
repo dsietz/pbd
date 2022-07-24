@@ -2,6 +2,7 @@ extern crate actix_web;
 extern crate pbd;
 
 use actix_web::{http, web, App, HttpRequest, HttpResponse, HttpServer};
+use actix_web::http::header::ContentType;
 use pbd::dua::extractor::actix::*;
 use pbd::dua::middleware::actix::*;
 
@@ -11,7 +12,7 @@ async fn index(duas: DUAs, _req: HttpRequest) -> HttpResponse {
     }
 
     HttpResponse::Ok()
-        .header(http::header::CONTENT_TYPE, "plain/text")
+        .insert_header(ContentType::plaintext())
         .body(r#"Hello World!"#)
 }
 

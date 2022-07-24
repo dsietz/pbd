@@ -123,11 +123,17 @@ impl FromRequest for Tracker {
     }
 }
 
+#[derive(Serialize)]
+struct TrackerHandler {
+    name: &'static str,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use actix_web::http::StatusCode;
-    use actix_web::{http, test, web, App, HttpRequest, HttpResponse};
+    use actix_web::http::header::ContentType;
+    use actix_web::{test, web, App, HttpRequest, HttpResponse};
     use bytes::Bytes;
 
     // supporting functions
@@ -137,21 +143,21 @@ mod tests {
         )
     }
 
-    fn index(_req: HttpRequest) -> HttpResponse {
+    async fn index(_req: HttpRequest) -> HttpResponse {
         return HttpResponse::Ok()
-            .header(http::header::CONTENT_TYPE, "application/json")
+            .insert_header(ContentType::json())
             .body(r#"Ok"#);
     }
 
-    fn index_extract_dtc(tracker: Tracker, _req: HttpRequest) -> HttpResponse {
+    async fn index_extract_dtc(tracker: Tracker, _req: HttpRequest) -> HttpResponse {
         return HttpResponse::Ok()
-            .header(http::header::CONTENT_TYPE, "application/json")
+            .insert_header(ContentType::json())
             .body(format!("{:?}", tracker));
     }
 
     // tests
     #[test]
-    fn test_http_header_name() {
+    async fn test_http_header_name() {
         assert_eq!(DTC_HEADER, "Data-Tracker-Chain");
     }
 
@@ -161,8 +167,8 @@ mod tests {
             test::init_service(App::new().route("/", web::get().to(index_extract_dtc))).await;
         let req = test::TestRequest::get()
             .uri("/")
-            .header("content-type", "application/json")
-            .header(DTC_HEADER, get_dtc_header())
+            .insert_header(ContentType::json())
+            .insert_header((DTC_HEADER, get_dtc_header()))
             .to_request();
         let resp = test::call_service(&mut app, req).await;
         assert_eq!(resp.status(), StatusCode::OK);
@@ -174,7 +180,7 @@ mod tests {
             test::init_service(App::new().route("/", web::get().to(index_extract_dtc))).await;
         let req = test::TestRequest::get()
             .uri("/")
-            .header("content-type", "application/json")
+            .insert_header(ContentType::json())
             .to_request();
         let resp = test::call_service(&mut app, req).await;
         assert_eq!(resp.status(), StatusCode::INTERNAL_SERVER_ERROR);
@@ -188,7 +194,7 @@ mod tests {
         let mut app = test::init_service(App::new().route("/", web::get().to(index))).await;
         let req = test::TestRequest::get()
             .uri("/")
-            .header("content-type", "application/json")
+            .insert_header(ContentType::json())
             .to_request();
         let resp = test::call_service(&mut app, req).await;
         assert_eq!(resp.status(), StatusCode::OK);
@@ -199,8 +205,9 @@ mod tests {
         let mut app =
             test::init_service(App::new().route("/", web::get().to(index_extract_dtc))).await;
         let req = test::TestRequest::get().uri("/")
-            .header("content-type", "application/json")
-            .header(DTC_HEADER, r#"[{"identifier":{"data_id":"order~clothing~iStore~15150","index":0,"timestamp":0,"actor_id":""},"hash":"185528985830230566760236203228589250556","previous_hash":"0","nonce":5}]"#)
+            .insert_header(ContentType::json())
+            .insert_header((DTC_HEADER, 
+                r#"[{"identifier":{"data_id":"order~clothing~iStore~15150","index":0,"timestamp":0,"actor_id":""},"hash":"185528985830230566760236203228589250556","previous_hash":"0","nonce":5}]"#))
             .to_request();
         let resp = test::call_service(&mut app, req).await;
         assert_eq!(resp.status(), StatusCode::INTERNAL_SERVER_ERROR);
