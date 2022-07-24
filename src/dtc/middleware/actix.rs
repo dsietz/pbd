@@ -68,7 +68,10 @@ use crate::dtc::extractor::actix::TrackerHeader;
 use crate::dtc::Tracker;
 use actix_web::dev::{forward_ready, Response, ServiceRequest, ServiceResponse, Service, Transform};
 use actix_web::{Error, HttpResponse};
-use actix_web::http::header::ContentType;
+use actix_web::http::{
+    header::ContentType,
+    StatusCode,
+};
 use futures::future::{ok, Either, Ready};
 // use std::task::{Context, Poll};
 
@@ -128,10 +131,6 @@ where
     type Error = Error;
     type Future = Either<S::Future, Ready<Result<Self::Response, Self::Error>>>;
 
-    // fn poll_ready(&self, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
-    //     self.service.poll_ready(cx)
-    // }
-
     forward_ready!(service);
 
     fn call(&self, req: ServiceRequest) -> Self::Future {
@@ -178,11 +177,18 @@ where
                     false => {
                         let (request, _pl) = req.into_parts();
                         let response = HttpResponse::BadRequest()
-                            .insert_header(ContentType::json())
+                            .insert_header(ContentType::plaintext())
                             .finish();
-                        Either::Right(ok(                            
-                            // req.into_response(ServiceResponse::new(request, response))
-                            req.into_response(Response::bad_request().into())
+                            // .map_into_right_body();
+                        Either::Right(ok(   
+                            // response                         
+                            ServiceResponse::new(request, response)
+                            // req.into_response(
+                            //     Response::with_body(
+                            //         StatusCode::BAD_REQUEST, 
+                            //         "Missing Data Tracker Chain header")
+                            //         .into()
+                            //     )
                         ))
                     },
                 }
@@ -193,32 +199,6 @@ where
         }
     }
 }
-
-/**
-                         match valid_ind {
-                            true => Either::Left(self.service.call(req)),
-                            false => {
-                                let (request, _pl) = req.into_parts();
-                                let response = HttpResponse::BadRequest()
-                .insert_header(ContentType::json())
-                // .body("Bad Request");
-                .finish();
-                // constructed responses map to "right" body
-                // .map_into_right_body();
-                                    Either::Right(ok(
-                                    // req.into_response(ServiceResponse::new(request, response))
-                                    ServiceResponse::new(request, response)
-                                    // req.into_response(Response::bad_request().into())
-                                ))
-                            }
-                        }
-
-
-                        Either::Right(ok(
-                            req.into_response(Response::bad_request().into())
-                        ))
- * 
- */
 
 pub struct DTCEnforcerMiddleware<S> {
     service: S,
