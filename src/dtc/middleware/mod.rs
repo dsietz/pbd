@@ -3,6 +3,7 @@ use super::*;
 extern crate actix_service;
 extern crate actix_web;
 extern crate futures;
+extern crate futures_util;
 extern crate rayon;
 
 /// Turns off validation so that only the the Data-Tracker-Chain header doesn't need to be set

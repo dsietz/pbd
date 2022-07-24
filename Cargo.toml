@@ -39,6 +39,7 @@ serde_derive = "~1.0"
 serde_json = "~1.0"
 derive_more = "~0.99"
 json = "~0.12"
+futures-util = "0.3.21"
 actix-web = { version = "4", optional = true }
 actix-service = { version = "^2", optional = true }
 futures = { version = "~0.3", optional = true }

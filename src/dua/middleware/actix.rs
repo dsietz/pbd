@@ -66,9 +66,15 @@
 #![allow(clippy::complexity)]
 use super::*;
 use crate::dua::extractor::actix::DUAs;
-use actix_web::dev::{Response, ServiceRequest, ServiceResponse, Service, Transform};
-use actix_web::{Error};
-use futures::future::{ok, Either, Ready};
+use actix_web::dev::{forward_ready, ServiceRequest, ServiceResponse, Service, Transform};
+use actix_web::{
+    body::EitherBody,
+    Error, 
+    HttpResponse,
+    http::header::ContentType,
+};
+use futures::future::{ok, Ready};
+use futures_util::future::LocalBoxFuture;
 use rayon::prelude::*;
 use reqwest::StatusCode;
 use std::task::{Context, Poll};
@@ -105,7 +111,7 @@ where
     S::Future: 'static,
     B: 'static,
 {
-    type Response = ServiceResponse<B>;
+    type Response = ServiceResponse<EitherBody<B>>;
     type Error = Error;
     type InitError = ();
     type Transform = DUAEnforcerMiddleware<S>;
@@ -130,9 +136,9 @@ where
     S::Future: 'static,
     B: 'static,
 {
-    type Response = ServiceResponse<B>;
+    type Response = ServiceResponse<EitherBody<B>>;
     type Error = Error;
-    type Future = Either<S::Future, Ready<Result<ServiceResponse<B>, Self::Error>>>;
+    type Future = LocalBoxFuture<'static, Result<Self::Response, Self::Error>>;
 
     fn poll_ready(&self, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
         self.service.poll_ready(cx)

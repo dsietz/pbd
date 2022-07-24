@@ -66,14 +66,15 @@
 use super::*;
 use crate::dtc::extractor::actix::TrackerHeader;
 use crate::dtc::Tracker;
-use actix_web::dev::{forward_ready, Response, ServiceRequest, ServiceResponse, Service, Transform};
-use actix_web::{Error, HttpResponse};
-use actix_web::http::{
-    header::ContentType,
-    StatusCode,
+use actix_web::dev::{forward_ready, ServiceRequest, ServiceResponse, Service, Transform};
+use actix_web::{
+    body::EitherBody,
+    Error, 
+    HttpResponse,
+    http::header::ContentType,
 };
-use futures::future::{ok, Either, Ready};
-// use std::task::{Context, Poll};
+use futures::future::{ok, Ready};
+use futures_util::future::LocalBoxFuture;
 
 #[derive(Clone)]
 pub struct DTCEnforcer {
@@ -107,7 +108,8 @@ where
     S::Future: 'static,
     B: 'static,
 {
-    type Response = ServiceResponse<B>;
+    // type Response = ServiceResponse<B>;
+    type Response = ServiceResponse<EitherBody<B>>;
     type Error = Error;
     type InitError = ();
     type Transform = DTCEnforcerMiddleware<S>;
@@ -121,56 +123,88 @@ where
     }
 }
 
+/**
+ * Example of what I'm trying to do
+ * https://github.com/actix/examples/blob/master/middleware/middleware/src/redirect.rs
+ */
 impl<S, B> Service<ServiceRequest> for DTCEnforcerMiddleware<S>
 where
     S: Service<ServiceRequest, Response = ServiceResponse<B>, Error = Error>,
     S::Future: 'static,
     B: 'static,
 {
-    type Response = ServiceResponse<B>;
+    // type Response = ServiceResponse<B>;
+    type Response = ServiceResponse<EitherBody<B>>;
     type Error = Error;
-    type Future = Either<S::Future, Ready<Result<Self::Response, Self::Error>>>;
+    // type Future = Either<S::Future, Ready<Result<Self::Response, Self::Error>>>;
+    type Future = LocalBoxFuture<'static, Result<Self::Response, Self::Error>>;
 
     forward_ready!(service);
 
     fn call(&self, req: ServiceRequest) -> Self::Future {
         debug!("VALIDATION LEVEL: {}", self.validation_level);
 
-        if self.validation_level == VALIDATION_NONE {
-            return Either::Left(self.service.call(req));
-        }
-
-        match req.headers().get(DTC_HEADER) {
-            Some(header_value) => {
-                let mut valid_ind: bool = match Tracker::tracker_from_header_value(header_value) {
-                    Ok(tracker) => {
-                        // Level 1 Validation: Check to see if there are DTC is provided
-                        match self.validation_level >= VALIDATION_LOW {
-                            true => {
-                                // Level 2 Validation: Check to see if the DUAs provided are valid ones
-                                match self.validation_level >= VALIDATION_HIGH {
-                                    true => {
-                                        match !tracker.is_valid() {
-                                            true => {
-                                                warn!("{}", crate::dtc::error::Error::BadDTC);
-                                                false
-                                            },
-                                            false => true,
+        // check if valid request
+        let mut valid_ind: bool = match self.validation_level == VALIDATION_NONE {
+            true => true,
+            false => {
+                match req.headers().get(DTC_HEADER) {
+                    Some(header_value) => {
+                        match Tracker::tracker_from_header_value(header_value) {
+                            Ok(tracker) => {
+                                    // Level 1 Validation: Check to see if there are DTC is provided
+                                    match self.validation_level >= VALIDATION_LOW {
+                                        true => {
+                                            // Level 2 Validation: Check to see if the DUAs provided are valid ones
+                                            match self.validation_level >= VALIDATION_HIGH {
+                                                true => {
+                                                    match !tracker.is_valid() {
+                                                        true => {
+                                                            warn!("{}", crate::dtc::error::Error::BadDTC);
+                                                            false
+                                                        },
+                                                        false => true,
+                                                    }
+                                                },
+                                                false => true,
+                                            }
                                         }
-                                    },
-                                    false => true,
-                                }
+                                        false => false,
+                                    }
+                            },
+                            Err(e) => {
+                                warn!("{}", e);
+                                false
                             }
-                            false => false,
                         }
                     },
-                    Err(e) => {
-                        warn!("{}", e);
-                        false
-                    }
-                };
+                    None => false,
+                }
+            },
+        };
 
-                match valid_ind {
+        match valid_ind {
+            true => {
+                let res = self.service.call(req);
+                Box::pin(async move {
+                    // forwarded responses map to "left" body
+                    res.await.map(ServiceResponse::map_into_left_body)
+                })
+            },
+            false => {
+                let (request, _pl) = req.into_parts();
+                let response = HttpResponse::BadRequest()
+                    .insert_header(ContentType::plaintext())
+                    .finish()
+                    .map_into_right_body();
+                return Box::pin(async { Ok(ServiceResponse::new(request, response)) });
+            },
+        } 
+    }
+}
+
+/*
+ match valid_ind {
                     true => {
                         Either::Left(self.service.call(req))
                     },
@@ -191,14 +225,11 @@ where
                             //     )
                         ))
                     },
-                }
-            }
-            None => Either::Right(ok(
-                req.into_response(Response::bad_request().into())
-            )),
-        }
-    }
-}
+                } 
+  
+  
+ */
+
 
 pub struct DTCEnforcerMiddleware<S> {
     service: S,
