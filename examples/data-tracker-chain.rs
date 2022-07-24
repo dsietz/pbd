@@ -1,7 +1,7 @@
 extern crate actix_web;
 extern crate pbd;
 
-use actix_web::{http, web, App, HttpRequest, HttpResponse, HttpServer};
+use actix_web::{web, App, HttpRequest, HttpResponse, HttpServer};
 use actix_web::http::header::ContentType;
 use pbd::dtc::middleware::actix::*;
 use pbd::dtc::Tracker;

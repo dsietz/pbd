@@ -145,7 +145,7 @@ where
         debug!("VALIDATION LEVEL: {}", self.validation_level);
 
         // check if valid request
-        let mut valid_ind: bool = match self.validation_level == VALIDATION_NONE {
+        let valid_ind: bool = match self.validation_level == VALIDATION_NONE {
             true => true,
             false => {
                 match req.headers().get(DTC_HEADER) {
@@ -187,7 +187,6 @@ where
             true => {
                 let res = self.service.call(req);
                 Box::pin(async move {
-                    // forwarded responses map to "left" body
                     res.await.map(ServiceResponse::map_into_left_body)
                 })
             },
@@ -202,34 +201,6 @@ where
         } 
     }
 }
-
-/*
- match valid_ind {
-                    true => {
-                        Either::Left(self.service.call(req))
-                    },
-                    false => {
-                        let (request, _pl) = req.into_parts();
-                        let response = HttpResponse::BadRequest()
-                            .insert_header(ContentType::plaintext())
-                            .finish();
-                            // .map_into_right_body();
-                        Either::Right(ok(   
-                            // response                         
-                            ServiceResponse::new(request, response)
-                            // req.into_response(
-                            //     Response::with_body(
-                            //         StatusCode::BAD_REQUEST, 
-                            //         "Missing Data Tracker Chain header")
-                            //         .into()
-                            //     )
-                        ))
-                    },
-                } 
-  
-  
- */
-
 
 pub struct DTCEnforcerMiddleware<S> {
     service: S,

@@ -77,7 +77,6 @@ use futures::future::{ok, Ready};
 use futures_util::future::LocalBoxFuture;
 use rayon::prelude::*;
 use reqwest::StatusCode;
-use std::task::{Context, Poll};
 
 #[derive(Clone)]
 pub struct DUAEnforcer {
@@ -140,66 +139,78 @@ where
     type Error = Error;
     type Future = LocalBoxFuture<'static, Result<Self::Response, Self::Error>>;
 
-    fn poll_ready(&self, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
-        self.service.poll_ready(cx)
-    }
+    forward_ready!(service);
 
     fn call(&self, req: ServiceRequest) -> Self::Future {
         debug!("VALIDATION LEVEL: {}", self.validation_level);
 
-        if self.validation_level == VALIDATION_NONE {
-            return Either::Left(self.service.call(req));
-        }
-
-        match req.headers().get(DUA_HEADER) {
-            Some(list) => {
-                let duas = DUAs::duas_from_header_value(list);
-                let mut valid_ind: bool = false;
-
-                // Level 1 Validation: Check to see if there are DUAs provided
-                if self.validation_level >= VALIDATION_LOW && !duas.vec().is_empty() {
-                    valid_ind = true;
-                }
-
-                // Level 2 Validation: Check to see if the DUAs provided are valid ones
-                if valid_ind && self.validation_level >= VALIDATION_HIGH {
-                    let checks: usize = duas
-                        .vec()
-                        .par_iter()
-                        .map(|d| match reqwest::blocking::get(&d.location.clone()) {
-                            Ok(rsp) => {
-                                if rsp.status() == StatusCode::OK {
-                                    1
-                                } else {
-                                    info!("{}", format!("Invalid DUA: {}", d.location.clone()));
-                                    0
+        let valid_ind: bool = match self.validation_level == VALIDATION_NONE {
+            true => true,
+            false => {
+                match req.headers().get(DUA_HEADER) {
+                    Some(list) => {
+                        let duas = DUAs::duas_from_header_value(list);
+        
+                        // Level 1 Validation: Check to see if there are DUAs provided
+                        match self.validation_level >= VALIDATION_LOW && !duas.vec().is_empty() {
+                            true => {
+                                // Level 2 Validation: Check to see if the DUAs provided are valid ones
+                                match self.validation_level >= VALIDATION_HIGH {
+                                    true => {
+                                        let checks: usize = duas
+                                            .vec()
+                                            .par_iter()
+                                            // this is the issue due to blocking
+                                            .map(|d| match reqwest::blocking::get(&d.location.clone()) {
+                                                Ok(rsp) => {
+                                                    if rsp.status() == StatusCode::OK {
+                                                        1
+                                                    } else {
+                                                        info!("{}", format!("Invalid DUA: {}", d.location.clone()));
+                                                        0
+                                                    }
+                                                }
+                                                Err(_err) => {
+                                                    info!("{}", format!("Invalid DUA: {}", d.location.clone()));
+                                                    0
+                                                }
+                                            })
+                                            .sum();
+                                            
+                                        match duas.vec().len() == checks {
+                                            true => true,
+                                            false => false,
+                                        }
+                                    },
+                                    false => true,
                                 }
-                            }
-                            Err(_err) => {
-                                info!("{}", format!("Invalid DUA: {}", d.location.clone()));
-                                0
-                            }
-                        })
-                        .sum();
-
-                    if duas.vec().len() == checks {
-                        valid_ind = true;
-                    } else {
-                        valid_ind = false;
+                            },
+                            false => false,
+                        }
                     }
+                    None => false,
                 }
+            },
+        };
 
-                match valid_ind {
-                    true => Either::Left(self.service.call(req)),
-                    false => Either::Right(ok(
-                        req.into_response(Response::bad_request().into())
-                    ))
-                }
-            }
-            None => Either::Right(ok(
-                req.into_response(Response::bad_request().into())
-            )),
-        }
+        println!("Validation check is {:?}", valid_ind);
+
+        match valid_ind {
+            true => {
+                let res = self.service.call(req);
+                Box::pin(async move {
+                    res.await.map(ServiceResponse::map_into_left_body)
+                })
+            },
+            false => {
+                let (request, _pl) = req.into_parts();
+                let response = HttpResponse::BadRequest()
+                    .insert_header(ContentType::plaintext())
+                    .finish()
+                    .map_into_right_body();
+                return Box::pin(async { Ok(ServiceResponse::new(request, response)) });
+            },
+        } 
     }
 }
 
@@ -332,7 +343,8 @@ mod tests {
                 .route("/", web::post().to(index_middleware_dua)),
         )
         .await;
-        let req = test::TestRequest::post().uri("/")
+        let req = test::TestRequest::post()
+            .uri("/")
             .insert_header(ContentType::json())
             .insert_header(
                 (DUA_HEADER, 

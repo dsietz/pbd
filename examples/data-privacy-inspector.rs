@@ -1,7 +1,7 @@
 extern crate actix_web;
 extern crate pbd;
 
-use actix_web::{http, web, App, Error, HttpResponse, HttpServer};
+use actix_web::{web, App, Error, HttpResponse, HttpServer};
 use actix_web::http::header::ContentType;
 use futures::StreamExt;
 use pbd::dpi::DPI;

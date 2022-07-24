@@ -131,10 +131,18 @@ struct TrackerHandler {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use actix_web::http::StatusCode;
-    use actix_web::http::header::ContentType;
-    use actix_web::{test, web, App, HttpRequest, HttpResponse};
-    use bytes::Bytes;
+    use actix_web::{
+        http::{
+            StatusCode,
+            header::ContentType,
+        },
+        test, 
+        web, 
+        App, 
+        HttpRequest, 
+        HttpResponse
+    };
+    use actix_web::web::Bytes;
 
     // supporting functions
     fn get_dtc_header() -> String {
@@ -186,7 +194,7 @@ mod tests {
         assert_eq!(resp.status(), StatusCode::INTERNAL_SERVER_ERROR);
         // read response
         let body = test::read_body(resp).await;
-        assert_eq!(body, Bytes::from_static(b"Missing Data Tracker Chain"));
+        assert_eq!(body, Bytes::from("Missing Data Tracker Chain"));
     }
 
     #[actix_rt::test]

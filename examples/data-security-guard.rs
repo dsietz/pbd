@@ -1,7 +1,7 @@
 extern crate actix_web;
 extern crate pbd;
 
-use actix_web::{http, web, App, Error, HttpResponse, HttpServer};
+use actix_web::{web, App, Error, HttpResponse, HttpServer};
 use actix_web::http::header::ContentType;
 use futures::StreamExt;
 use pbd::dsg::{PrivacyGuard, PrivacySecurityGuard, TransferSet};
@@ -40,12 +40,12 @@ async fn index(mut body: web::Payload) -> Result<HttpResponse, Error> {
         Ok(msg) => {
             println!("Message Received: {}", String::from_utf8(msg).unwrap());
             return Ok(HttpResponse::Ok()
-                .header(http::header::CONTENT_TYPE, "plain/text")
+                .insert_header(ContentType::plaintext())
                 .body(r#"Hello World!"#));
         }
         Err(e) => {
             return Ok(HttpResponse::BadRequest()
-                .header(http::header::CONTENT_TYPE, "plain/text")
+                .insert_header(ContentType::plaintext())
                 .body(format!("{}", e)))
         }
     }
