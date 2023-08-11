@@ -101,7 +101,7 @@ impl TrackerHeader for Tracker {
 }
 
 impl FromRequest for Tracker {
-    // type Config = ();
+    type Config = ();
     type Future = Ready<Result<Self, Self::Error>>;
     type Error = LocalError;
     // convert request to future self
@@ -123,26 +123,12 @@ impl FromRequest for Tracker {
     }
 }
 
-#[derive(Serialize)]
-struct TrackerHandler {
-    name: &'static str,
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
-    use actix_web::{
-        http::{
-            StatusCode,
-            header::ContentType,
-        },
-        test, 
-        web, 
-        App, 
-        HttpRequest, 
-        HttpResponse
-    };
-    use actix_web::web::Bytes;
+    use actix_web::http::StatusCode;
+    use actix_web::{http, test, web, App, HttpRequest, HttpResponse};
+    use bytes::Bytes;
 
     // supporting functions
     fn get_dtc_header() -> String {
@@ -151,21 +137,21 @@ mod tests {
         )
     }
 
-    async fn index(_req: HttpRequest) -> HttpResponse {
+    fn index(_req: HttpRequest) -> HttpResponse {
         return HttpResponse::Ok()
-            .insert_header(ContentType::json())
+            .header(http::header::CONTENT_TYPE, "application/json")
             .body(r#"Ok"#);
     }
 
-    async fn index_extract_dtc(tracker: Tracker, _req: HttpRequest) -> HttpResponse {
+    fn index_extract_dtc(tracker: Tracker, _req: HttpRequest) -> HttpResponse {
         return HttpResponse::Ok()
-            .insert_header(ContentType::json())
+            .header(http::header::CONTENT_TYPE, "application/json")
             .body(format!("{:?}", tracker));
     }
 
     // tests
     #[test]
-    async fn test_http_header_name() {
+    fn test_http_header_name() {
         assert_eq!(DTC_HEADER, "Data-Tracker-Chain");
     }
 
@@ -175,8 +161,8 @@ mod tests {
             test::init_service(App::new().route("/", web::get().to(index_extract_dtc))).await;
         let req = test::TestRequest::get()
             .uri("/")
-            .insert_header(ContentType::json())
-            .insert_header((DTC_HEADER, get_dtc_header()))
+            .header("content-type", "application/json")
+            .header(DTC_HEADER, get_dtc_header())
             .to_request();
         let resp = test::call_service(&mut app, req).await;
         assert_eq!(resp.status(), StatusCode::OK);
@@ -188,13 +174,13 @@ mod tests {
             test::init_service(App::new().route("/", web::get().to(index_extract_dtc))).await;
         let req = test::TestRequest::get()
             .uri("/")
-            .insert_header(ContentType::json())
+            .header("content-type", "application/json")
             .to_request();
         let resp = test::call_service(&mut app, req).await;
         assert_eq!(resp.status(), StatusCode::INTERNAL_SERVER_ERROR);
         // read response
         let body = test::read_body(resp).await;
-        assert_eq!(body, Bytes::from("Missing Data Tracker Chain"));
+        assert_eq!(body, Bytes::from_static(b"Missing Data Tracker Chain"));
     }
 
     #[actix_rt::test]
@@ -202,7 +188,7 @@ mod tests {
         let mut app = test::init_service(App::new().route("/", web::get().to(index))).await;
         let req = test::TestRequest::get()
             .uri("/")
-            .insert_header(ContentType::json())
+            .header("content-type", "application/json")
             .to_request();
         let resp = test::call_service(&mut app, req).await;
         assert_eq!(resp.status(), StatusCode::OK);
@@ -213,9 +199,8 @@ mod tests {
         let mut app =
             test::init_service(App::new().route("/", web::get().to(index_extract_dtc))).await;
         let req = test::TestRequest::get().uri("/")
-            .insert_header(ContentType::json())
-            .insert_header((DTC_HEADER, 
-                r#"[{"identifier":{"data_id":"order~clothing~iStore~15150","index":0,"timestamp":0,"actor_id":""},"hash":"185528985830230566760236203228589250556","previous_hash":"0","nonce":5}]"#))
+            .header("content-type", "application/json")
+            .header(DTC_HEADER, r#"[{"identifier":{"data_id":"order~clothing~iStore~15150","index":0,"timestamp":0,"actor_id":""},"hash":"185528985830230566760236203228589250556","previous_hash":"0","nonce":5}]"#)
             .to_request();
         let resp = test::call_service(&mut app, req).await;
         assert_eq!(resp.status(), StatusCode::INTERNAL_SERVER_ERROR);

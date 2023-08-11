@@ -128,7 +128,7 @@ impl Default for DUAs {
 }
 
 impl FromRequest for DUAs {
-    // type Config = ();
+    type Config = ();
     type Future = Ready<Result<Self, Self::Error>>;
     type Error = LocalError;
     // convert request to future self
@@ -141,25 +141,24 @@ impl FromRequest for DUAs {
 mod tests {
     use super::*;
     use actix_web::http::StatusCode;
-    use actix_web::http::header::ContentType;
-    use actix_web::{test, web, App, HttpRequest, HttpResponse};
+    use actix_web::{http, test, web, App, HttpRequest, HttpResponse};
 
     // supporting functions
-    async fn index_extract_dua(duas: DUAs, _req: HttpRequest) -> HttpResponse {
+    fn index_extract_dua(duas: DUAs, _req: HttpRequest) -> HttpResponse {
         if duas.vec().len() > 0 {
             return HttpResponse::Ok()
-                .insert_header(ContentType::json())
+                .header(http::header::CONTENT_TYPE, "application/json")
                 .body(format!("{}", duas));
         } else {
             return HttpResponse::BadRequest()
-            .insert_header(ContentType::json())
+                .header(http::header::CONTENT_TYPE, "application/json")
                 .body(format!("{}", LocalError::BadDUA));
         }
     }
 
     // tests
     #[test]
-    async fn test_http_header_name() {
+    fn test_http_header_name() {
         assert_eq!(DUA_HEADER, "Data-Usage-Agreement");
     }
 
@@ -168,8 +167,8 @@ mod tests {
         let mut app =
             test::init_service(App::new().route("/", web::get().to(index_extract_dua))).await;
         let req = test::TestRequest::get().uri("/")
-            .insert_header(ContentType::json())
-            .insert_header((DUA_HEADER, r#"[{"agreement_name":"billing","location":"www.dua.org/billing.pdf","agreed_dtm": 1553988607}]"#))
+            .header("content-type", "application/json")
+            .header(DUA_HEADER, r#"[{"agreement_name":"billing","location":"www.dua.org/billing.pdf","agreed_dtm": 1553988607}]"#)
             .to_request();
         let resp = test::call_service(&mut app, req).await;
         assert_eq!(resp.status(), StatusCode::OK);
@@ -180,11 +179,8 @@ mod tests {
         let mut app =
             test::init_service(App::new().route("/", web::get().to(index_extract_dua))).await;
         let req = test::TestRequest::get().uri("/")
-            .insert_header(ContentType::json())
-            .insert_header(
-                (DUA_HEADER, 
-                r#"[{"agreement_name":"billing""location":"www.dua.org/billing.pdf","agreed_dtm": 1553988607}]"#)
-            )
+            .header("content-type", "application/json")
+            .header(DUA_HEADER, r#"[{"agreement_name":"billing""location":"www.dua.org/billing.pdf","agreed_dtm": 1553988607}]"#)
             .to_request();
         let resp = test::call_service(&mut app, req).await;
         assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
@@ -196,7 +192,7 @@ mod tests {
             test::init_service(App::new().route("/", web::get().to(index_extract_dua))).await;
         let req = test::TestRequest::get()
             .uri("/")
-            .insert_header(ContentType::json())
+            .header("content-type", "application/json")
             .to_request();
         let resp = test::call_service(&mut app, req).await;
         assert_eq!(resp.status(), StatusCode::BAD_REQUEST);

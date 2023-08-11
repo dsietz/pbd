@@ -66,17 +66,13 @@
 #![allow(clippy::complexity)]
 use super::*;
 use crate::dua::extractor::actix::DUAs;
-use actix_web::dev::{forward_ready, ServiceRequest, ServiceResponse, Service, Transform};
-use actix_web::{
-    body::EitherBody,
-    Error, 
-    HttpResponse,
-    http::header::ContentType,
-};
-use futures::future::{ok, Ready};
-use futures_util::future::LocalBoxFuture;
+use actix_service::{Service, Transform};
+use actix_web::dev::{ServiceRequest, ServiceResponse};
+use actix_web::{Error, HttpResponse};
+use futures::future::{ok, Either, Ready};
 use rayon::prelude::*;
 use reqwest::StatusCode;
+use std::task::{Context, Poll};
 
 #[derive(Clone)]
 pub struct DUAEnforcer {
@@ -104,13 +100,14 @@ impl Default for DUAEnforcer {
 }
 
 // `B` - type of response's body
-impl<S, B> Transform<S, ServiceRequest> for DUAEnforcer
+impl<S, B> Transform<S> for DUAEnforcer
 where
-    S: Service<ServiceRequest, Response = ServiceResponse<B>, Error = Error>,
+    S: Service<Request = ServiceRequest, Response = ServiceResponse<B>, Error = Error>,
     S::Future: 'static,
     B: 'static,
 {
-    type Response = ServiceResponse<EitherBody<B>>;
+    type Request = ServiceRequest;
+    type Response = ServiceResponse<B>;
     type Error = Error;
     type InitError = ();
     type Transform = DUAEnforcerMiddleware<S>;
@@ -129,88 +126,78 @@ pub struct DUAEnforcerMiddleware<S> {
     validation_level: u8,
 }
 
-impl<S, B> Service<ServiceRequest> for DUAEnforcerMiddleware<S>
+impl<S, B> Service for DUAEnforcerMiddleware<S>
 where
-    S: Service<ServiceRequest, Response = ServiceResponse<B>, Error = Error>,
+    S: Service<Request = ServiceRequest, Response = ServiceResponse<B>, Error = Error>,
     S::Future: 'static,
     B: 'static,
 {
-    type Response = ServiceResponse<EitherBody<B>>;
+    type Request = ServiceRequest;
+    type Response = ServiceResponse<B>;
     type Error = Error;
-    type Future = LocalBoxFuture<'static, Result<Self::Response, Self::Error>>;
+    type Future = Either<S::Future, Ready<Result<ServiceResponse<B>, Self::Error>>>;
 
-    forward_ready!(service);
+    fn poll_ready(&mut self, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
+        self.service.poll_ready(cx)
+    }
 
-    fn call(&self, req: ServiceRequest) -> Self::Future {
+    fn call(&mut self, req: ServiceRequest) -> Self::Future {
         debug!("VALIDATION LEVEL: {}", self.validation_level);
 
-        let valid_ind: bool = match self.validation_level == VALIDATION_NONE {
-            true => true,
-            false => {
-                match req.headers().get(DUA_HEADER) {
-                    Some(list) => {
-                        let duas = DUAs::duas_from_header_value(list);
-        
-                        // Level 1 Validation: Check to see if there are DUAs provided
-                        match self.validation_level >= VALIDATION_LOW && !duas.vec().is_empty() {
-                            true => {
-                                // Level 2 Validation: Check to see if the DUAs provided are valid ones
-                                match self.validation_level >= VALIDATION_HIGH {
-                                    true => {
-                                        let checks: usize = duas
-                                            .vec()
-                                            .par_iter()
-                                            // this is the issue due to blocking
-                                            .map(|d| match reqwest::blocking::get(&d.location.clone()) {
-                                                Ok(rsp) => {
-                                                    if rsp.status() == StatusCode::OK {
-                                                        1
-                                                    } else {
-                                                        info!("{}", format!("Invalid DUA: {}", d.location.clone()));
-                                                        0
-                                                    }
-                                                }
-                                                Err(_err) => {
-                                                    info!("{}", format!("Invalid DUA: {}", d.location.clone()));
-                                                    0
-                                                }
-                                            })
-                                            .sum();
-                                            
-                                        match duas.vec().len() == checks {
-                                            true => true,
-                                            false => false,
-                                        }
-                                    },
-                                    false => true,
-                                }
-                            },
-                            false => false,
-                        }
-                    }
-                    None => false,
+        if self.validation_level == VALIDATION_NONE {
+            return Either::Left(self.service.call(req));
+        }
+
+        match req.headers().get(DUA_HEADER) {
+            Some(list) => {
+                let duas = DUAs::duas_from_header_value(list);
+                let mut valid_ind: bool = false;
+
+                // Level 1 Validation: Check to see if there are DUAs provided
+                if self.validation_level >= VALIDATION_LOW && !duas.vec().is_empty() {
+                    valid_ind = true;
                 }
-            },
-        };
 
-        println!("Validation check is {:?}", valid_ind);
+                // Level 2 Validation: Check to see if the DUAs provided are valid ones
+                if valid_ind && self.validation_level >= VALIDATION_HIGH {
+                    let checks: usize = duas
+                        .vec()
+                        .par_iter()
+                        .map(|d| match reqwest::blocking::get(&d.location.clone()) {
+                            Ok(rsp) => {
+                                if rsp.status() == StatusCode::OK {
+                                    1
+                                } else {
+                                    info!("{}", format!("Invalid DUA: {}", d.location.clone()));
+                                    0
+                                }
+                            }
+                            Err(_err) => {
+                                info!("{}", format!("Invalid DUA: {}", d.location.clone()));
+                                0
+                            }
+                        })
+                        .sum();
 
-        match valid_ind {
-            true => {
-                let res = self.service.call(req);
-                Box::pin(async move {
-                    res.await.map(ServiceResponse::map_into_left_body)
-                })
-            },
-            false => {
-                let (request, _pl) = req.into_parts();
-                let response = HttpResponse::BadRequest()
-                    .insert_header(ContentType::plaintext())
-                    .finish()
-                    .map_into_right_body();
-                return Box::pin(async { Ok(ServiceResponse::new(request, response)) });
-            },
-        } 
+                    if duas.vec().len() == checks {
+                        valid_ind = true;
+                    } else {
+                        valid_ind = false;
+                    }
+                }
+
+                if valid_ind {
+                    Either::Left(self.service.call(req))
+                } else {
+                    Either::Right(ok(
+                        req.into_response(HttpResponse::BadRequest().finish().into_body())
+                    ))
+                }
+            }
+            None => Either::Right(ok(
+                req.into_response(HttpResponse::BadRequest().finish().into_body())
+            )),
+        }
     }
 }
 
@@ -218,24 +205,17 @@ where
 mod tests {
     use super::*;
     use actix_web::http::StatusCode;
-    use actix_web::{
-        http::header::ContentType, 
-        test, 
-        web, 
-        App, 
-        HttpRequest, 
-        HttpResponse
-    };
+    use actix_web::{http, test, web, App, HttpRequest, HttpResponse};
 
     // supporting functions
-    async fn index_middleware_dua(_req: HttpRequest) -> HttpResponse {
+    fn index_middleware_dua(_req: HttpRequest) -> HttpResponse {
         HttpResponse::Ok()
-            .insert_header(ContentType::json())
+            .header(http::header::CONTENT_TYPE, "application/json")
             .body(r#"{"status":"Ok"}"#)
     }
 
     #[test]
-    async fn test_add_middleware() {
+    fn test_add_middleware() {
         let _app = App::new()
             .wrap(DUAEnforcer::default())
             .service(web::resource("/").route(web::get().to(index_middleware_dua)));
@@ -253,7 +233,7 @@ mod tests {
         .await;
         let req = test::TestRequest::post()
             .uri("/")
-            .insert_header(ContentType::json())
+            .header("content-type", "application/json")
             .to_request();
         let resp = test::call_service(&mut app, req).await;
         assert_eq!(resp.status(), StatusCode::OK);
@@ -268,9 +248,8 @@ mod tests {
         )
         .await;
         let req = test::TestRequest::post().uri("/")
-            .insert_header(ContentType::json())
-            .insert_header((DUA_HEADER, 
-                r#"[{"agreement_name":"patient data use","location":"https://github.com/dsietz/pbd/blob/master/tests/duas/Patient%20Data%20Use%20Agreement.pdf","agreed_dtm": 1553988607}]"#))
+            .header("content-type", "application/json")
+            .header(DUA_HEADER, r#"[{"agreement_name":"patient data use","location":"https://github.com/dsietz/pbd/blob/master/tests/duas/Patient%20Data%20Use%20Agreement.pdf","agreed_dtm": 1553988607}]"#)
             .to_request();
         let resp = test::call_service(&mut app, req).await;
 
@@ -287,8 +266,8 @@ mod tests {
         .await;
         let req = test::TestRequest::post()
             .uri("/")
-            .insert_header(ContentType::json())
-            .insert_header((DUA_HEADER, r#"[]"#))
+            .header("content-type", "application/json")
+            .header(DUA_HEADER, r#"[]"#)
             .to_request();
         let resp = test::call_service(&mut app, req).await;
 
@@ -304,9 +283,8 @@ mod tests {
         )
         .await;
         let req = test::TestRequest::post().uri("/")
-            .insert_header(ContentType::json())
-            .insert_header((DUA_HEADER, 
-                r#"[{"agreement_name":"patient data use","location":"https://example.com/invalid.pdf","agreed_dtm": 1553988607},{"agreement_name":"patient data use","location":"https://github.com/dsietz/pbd/blob/master/tests/duas/Patient%20Data%20Use%20Agreement.pdf","agreed_dtm": 1553988607}]"#))
+            .header("content-type", "application/json")
+            .header(DUA_HEADER, r#"[{"agreement_name":"patient data use","location":"https://example.com/invalid.pdf","agreed_dtm": 1553988607},{"agreement_name":"patient data use","location":"https://github.com/dsietz/pbd/blob/master/tests/duas/Patient%20Data%20Use%20Agreement.pdf","agreed_dtm": 1553988607}]"#)
             .to_request();
         let resp = test::call_service(&mut app, req).await;
 
@@ -323,14 +301,14 @@ mod tests {
         .await;
         let req = test::TestRequest::post()
             .uri("/")
-            .insert_header(ContentType::json())
+            .header("content-type", "application/json")
             .to_request();
         let resp = test::call_service(&mut app, req).await;
         assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
     }
 
     #[test]
-    async fn test_dua_default_validation_level() {
+    fn test_dua_default_validation_level() {
         let dflt = DUAEnforcer::default();
         assert_eq!(dflt.validation_level, 1);
     }
@@ -343,13 +321,9 @@ mod tests {
                 .route("/", web::post().to(index_middleware_dua)),
         )
         .await;
-        let req = test::TestRequest::post()
-            .uri("/")
-            .insert_header(ContentType::json())
-            .insert_header(
-                (DUA_HEADER, 
-                r#"[{"agreement_name":"patient data use","location":"https://github.com/dsietz/pbd/blob/master/tests/duas/Patient%20Data%20Use%20Agreement.pdf","agreed_dtm": 1553988607}]"#)
-                )
+        let req = test::TestRequest::post().uri("/")
+            .header("content-type", "application/json")
+            .header(DUA_HEADER, r#"[{"agreement_name":"patient data use","location":"https://github.com/dsietz/pbd/blob/master/tests/duas/Patient%20Data%20Use%20Agreement.pdf","agreed_dtm": 1553988607}]"#)
             .to_request();
         let resp = test::call_service(&mut app, req).await;
 
@@ -366,8 +340,8 @@ mod tests {
         .await;
         let req = test::TestRequest::post()
             .uri("/")
-            .insert_header(ContentType::json())
-            .insert_header((DUA_HEADER, r#"[]"#))
+            .header("content-type", "application/json")
+            .header(DUA_HEADER, r#"[]"#)
             .to_request();
         let resp = test::call_service(&mut app, req).await;
 
@@ -383,9 +357,8 @@ mod tests {
         )
         .await;
         let req = test::TestRequest::post().uri("/")
-            .insert_header(ContentType::json())
-            .insert_header((DUA_HEADER, 
-                r#"[{"agreement_name":"patient data use","location":"https://example.com/invalid.pdf","agreed_dtm": 1553988607},{"agreement_name":"patient data use","location":"https://github.com/dsietz/pbd/blob/master/tests/duas/Patient%20Data%20Use%20Agreement.pdf","agreed_dtm": 1553988607}]"#))
+            .header("content-type", "application/json")
+            .header(DUA_HEADER, r#"[{"agreement_name":"patient data use","location":"https://example.com/invalid.pdf","agreed_dtm": 1553988607},{"agreement_name":"patient data use","location":"https://github.com/dsietz/pbd/blob/master/tests/duas/Patient%20Data%20Use%20Agreement.pdf","agreed_dtm": 1553988607}]"#)
             .to_request();
         let resp = test::call_service(&mut app, req).await;
 
@@ -402,7 +375,7 @@ mod tests {
         .await;
         let req = test::TestRequest::post()
             .uri("/")
-            .insert_header(ContentType::json())
+            .header("content-type", "application/json")
             .to_request();
         let resp = test::call_service(&mut app, req).await;
         assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
@@ -417,9 +390,8 @@ mod tests {
         )
         .await;
         let req = test::TestRequest::post().uri("/")
-            .insert_header(ContentType::json())
-            .insert_header((DUA_HEADER, 
-                r#"[{"agreement_name":"patient data use","location":"https://github.com/dsietz/pbd/blob/master/tests/duas/Patient%20Data%20Use%20Agreement.pdf","agreed_dtm": 1553988607}]"#))
+            .header("content-type", "application/json")
+            .header(DUA_HEADER, r#"[{"agreement_name":"patient data use","location":"https://github.com/dsietz/pbd/blob/master/tests/duas/Patient%20Data%20Use%20Agreement.pdf","agreed_dtm": 1553988607}]"#)
             .to_request();
         let resp = test::call_service(&mut app, req).await;
 
@@ -436,8 +408,8 @@ mod tests {
         .await;
         let req = test::TestRequest::post()
             .uri("/")
-            .insert_header(ContentType::json())
-            .insert_header((DUA_HEADER, r#"[]"#))
+            .header("content-type", "application/json")
+            .header(DUA_HEADER, r#"[]"#)
             .to_request();
         let resp = test::call_service(&mut app, req).await;
 
@@ -453,9 +425,8 @@ mod tests {
         )
         .await;
         let req = test::TestRequest::post().uri("/")
-            .insert_header(ContentType::json())
-            .insert_header((DUA_HEADER, 
-                r#"[{"agreement_name":"patient data use","location":"https://example.com/invalid.pdf","agreed_dtm": 1553988607},{"agreement_name":"patient data use","location":"https://github.com/dsietz/pbd/blob/master/tests/duas/Patient%20Data%20Use%20Agreement.pdf","agreed_dtm": 1553988607}]"#))
+            .header("content-type", "application/json")
+            .header(DUA_HEADER, r#"[{"agreement_name":"patient data use","location":"https://example.com/invalid.pdf","agreed_dtm": 1553988607},{"agreement_name":"patient data use","location":"https://github.com/dsietz/pbd/blob/master/tests/duas/Patient%20Data%20Use%20Agreement.pdf","agreed_dtm": 1553988607}]"#)
             .to_request();
         let resp = test::call_service(&mut app, req).await;
 
@@ -472,7 +443,7 @@ mod tests {
         .await;
         let req = test::TestRequest::post()
             .uri("/")
-            .insert_header(ContentType::json())
+            .header("content-type", "application/json")
             .to_request();
         let resp = test::call_service(&mut app, req).await;
         assert_eq!(resp.status(), StatusCode::BAD_REQUEST);

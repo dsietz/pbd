@@ -1,8 +1,7 @@
 extern crate actix_web;
 extern crate pbd;
 
-use actix_web::{web, App, HttpRequest, HttpResponse, HttpServer};
-use actix_web::http::header::ContentType;
+use actix_web::{http, web, App, HttpRequest, HttpResponse, HttpServer};
 use pbd::dtc::middleware::actix::*;
 use pbd::dtc::Tracker;
 
@@ -10,7 +9,7 @@ async fn index(tracker: Tracker, _req: HttpRequest) -> HttpResponse {
     println!("{}", tracker.serialize());
 
     HttpResponse::Ok()
-        .insert_header(ContentType::plaintext())
+        .header(http::header::CONTENT_TYPE, "plain/text")
         .body(r#"Hello World!"#)
 }
 

@@ -66,15 +66,11 @@
 use super::*;
 use crate::dtc::extractor::actix::TrackerHeader;
 use crate::dtc::Tracker;
-use actix_web::dev::{forward_ready, ServiceRequest, ServiceResponse, Service, Transform};
-use actix_web::{
-    body::EitherBody,
-    Error, 
-    HttpResponse,
-    http::header::ContentType,
-};
-use futures::future::{ok, Ready};
-use futures_util::future::LocalBoxFuture;
+use actix_service::{Service, Transform};
+use actix_web::dev::{ServiceRequest, ServiceResponse};
+use actix_web::{Error, HttpResponse};
+use futures::future::{ok, Either, Ready};
+use std::task::{Context, Poll};
 
 #[derive(Clone)]
 pub struct DTCEnforcer {
@@ -102,14 +98,14 @@ impl Default for DTCEnforcer {
 }
 
 // `B` - type of response's body
-impl<S, B> Transform<S, ServiceRequest> for DTCEnforcer
+impl<S, B> Transform<S> for DTCEnforcer
 where
-    S: Service<ServiceRequest, Response = ServiceResponse<B>, Error = Error>,
+    S: Service<Request = ServiceRequest, Response = ServiceResponse<B>, Error = Error>,
     S::Future: 'static,
     B: 'static,
 {
-    // type Response = ServiceResponse<B>;
-    type Response = ServiceResponse<EitherBody<B>>;
+    type Request = ServiceRequest;
+    type Response = ServiceResponse<B>;
     type Error = Error;
     type InitError = ();
     type Transform = DTCEnforcerMiddleware<S>;
@@ -123,82 +119,69 @@ where
     }
 }
 
-/**
- * Example of what I'm trying to do
- * https://github.com/actix/examples/blob/master/middleware/middleware/src/redirect.rs
- */
-impl<S, B> Service<ServiceRequest> for DTCEnforcerMiddleware<S>
+impl<S, B> Service for DTCEnforcerMiddleware<S>
 where
-    S: Service<ServiceRequest, Response = ServiceResponse<B>, Error = Error>,
+    S: Service<Request = ServiceRequest, Response = ServiceResponse<B>, Error = Error>,
     S::Future: 'static,
     B: 'static,
 {
-    // type Response = ServiceResponse<B>;
-    type Response = ServiceResponse<EitherBody<B>>;
+    type Request = ServiceRequest;
+    type Response = ServiceResponse<B>;
     type Error = Error;
-    // type Future = Either<S::Future, Ready<Result<Self::Response, Self::Error>>>;
-    type Future = LocalBoxFuture<'static, Result<Self::Response, Self::Error>>;
+    type Future = Either<S::Future, Ready<Result<ServiceResponse<B>, Self::Error>>>;
 
-    forward_ready!(service);
+    fn poll_ready(&mut self, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
+        self.service.poll_ready(cx)
+    }
 
-    fn call(&self, req: ServiceRequest) -> Self::Future {
+    fn call(&mut self, req: ServiceRequest) -> Self::Future {
         debug!("VALIDATION LEVEL: {}", self.validation_level);
 
-        // check if valid request
-        let valid_ind: bool = match self.validation_level == VALIDATION_NONE {
-            true => true,
-            false => {
-                match req.headers().get(DTC_HEADER) {
-                    Some(header_value) => {
-                        match Tracker::tracker_from_header_value(header_value) {
-                            Ok(tracker) => {
-                                    // Level 1 Validation: Check to see if there are DTC is provided
-                                    match self.validation_level >= VALIDATION_LOW {
-                                        true => {
-                                            // Level 2 Validation: Check to see if the DUAs provided are valid ones
-                                            match self.validation_level >= VALIDATION_HIGH {
-                                                true => {
-                                                    match !tracker.is_valid() {
-                                                        true => {
-                                                            warn!("{}", crate::dtc::error::Error::BadDTC);
-                                                            false
-                                                        },
-                                                        false => true,
-                                                    }
-                                                },
-                                                false => true,
-                                            }
-                                        }
-                                        false => false,
-                                    }
-                            },
-                            Err(e) => {
-                                warn!("{}", e);
-                                false
+        if self.validation_level == VALIDATION_NONE {
+            return Either::Left(self.service.call(req));
+        }
+
+        match req.headers().get(DTC_HEADER) {
+            Some(header_value) => {
+                let mut valid_ind: bool = false;
+
+                match Tracker::tracker_from_header_value(header_value) {
+                    Ok(tracker) => {
+                        // Level 1 Validation: Check to see if there are DTC is provided
+                        if self.validation_level >= VALIDATION_LOW {
+                            valid_ind = true;
+                        }
+
+                        // Level 2 Validation: Check to see if the DUAs provided are valid ones
+                        if valid_ind && self.validation_level >= VALIDATION_HIGH {
+                            if !tracker.is_valid() {
+                                warn!("{}", crate::dtc::error::Error::BadDTC);
+                                valid_ind = false;
+                            } else {
+                                valid_ind = true;
                             }
                         }
-                    },
-                    None => false,
-                }
-            },
-        };
 
-        match valid_ind {
-            true => {
-                let res = self.service.call(req);
-                Box::pin(async move {
-                    res.await.map(ServiceResponse::map_into_left_body)
-                })
-            },
-            false => {
-                let (request, _pl) = req.into_parts();
-                let response = HttpResponse::BadRequest()
-                    .insert_header(ContentType::plaintext())
-                    .finish()
-                    .map_into_right_body();
-                return Box::pin(async { Ok(ServiceResponse::new(request, response)) });
-            },
-        } 
+                        if valid_ind {
+                            Either::Left(self.service.call(req))
+                        } else {
+                            Either::Right(ok(
+                                req.into_response(HttpResponse::BadRequest().finish().into_body())
+                            ))
+                        }
+                    }
+                    Err(e) => {
+                        warn!("{}", e);
+                        Either::Right(ok(
+                            req.into_response(HttpResponse::BadRequest().finish().into_body())
+                        ))
+                    }
+                }
+            }
+            None => Either::Right(ok(
+                req.into_response(HttpResponse::BadRequest().finish().into_body())
+            )),
+        }
     }
 }
 
@@ -211,14 +194,7 @@ pub struct DTCEnforcerMiddleware<S> {
 mod tests {
     use super::*;
     use actix_web::http::StatusCode;
-    use actix_web::{
-        http::header::ContentType, 
-        test, 
-        web, 
-        App, 
-        HttpRequest, 
-        HttpResponse
-    };
+    use actix_web::{http, test, web, App, HttpRequest, HttpResponse};
 
     // supporting functions
     fn get_dtc_header() -> String {
@@ -233,14 +209,14 @@ mod tests {
         )
     }
 
-    async fn index_middleware_dtc(_req: HttpRequest) -> HttpResponse {
+    fn index_middleware_dtc(_req: HttpRequest) -> HttpResponse {
         HttpResponse::Ok()
-            .insert_header(ContentType::json())
+            .header(http::header::CONTENT_TYPE, "application/json")
             .body(r#"{"status":"Ok"}"#)
     }
 
     #[test]
-    async fn test_add_middleware() {
+    fn test_add_middleware() {
         let _app = App::new()
             .wrap(DTCEnforcer::default())
             .service(web::resource("/").route(web::get().to(index_middleware_dtc)));
@@ -258,7 +234,7 @@ mod tests {
         .await;
         let req = test::TestRequest::post()
             .uri("/")
-            .insert_header(ContentType::json())
+            .header("content-type", "application/json")
             .to_request();
         let resp = test::call_service(&mut app, req).await;
         assert_eq!(resp.status(), StatusCode::OK);
@@ -274,8 +250,8 @@ mod tests {
         .await;
         let req = test::TestRequest::post()
             .uri("/")
-            .insert_header(ContentType::json())
-            .insert_header((DTC_HEADER, get_dtc_header()))
+            .header("content-type", "application/json")
+            .header(DTC_HEADER, get_dtc_header())
             .to_request();
         let resp = test::call_service(&mut app, req).await;
 
@@ -292,8 +268,8 @@ mod tests {
         .await;
         let req = test::TestRequest::post()
             .uri("/")
-            .insert_header(ContentType::json())
-            .insert_header((DTC_HEADER, ""))
+            .header("content-type", "application/json")
+            .header(DTC_HEADER, "")
             .to_request();
         let resp = test::call_service(&mut app, req).await;
 
@@ -310,8 +286,8 @@ mod tests {
         .await;
         let req = test::TestRequest::post()
             .uri("/")
-            .insert_header(ContentType::json())
-            .insert_header((DTC_HEADER, get_dtc_header()))
+            .header("content-type", "application/json")
+            .header(DTC_HEADER, get_dtc_header())
             .to_request();
         let resp = test::call_service(&mut app, req).await;
 
@@ -328,7 +304,7 @@ mod tests {
         .await;
         let req = test::TestRequest::post()
             .uri("/")
-            .insert_header(ContentType::json())
+            .header("content-type", "application/json")
             .to_request();
         let resp = test::call_service(&mut app, req).await;
         assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
@@ -344,8 +320,8 @@ mod tests {
         .await;
         let req = test::TestRequest::post()
             .uri("/")
-            .insert_header(ContentType::json())
-            .insert_header((DTC_HEADER, get_dtc_header()))
+            .header("content-type", "application/json")
+            .header(DTC_HEADER, get_dtc_header())
             .to_request();
         let resp = test::call_service(&mut app, req).await;
 
@@ -362,8 +338,8 @@ mod tests {
         .await;
         let req = test::TestRequest::post()
             .uri("/")
-            .insert_header(ContentType::json())
-            .insert_header((DTC_HEADER, ""))
+            .header("content-type", "application/json")
+            .header(DTC_HEADER, "")
             .to_request();
         let resp = test::call_service(&mut app, req).await;
 
@@ -380,8 +356,8 @@ mod tests {
         .await;
         let req = test::TestRequest::post()
             .uri("/")
-            .insert_header(ContentType::json())
-            .insert_header((DTC_HEADER, get_dtc_header_invalid()))
+            .header("content-type", "application/json")
+            .header(DTC_HEADER, get_dtc_header_invalid())
             .to_request();
         let resp = test::call_service(&mut app, req).await;
 
@@ -398,7 +374,7 @@ mod tests {
         .await;
         let req = test::TestRequest::post()
             .uri("/")
-            .insert_header(ContentType::json())
+            .header("content-type", "application/json")
             .to_request();
         let resp = test::call_service(&mut app, req).await;
         assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
@@ -414,8 +390,8 @@ mod tests {
         .await;
         let req = test::TestRequest::post()
             .uri("/")
-            .insert_header(ContentType::json())
-            .insert_header((DTC_HEADER, get_dtc_header()))
+            .header("content-type", "application/json")
+            .header(DTC_HEADER, get_dtc_header())
             .to_request();
         let resp = test::call_service(&mut app, req).await;
 
@@ -432,8 +408,8 @@ mod tests {
         .await;
         let req = test::TestRequest::post()
             .uri("/")
-            .insert_header(ContentType::json())
-            .insert_header((DTC_HEADER, ""))
+            .header("content-type", "application/json")
+            .header(DTC_HEADER, "")
             .to_request();
         let resp = test::call_service(&mut app, req).await;
 
@@ -450,8 +426,8 @@ mod tests {
         .await;
         let req = test::TestRequest::post()
             .uri("/")
-            .insert_header(ContentType::json())
-            .insert_header((DTC_HEADER, get_dtc_header_invalid()))
+            .header("content-type", "application/json")
+            .header(DTC_HEADER, get_dtc_header_invalid())
             .to_request();
         let resp = test::call_service(&mut app, req).await;
 
@@ -468,7 +444,7 @@ mod tests {
         .await;
         let req = test::TestRequest::post()
             .uri("/")
-            .insert_header(ContentType::json())
+            .header("content-type", "application/json")
             .to_request();
         let resp = test::call_service(&mut app, req).await;
         assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
