@@ -1,12 +1,12 @@
 extern crate actix_web;
 extern crate pbd;
 
-use actix_web::{http, web, App, HttpRequest, HttpResponse, HttpServer};
 use actix_web::http::header::HeaderValue;
-use pbd::dtc::{DTC_HEADER, Tracker};
+use actix_web::{http, web, App, HttpRequest, HttpResponse, HttpServer};
+use log::warn;
 use pbd::dtc::error;
 use pbd::dtc::error::Error;
-use log::warn;
+use pbd::dtc::{Tracker, DTC_HEADER};
 
 fn tracker_from_header_value(header_value: &HeaderValue) -> Result<Tracker, error::Error> {
     match base64::decode(header_value.to_str().unwrap()) {
@@ -33,21 +33,21 @@ async fn index(req: HttpRequest) -> HttpResponse {
         Some(u) => match tracker_from_header_value(u) {
             Ok(dtc) => {
                 println!("{}", dtc.serialize());
-            },
+            }
             Err(e) => {
                 return HttpResponse::BadRequest()
-                .header(http::header::CONTENT_TYPE, "plain/text")
-                .body(format!("{}", e))
+                    .header(http::header::CONTENT_TYPE, "plain/text")
+                    .body(format!("{}", e))
             }
         },
         None => {
             // couldn't find the header
             return HttpResponse::BadRequest()
-            .header(http::header::CONTENT_TYPE, "plain/text")
-            .body(format!("{}", error::Error::MissingDTC))
+                .header(http::header::CONTENT_TYPE, "plain/text")
+                .body(format!("{}", error::Error::MissingDTC));
         }
     }
-    
+
     HttpResponse::Ok()
         .header(http::header::CONTENT_TYPE, "plain/text")
         .body(r#"Hello World!"#)
@@ -56,12 +56,9 @@ async fn index(req: HttpRequest) -> HttpResponse {
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     println!("Starting service on localhost:8088 ...");
-    HttpServer::new(|| {
-        App::new()
-            .service(web::resource("/").to(index))
-    })
-    .bind("localhost:8088")
-    .unwrap()
-    .run()
-    .await
+    HttpServer::new(|| App::new().service(web::resource("/").to(index)))
+        .bind("localhost:8088")
+        .unwrap()
+        .run()
+        .await
 }
