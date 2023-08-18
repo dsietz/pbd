@@ -16,6 +16,24 @@ pub enum Strategy {
 }
 
 impl Strategy {
+    /// Returns the enum Strategy from a string
+    ///
+    /// # Arguments
+    ///
+    /// * val: &str - The textual representation of the enum value.</br>
+    ///
+    /// #Example
+    ///
+    /// ```
+    /// extern crate pbd;
+    ///
+    /// use pbd::dua::policy::Strategy;
+    ///
+    /// fn main() {
+    ///     assert_eq!(Strategy::from_str("INCLUDE"), Strategy::INCLUDE);
+    /// }
+    /// ```
+    ///
     pub fn from_str(val: &str) -> Strategy {
         match val {
             "ALL" => Strategy::ALL,
@@ -43,6 +61,24 @@ pub enum Right {
 }
 
 impl Right {
+    /// Returns the enum Right from a string
+    ///
+    /// # Arguments
+    ///
+    /// * val: &str - The textual representation of the enum value.</br>
+    ///
+    /// #Example
+    ///
+    /// ```
+    /// extern crate pbd;
+    ///
+    /// use pbd::dua::policy::Right;
+    ///
+    /// fn main() {
+    ///     assert_eq!(Right::from_str("Rectification"), Right::Rectification);
+    /// }
+    /// ```
+    ///
     pub fn from_str(val: &str) -> Right {
         match val {
             "Informed" => Right::Informed,
@@ -83,24 +119,18 @@ impl DataRights {
     ///
     /// # Arguments
     ///
-    /// * agreement: String - The common name of the Data Usage Agreement, (e.g.: For Billing Purpose).</br>
-    /// * uri: String - The URI where the version of the DUA can be found, (e.g.: https://iStore.example.org/dua/v2/billing.pdf).</br>
-    /// * agreed_on: String - The Unix Epoch time when the DUA was agreed to.</br>
+    /// * selection_strategy: Strategy - The enum Strategy to apply to the rights.</br>
+    /// * rights: Vec<Right> - List of enum Right.</br>
     ///
     /// #Example
     ///
     /// ```
     /// extern crate pbd;
     ///
-    /// use pbd::dua::policy::DataRights;
+    /// use pbd::dua::policy::{DataRights, Right, Strategy};
     ///
     /// fn main() {
-    ///     let dua = DataRights::new();
-    ///     
-    ///     match dua.agreement_name.as_ref() {
-    ///         "For Billing Purpose" => println!("We can use the data for sending a bill."),
-    ///         _ => println!("Oops: We can't use the data this way!")
-    ///     }
+    ///     let rights = DataRights::new(Strategy::ALL, vec![Right::Informed, Right::Access]);
     /// }
     /// ```
     pub fn new(selection_strategy: Strategy, rights: Vec<Right>) -> Self {
@@ -110,10 +140,42 @@ impl DataRights {
         }
     }
 
+    /// Retrieves the enum Strategy that is applied to the rights
+    ///
+    ///
+    /// #Example
+    ///
+    /// ```
+    /// extern crate pbd;
+    ///
+    /// use pbd::dua::policy::{DataRights, Right, Strategy};
+    ///
+    /// fn main() {
+    ///     let data_rights = DataRights::new(Strategy::ALL, vec![Right::Informed, Right::Access]);
+    ///     assert_eq!(data_rights.get_strategy(), Strategy::ALL);
+    /// }
+    /// ```
+    ///
     pub fn get_strategy(&self) -> Strategy {
         self.strategy.clone()
     }
 
+    /// Retrieves the list of enum Right
+    ///
+    ///
+    /// #Example
+    ///
+    /// ```
+    /// extern crate pbd;
+    ///
+    /// use pbd::dua::policy::{DataRights, Right, Strategy};
+    ///
+    /// fn main() {
+    ///     let data_rights = DataRights::new(Strategy::ALL, vec![Right::Informed, Right::Access]);
+    ///     assert_eq!(data_rights.get_rights(), vec![Right::Informed, Right::Access]);
+    /// }
+    /// ```
+    ///
     pub fn get_rights(&self) -> Vec<Right> {
         self.values.clone()
     }
@@ -196,6 +258,42 @@ pub struct DataSubject {
 }
 
 impl DataSubject {
+    /// Constructs a new DataSubject object
+    ///
+    /// # Arguments
+    ///
+    /// * nme: String - A UI-friendly label for the Data Subject.</br>
+    /// * descr: String - A human-readable description of the Data Subject.</br>
+    /// * fkey: String - The fides key of the Data Subject.</br>
+    /// * org_key: String - The fides key of the organization to which this Data Subject belongs.</br>
+    /// * tag_list: Option<Vec<String>> - List of labels related to the Data Subject.</br>
+    /// * rights_list: Option<DataRights> - The Data Rights related to the Data Subject.</br>
+    /// * auto_decide: bool - Indicates whether or not automated decision-making or profiling exists. Tied to article 22 of the GDPR.</br>
+    /// * ind_default: bool - Indicates if the Data Subject is used as a default setting
+    /// * ind_active: bool - Indicates if the Data Subject is available to be used
+    ///
+    /// #Example
+    ///
+    /// ```
+    /// extern crate pbd;
+    ///
+    /// use pbd::dua::policy::{DataSubject, DataRights, Right, Strategy};
+    ///
+    /// fn main() {
+    ///     let subject = DataSubject::new(
+    ///         "Consultant".to_string(),
+    ///         "An individual employed in a consultative/temporary capacity by the organization.".to_string(),
+    ///         "consultant".to_string(),
+    ///         "default_organization".to_string(),
+    ///         Some(vec!["work".to_string(), "temporary".to_string()]),
+    ///         Some(DataRights::new(Strategy::ALL, vec![Right::Informed, Right::Access])),
+    ///         false,
+    ///         false,
+    ///         true
+    ///     );
+    /// }
+    /// ```
+    ///
     pub fn new(
         nme: String,
         descr: String,
@@ -220,6 +318,31 @@ impl DataSubject {
         }
     }
 
+    /// Retrieves the list of enum Right that are related to the DataSubject object
+    ///
+    /// #Example
+    ///
+    /// ```
+    /// extern crate pbd;
+    ///
+    /// use pbd::dua::policy::{DataSubject, DataRights, Right, Strategy};
+    ///
+    /// fn main() {
+    ///     let subject = DataSubject::new(
+    ///         "Consultant".to_string(),
+    ///         "An individual employed in a consultative/temporary capacity by the organization.".to_string(),
+    ///         "consultant".to_string(),
+    ///         "default_organization".to_string(),
+    ///         Some(vec!["work".to_string(), "temporary".to_string()]),
+    ///         Some(DataRights::new(Strategy::ALL, vec![Right::Informed, Right::Access])),
+    ///         false,
+    ///         false,
+    ///         true
+    ///     );
+    /// 
+    ///     assert_eq!(subject.get_data_rights().unwrap(), vec![Right::Informed, Right::Access]);
+    /// }
+    /// ```
     pub fn get_data_rights(&self) -> Option<Vec<Right>> {
         match self.rights.as_ref() {
             Some(r) => Some(r.clone().get_rights()),
@@ -227,6 +350,31 @@ impl DataSubject {
         }
     }
 
+    /// Retrieves the enum Strategy that is applied to the Rights related to the DataSubject object
+    ///
+    /// #Example
+    ///
+    /// ```
+    /// extern crate pbd;
+    ///
+    /// use pbd::dua::policy::{DataSubject, DataRights, Right, Strategy};
+    ///
+    /// fn main() {
+    ///     let subject = DataSubject::new(
+    ///         "Consultant".to_string(),
+    ///         "An individual employed in a consultative/temporary capacity by the organization.".to_string(),
+    ///         "consultant".to_string(),
+    ///         "default_organization".to_string(),
+    ///         Some(vec!["work".to_string(), "temporary".to_string()]),
+    ///         Some(DataRights::new(Strategy::ALL, vec![Right::Informed, Right::Access])),
+    ///         false,
+    ///         false,
+    ///         true
+    ///     );
+    /// 
+    ///     assert_eq!(subject.get_data_strategy().unwrap(), Strategy::ALL);
+    /// }
+    /// ```
     pub fn get_data_strategy(&self) -> Option<Strategy> {
         match self.rights.as_ref() {
             Some(r) => Some(r.clone().get_strategy()),
@@ -235,17 +383,32 @@ impl DataSubject {
     }
 }
 
+/// Represents a Data Subject Factory
 pub struct DataSubjectFactory {
+    /// The entire list of DataSubjects that are available
     subjects: Vec<DataSubject>,
 }
 impl DataSubjectFactory {
+    /// Constructs a DataSubjectFactory object
+    ///
+    /// #Example
+    ///
+    /// ```
+    /// extern crate pbd;
+    ///
+    /// use pbd::dua::policy::DataSubjectFactory;
+    ///
+    /// fn main() {
+    ///     let factory = DataSubjectFactory::new();
+    /// }
+    /// ```
     pub fn new() -> Self {
         DataSubjectFactory {
             subjects: Self::build_subjects(),
         }
     }
 
-    pub fn build_subjects() -> Vec<DataSubject> {
+    fn build_subjects() -> Vec<DataSubject> {
         let mut list = Vec::new();
         let data = data_subjects::read_json_data_subjects();
         let data_array = data.as_array().unwrap();
@@ -305,10 +468,81 @@ impl DataSubjectFactory {
         list
     }
 
+    /// Returns a list of all the active DataSubjects
+    ///
+    /// #Example
+    ///
+    /// ```
+    /// extern crate pbd;
+    ///
+    /// use pbd::dua::policy::DataSubjectFactory;
+    ///
+    /// fn main() {
+    ///     let factory = DataSubjectFactory::new();
+    ///     assert_eq!(factory.get_subjects().len(), 16);
+    /// }
+    /// ```
     pub fn get_subjects(&self) -> Vec<DataSubject> {
-        self.subjects.clone()
+        let filtered: Vec<DataSubject> = self
+            .subjects
+            .iter()
+            .map(|s| s.clone())
+            .filter(|s| s.active == true)
+            .collect();
+
+        filtered.clone()
     }
 
+    /// Searches the list of active DataSubjects and retrieves the DataSubject object with the specified name
+    ///
+    /// #Example
+    ///
+    /// ```
+    /// extern crate pbd;
+    ///
+    /// use pbd::dua::policy::DataSubjectFactory;
+    ///
+    /// fn main() {
+    ///     let factory = DataSubjectFactory::new();
+    ///     
+    ///     let subject = match factory.get_subject_by_key("customer".to_string()) {
+    ///         Some(s) => s,
+    ///         None => panic!("Could not find it!"),
+    ///     };
+    /// }
+    /// ```
+    pub fn get_subject_by_key(&self, key: String) -> Option<DataSubject> {
+        let filtered: Vec<DataSubject> = self
+            .subjects
+            .iter()
+            .map(|s| s.clone())
+            .filter(|s| s.fides_key == key)
+            .collect();
+        match filtered.len() {
+            0 => None,
+            1 => Some(filtered[0].clone()),
+            _ => panic!("Duplicate DataSubject objects found!"),
+        }
+    }
+
+    /// Searches the list of active DataSubjects and retrieves the DataSubject object with the specified name
+    ///
+    /// #Example
+    ///
+    /// ```
+    /// extern crate pbd;
+    ///
+    /// use pbd::dua::policy::DataSubjectFactory;
+    ///
+    /// fn main() {
+    ///     let factory = DataSubjectFactory::new();
+    ///     
+    ///     let subject = match factory.get_subject_by_name("Customer".to_string()) {
+    ///         Some(s) => s,
+    ///         None => panic!("Could not find it!"),
+    ///     };
+    /// }
+    /// ```
     pub fn get_subject_by_name(&self, name: String) -> Option<DataSubject> {
         let filtered: Vec<DataSubject> = self
             .subjects
@@ -357,6 +591,20 @@ mod tests {
     fn test_data_subject_factory_get_subjects_ok() {
         let factory = DataSubjectFactory::new();
         assert_eq!(factory.get_subjects().len(), 16);
+    }
+
+    #[test]
+    fn test_data_subject_factory_get_subject_by_key() {
+        let factory = DataSubjectFactory::new();
+
+        let subject = match factory.get_subject_by_key("customer".to_string()) {
+            Some(s) => s,
+            None => panic!("Customer not found!"),
+        };
+
+        assert_eq!(subject.fides_key, "customer");
+        assert_eq!(subject.get_data_strategy(), None);
+        assert_eq!(subject.get_data_rights(), None);
     }
 
     #[test]
