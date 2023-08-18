@@ -155,6 +155,8 @@ impl DUA {
 }
 
 pub mod error;
+pub mod policy;
+mod data_subjects;
 
 // Unit Tests
 #[cfg(test)]
