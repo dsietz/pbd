@@ -1,6 +1,6 @@
 [package]
 name = "pbd"
-version = "0.4.1"
+version = "0.5.0"
 authors = ["dsietz <davidsietz@yahoo.com>"]
 edition = "2018"
 readme = "README.md"
@@ -26,8 +26,8 @@ maintenance = {status = "actively-developed"}
 
 [features]
 default = ["dua", "dtc", "dsg", "dpi"]
-dua = ["actix-web", "actix-service", "futures", "rayon", "reqwest"] # Data Usage Agreement funcitonality
-dtc =["actix-web", "actix-service", "pow_sha256", "base64"] # Data Tracker Chain functionality
+dua = ["futures", "rayon", "reqwest"] # Data Usage Agreement functionality
+dtc =["pow_sha256", "base64"] # Data Tracker Chain functionality
 dsg =["bytes", "openssl", "rand"] # Data Security Guard functionality
 dpi = ["multimap", "eddie", "levenshtein", "rayon", "regex", "rust-tfidf"] # Data Privacy Inspector functionality
 
@@ -40,8 +40,9 @@ serde_json = "~1.0"
 derive_more = "~0.99"
 json = "~0.12"
 #actix-rt = { version = "1.1", optional = true }
-actix-web = { version = "~3", optional = true }
-actix-service = { version = "^1", optional = true }
+# actix-web = { version = "~3", optional = true }
+actix-web = "~3"
+# actix-service = { version = "^1", optional = true }
 futures = { version = "~0.3", optional = true }
 rayon = { version = "~1.5", optional = true }
 pow_sha256 = { version = "~0.2", optional = true }
