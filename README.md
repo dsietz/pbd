@@ -36,7 +36,7 @@ We've made breaking changes in this newest version 0.5.0!
    - incompatibility issues with `actix-web version ~4` 
    - improved Mean Time To Resolve (MTTR) issues
    > NOTE: The examples will still provide demonstration of how to implement these features using `actix-web` without axtractors or middleware. 
-2.  TBD
+2.  Updated `regex` version to fix security vulnerability
 
 ## Features
 
