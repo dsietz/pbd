@@ -118,13 +118,13 @@ impl SpecialCategory {
 /// Represents a Data Use
 #[derive(Debug, Deserialize, Clone, PartialEq, Serialize)]
 pub struct DataUse {
-    /// A UI-friendly label for the Data Subject
+    /// A UI-friendly label for the Data Use
     pub name: String,
-    /// A human-readable description of the Data Subject
+    /// A human-readable description of the Data Use
     pub description: String,
-    /// The fides key of the Data Subject
+    /// The fides key of the Data Use
     pub fides_key: String,
-    /// The fides key of the organization to which this Data Subject belongs.
+    /// The fides key of the organization to which this Data Use belongs.
     pub organization_fides_key: String,
     /// The fides key of the the Data Use's parent.
     pub parent_key: Option<String>,
@@ -138,11 +138,11 @@ pub struct DataUse {
     pub legitimate_interest: bool,
     /// A url to the legitimate interest impact assessment. Can be any valid url (e.g. http, file, etc.)
     pub legitimate_interest_impact_assessment: Option<String>,
-    /// List of labels related to the Data Subject
+    /// List of labels related to the Data Use
     pub tags: Option<Vec<String>>,
-    /// Indicates if the Data Subject is used as a default setting
+    /// Indicates if the Data Use is used as a default setting
     pub is_default: bool,
-    /// Indicates if the Data Subject is available to be used
+    /// Indicates if the Data Use is available to be used
     pub active: bool,
 }
 
@@ -151,18 +151,19 @@ impl DataUse {
     ///
     /// # Arguments
     ///
-    /// * nme: String - A UI-friendly label for the Data Subject.</br>
-    /// * descr: String - A human-readable description of the Data Subject.</br>
-    /// * fkey: String - The fides key of the Data Subject.</br>
-    /// * org_key: String - The fides key of the organization to which this Data Subject belongs.</br>
+    /// * nme: String - A UI-friendly label for the Data Use.</br>
+    /// * descr: String - A human-readable description of the Data Use.</br>
+    /// * fkey: String - The fides key of the Data Use.</br>
+    /// * org_key: String - The fides key of the organization to which this Data Use belongs.</br>
     /// * prnt_key: Option<String> - The fides key of the the Data Use's parent.
     /// * lgl_basis: Option<LegalBasis> - The legal basis category of which the data use falls under. This field is used as part of the creation of an exportable data map.
     /// * spc_cat: Option<SpecialCategory> - The special category for processing of which the data use falls under. This field is used as part of the creation of an exportable data map.
     /// * recs: Option<Vec<String>> - An array of recipients is applied here when sharing personal data outside of your organization (e.g. Internal Revenue Service, HMRC, etc.)
     /// * leg_interest: bool -  boolean value representing whether the legal basis is a Legitimate Interest. This is validated at run time and looks for a legitimate_interest_impact_assessment to exist if true.
     /// * leg_interest_impact: Option<String> - A url to the legitimate interest impact assessment. Can be any valid url (e.g. http, file, etc.)
-    /// * ind_default: bool - Indicates if the Data Subject is used as a default setting
-    /// * ind_active: bool - Indicates if the Data Subject is available to be used
+    /// * tag_list: Option<Vec<String>> - List of labels related to the Data Use.</br>
+    /// * ind_default: bool - Indicates if the Data Use is used as a default setting
+    /// * ind_active: bool - Indicates if the Data Use is available to be used
     ///
     /// #Example
     ///

@@ -156,6 +156,8 @@ impl DUA {
 
 pub mod error;
 pub mod policy;
+mod data_categories;
+pub mod data_category;
 mod data_subjects;
 pub mod data_subject;
 mod data_uses;

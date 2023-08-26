@@ -4,6 +4,8 @@
 //! Credit is to be given to [fides](https://ethyca.github.io/fideslang/) and adheres to the fides licensing:
 //! + [license](https://github.com/ethyca/fides/blob/main/LICENSE)
 //! + [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)
+//! 
+//! You can use the [Privacy Taxonomy Explorer](https://ethyca.github.io/fideslang/explorer/) for a graphic representation of the Fides classification groups.
 //!
 
 // use super::data_subject;
