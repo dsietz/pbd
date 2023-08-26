@@ -34,6 +34,10 @@ We've made breaking changes in this newest version 0.5.0!
 1. Due to the following reasons, we have dropped the `extractor` and `middleware` features for the Data Tracker Chain and Data Usage Agreement features. (Resolves Isses [#45](https://github.com/dsietz/pbd/issues/45), [#46](https://github.com/dsietz/pbd/issues/46), and [#49](https://github.com/dsietz/pbd/issues/49))
    - focus on remaining a light-weight and flexible SDK
    - incompatibility issues with `actix-web version ~4` 
+   - High vulnerability found in `actix-web version 3.3.3`
+     - https://rustsec.org/advisories/RUSTSEC-2023-0034
+   - High vulnerability found in `actix-rt version 1.1.1`
+     - https://rustsec.org/advisories/RUSTSEC-2021-0124
    - improved Mean Time To Resolve (MTTR) issues
    > NOTE: The examples will still provide demonstration of how to implement these features using `actix-web` without axtractors or middleware. 
 2.  Updated `regex` version to fix security vulnerability
