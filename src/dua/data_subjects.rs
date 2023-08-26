@@ -169,17 +169,6 @@ pub fn read_json_data_subjects() -> Value {
       "automated_decisions_or_profiling": null,
       "is_default": true,
       "active": true
-    },
-    {
-      "fides_key": "custom",
-      "organization_fides_key": "default_organization",
-      "tags": null,
-      "name": "Custom field",
-      "description": "Custom field for tests",
-      "rights": null,
-      "automated_decisions_or_profiling": null,
-      "is_default": false,
-      "active": true
     }
   ]"#;
     let v: Value = serde_json::from_str(data).unwrap();

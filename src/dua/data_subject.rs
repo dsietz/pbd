@@ -1,6 +1,7 @@
 //! ### Background
 //! Data Subjects in the taxonomy are designed to support common privacy regulations and standards out of the box, these include GDPR, CCPA, LGPD and ISO 19944.
-//!
+//! Referencing: [data_uses.csv](https://ethyca.github.io/fideslang/csv/data_subjects.csv)
+//! 
 
 use super::data_subjects;
 use derive_more::Display;
@@ -459,7 +460,7 @@ impl DataSubjectFactory {
                 true => item["is_default"].as_bool().unwrap(),
                 false => false,
             };
-            let subject_acive = match item["active"].is_boolean() {
+            let subject_active = match item["active"].is_boolean() {
                 true => item["active"].as_bool().unwrap(),
                 false => false,
             };
@@ -473,7 +474,7 @@ impl DataSubjectFactory {
                 subject_rights,
                 subject_auto,
                 subject_default,
-                subject_acive,
+                subject_active,
             ));
         }
 
@@ -491,7 +492,7 @@ impl DataSubjectFactory {
     ///
     /// fn main() {
     ///     let factory = DataSubjectFactory::new();
-    ///     assert_eq!(factory.get_subjects().len(), 16);
+    ///     assert_eq!(factory.get_subjects().len(), 15);
     /// }
     /// ```
     pub fn get_subjects(&self) -> Vec<DataSubject> {
@@ -507,6 +508,10 @@ impl DataSubjectFactory {
 
     /// Searches the list of active DataSubjects and retrieves the DataSubject object with the specified name
     ///
+    /// # Arguments
+    ///
+    /// * key: String - The string that represents the DataSubject fides_key.</br>
+    /// 
     /// #Example
     ///
     /// ```
@@ -538,7 +543,11 @@ impl DataSubjectFactory {
     }
 
     /// Searches the list of active DataSubjects and retrieves the DataSubject object with the specified name
+    /// 
+    /// # Arguments
     ///
+    /// * name: String - The string that represents the DataSubject name.</br>
+    /// 
     /// #Example
     ///
     /// ```
@@ -602,7 +611,7 @@ mod tests {
     #[test]
     fn test_data_subject_factory_get_subjects_ok() {
         let factory = DataSubjectFactory::new();
-        assert_eq!(factory.get_subjects().len(), 16);
+        assert_eq!(factory.get_subjects().len(), 15);
     }
 
     #[test]
