@@ -1,6 +1,6 @@
-//! ### Background 
-//! Data Subjects in the taxonomy are designed to support common privacy regulations and standards out of the box, these include GDPR, CCPA, LGPD and ISO 19944. 
-//! 
+//! ### Background
+//! Data Subjects in the taxonomy are designed to support common privacy regulations and standards out of the box, these include GDPR, CCPA, LGPD and ISO 19944.
+//!
 
 use super::data_subjects;
 use derive_more::Display;
@@ -112,17 +112,17 @@ impl Strategy {
 pub struct DataRights {
     /// A strategy for selecting the rights available to the data subject (Strategy::All, Strategy::Exclude, Strategy::Include, Strategy::None)
     pub strategy: Strategy,
-    // An array of rights available to the data subject, made of available values coupled with Chapter 3 of the GDPR.
-    // The output of a data map is based upon the strategy for applying rights and the selections made from the following valid options:
-    // - Right::Informed
-    // - Right::Access
-    // - Right::Rectification
-    // - Right::Erasure
-    // - Right::Portability
-    // - Right::RestrictProcessing
-    // - Right::WithdrawConsent
-    // - Right::Object
-    // - Right::ObjectToAutomatedProcessing
+    /// An array of rights available to the data subject, made of available values coupled with Chapter 3 of the GDPR.
+    /// The output of a data map is based upon the strategy for applying rights and the selections made from the following valid options:
+    /// - Right::Informed
+    /// - Right::Access
+    /// - Right::Rectification
+    /// - Right::Erasure
+    /// - Right::Portability
+    /// - Right::RestrictProcessing
+    /// - Right::WithdrawConsent
+    /// - Right::Object
+    /// - Right::ObjectToAutomatedProcessing
     pub values: Vec<Right>,
 }
 
@@ -351,7 +351,7 @@ impl DataSubject {
     ///         false,
     ///         true
     ///     );
-    /// 
+    ///
     ///     assert_eq!(subject.get_data_rights().unwrap(), vec![Right::Informed, Right::Access]);
     /// }
     /// ```
@@ -383,7 +383,7 @@ impl DataSubject {
     ///         false,
     ///         true
     ///     );
-    /// 
+    ///
     ///     assert_eq!(subject.get_data_strategy().unwrap(), Strategy::ALL);
     /// }
     /// ```
