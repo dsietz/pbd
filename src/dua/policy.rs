@@ -133,10 +133,78 @@ impl DUP {
         self.categories.clone().into_values().collect()
     }
 
+    /// Disassociates the specified DataCategory object from the policy
+    ///
+    /// #Example
+    ///
+    /// ```
+    /// extern crate pbd;
+    ///
+    /// use pbd::dua::policy::DUP;
+    /// use pbd::dua::data_category::DataCategory;
+    ///
+    /// fn main() {
+    ///     let mut dup = DUP::new(
+    ///         "General Policy".to_string(),
+    ///         "This is a high-level policy.".to_string(),
+    ///         "1.0.1".to_string()
+    ///     );
+    ///     let cat = DataCategory::new(
+    ///        "Authentication Data".to_string(),
+    ///        "Data used to manage access to the system.".to_string(),
+    ///        "system.authentication".to_string(),
+    ///        "default_organization".to_string(),
+    ///        Some("system".to_string()),
+    ///        None,                       
+    ///        false,
+    ///        true,
+    ///    );
+    /// 
+    ///    dup.add_category(cat.clone());
+    /// 
+    ///    dup.remove_category(cat);
+    /// }
+    /// ```
     pub fn remove_category(&mut self, category: DataCategory) {
         self.categories.remove(&category.fides_key);
     }
 
+    /// Disassociates the specified DataCategory object from the policy using the fides key
+    /// 
+    /// # Arguments
+    ///
+    /// * key: String - The fides kay of the Data Category to remove.</br>
+    /// 
+    /// #Example
+    ///
+    /// ```
+    /// extern crate pbd;
+    ///
+    /// use pbd::dua::policy::DUP;
+    /// use pbd::dua::data_category::DataCategory;
+    ///
+    /// fn main() {
+    ///     let mut dup = DUP::new(
+    ///         "General Policy".to_string(),
+    ///         "This is a high-level policy.".to_string(),
+    ///         "1.0.1".to_string()
+    ///     );
+    ///     let cat = DataCategory::new(
+    ///        "Authentication Data".to_string(),
+    ///        "Data used to manage access to the system.".to_string(),
+    ///        "system.authentication".to_string(),
+    ///        "default_organization".to_string(),
+    ///        Some("system".to_string()),
+    ///        None,                       
+    ///        false,
+    ///        true,
+    ///    );
+    /// 
+    ///    dup.add_category(cat.clone());
+    /// 
+    ///    dup.remove_category_by_key(cat.fides_key);
+    /// }
+    /// ```
     pub fn remove_category_by_key(&mut self, key: String) {
         self.categories.remove(&key);
     }
