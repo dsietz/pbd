@@ -11,8 +11,8 @@
 use super::data_category::DataCategory;
 use super::data_subject::DataSubject;
 use super::data_use::DataUse;
-use std::collections::BTreeMap;
 use derive_more::Display;
+use std::collections::BTreeMap;
 
 /// An Enum of any possible item keys that can be associated to a policy
 #[derive(Display, Clone)]
@@ -728,13 +728,13 @@ impl DUP {
                         false => conflicts.push(condition),
                         true => {}
                     };
-                },
+                }
                 Condition::Use(String) => {
                     match self.has_use(condition.to_string()) {
                         false => conflicts.push(condition),
                         true => {}
                     };
-                },
+                }
             }
         }
 
