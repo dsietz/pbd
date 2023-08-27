@@ -713,6 +713,78 @@ impl DUP {
         self.uses.contains_key(&key)
     }
 
+    /// Determines if the specified Conditions can be met by the policy and returns a list of conditions that conflict wiht the policy.
+    ///
+    /// # Arguments
+    ///
+    /// * conditions: Vec<Condition> - The list of Conditions to check against the policy.</br>
+    ///
+    /// #Example
+    ///
+    /// ```rust
+    /// extern crate pbd;
+    ///
+    /// use pbd::dua::policy::{Condition, DUP};
+    /// use pbd::dua::data_category::DataCategory;
+    /// use pbd::dua::data_subject::{DataRights, DataSubject, Right, Strategy};
+    /// use pbd::dua::data_use::{DataUse, LegalBasis, SpecialCategory};
+    ///
+    /// fn main() {
+    ///     let mut dup = DUP::new(
+    ///         "General Policy".to_string(),
+    ///         "This is a high-level policy.".to_string(),
+    ///         "1.0.1".to_string()
+    ///     );
+    ///     let category = DataCategory::new(
+    ///        "Authentication Data".to_string(),
+    ///        "Data used to manage access to the system.".to_string(),
+    ///        "system.authentication".to_string(),
+    ///        "default_organization".to_string(),
+    ///        Some("system".to_string()),
+    ///        None,                       
+    ///        false,
+    ///        true,
+    ///     );
+    ///     let subject = DataSubject::new(
+    ///         "Consultant".to_string(),
+    ///         "An individual employed in a consultative/temporary capacity by the organization.".to_string(),
+    ///         "consultant".to_string(),
+    ///         "default_organization".to_string(),
+    ///         Some(vec!["work".to_string(), "temporary".to_string()]),
+    ///         Some(DataRights::new(Strategy::ALL, vec![Right::Informed, Right::Access])),
+    ///         false,
+    ///         false,
+    ///         true
+    ///     );
+    ///     let datause = DataUse::new(
+    ///         "Provide the capability".to_string(),
+    ///         "Provide, give, or make available the product, service, application or system.".to_string(),
+    ///         "provide".to_string(),
+    ///         "default_organization".to_string(),
+    ///         None,
+    ///         Some(LegalBasis::LegitimateInterest),
+    ///         Some(SpecialCategory::VitalInterests),
+    ///         Some(vec!("marketing team".to_string(), "dog shelter".to_string())),
+    ///         false,
+    ///         Some("https://example.org/legitimate_interest_assessment".to_string()),
+    ///         None,
+    ///         false,
+    ///         true
+    ///     );
+    ///
+    ///    dup.associate_category(category.clone());
+    ///    dup.associate_use(datause.clone());
+    /// 
+    ///    let mut conditions: Vec<Condition> = Vec::new();
+    ///    conditions.push(Condition::Category(category.get_key()));
+    ///    conditions.push(Condition::Subject(subject.get_key()));
+    ///    conditions.push(Condition::Use(datause.get_key()));
+    ///    let conflicts = dup.match_conditions(conditions);
+    ///
+    ///    assert_eq!(conflicts.len(), 1);
+    ///    assert_eq!(conflicts[0].to_string(), subject.get_key());
+    /// }
+    /// ```
     pub fn match_conditions(&mut self, conditions: Vec<Condition>) -> Vec<Condition> {
         let mut conflicts = Vec::new();
         for condition in conditions.into_iter() {
