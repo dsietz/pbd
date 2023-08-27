@@ -146,6 +146,51 @@ impl DUP {
         self.subjects.insert(subject.get_key().clone(), subject);
     }
 
+    /// Associates a DataUse object to the policy
+    /// __NOTE__: Call this function to associate a new DataUse objects or replace pre-associated DataUse objects
+    ///
+    /// # Arguments
+    ///
+    /// * usage: DataUse - The Data Use to associate.</br>
+    ///
+    /// #Example
+    ///
+    /// ```rust
+    /// extern crate pbd;
+    ///
+    /// use pbd::dua::policy::DUP;
+    /// use pbd::dua::data_use::{DataUse, LegalBasis, SpecialCategory};
+    ///
+    /// fn main() {
+    ///     let mut dup = DUP::new(
+    ///         "General Policy".to_string(),
+    ///         "This is a high-level policy.".to_string(),
+    ///         "1.0.1".to_string()
+    ///     );
+    ///
+    ///     let datause = DataUse::new(
+    ///         "Provide the capability".to_string(),
+    ///         "Provide, give, or make available the product, service, application or system.".to_string(),
+    ///         "provide".to_string(),
+    ///         "default_organization".to_string(),
+    ///         None,
+    ///         Some(LegalBasis::LegitimateInterest),
+    ///         Some(SpecialCategory::VitalInterests),
+    ///         Some(vec!("marketing team".to_string(), "dog shelter".to_string())),
+    ///         false,
+    ///         Some("https://example.org/legitimate_interest_assessment".to_string()),
+    ///         None,
+    ///         false,
+    ///         true
+    ///     );
+    ///
+    ///     dup.associate_use(datause);
+    /// }
+    /// ```
+    pub fn associate_use(&mut self, usage: DataUse) {
+        self.uses.insert(usage.get_key().clone(), usage);
+    }
+
     /// Disassociates the specified DataCategory object from the policy using the key
     ///
     /// # Arguments
@@ -228,6 +273,52 @@ impl DUP {
         self.subjects.remove(&key);
     }
 
+    /// Disassociates the specified DataUse object from the policy using the key
+    ///
+    /// # Arguments
+    ///
+    /// * key: String - The key of the Data Use to disassociate.</br>
+    ///
+    /// #Example
+    ///
+    /// ```rust
+    /// extern crate pbd;
+    ///
+    /// use pbd::dua::policy::DUP;
+    /// use pbd::dua::data_use::{DataUse, LegalBasis, SpecialCategory};
+    ///
+    /// fn main() {
+    ///     let mut dup = DUP::new(
+    ///         "General Policy".to_string(),
+    ///         "This is a high-level policy.".to_string(),
+    ///         "1.0.1".to_string()
+    ///     );
+    ///
+    ///     let datause = DataUse::new(
+    ///         "Provide the capability".to_string(),
+    ///         "Provide, give, or make available the product, service, application or system.".to_string(),
+    ///         "provide".to_string(),
+    ///         "default_organization".to_string(),
+    ///         None,
+    ///         Some(LegalBasis::LegitimateInterest),
+    ///         Some(SpecialCategory::VitalInterests),
+    ///         Some(vec!("marketing team".to_string(), "dog shelter".to_string())),
+    ///         false,
+    ///         Some("https://example.org/legitimate_interest_assessment".to_string()),
+    ///         None,
+    ///         false,
+    ///         true
+    ///     );
+    ///
+    ///    dup.associate_use(datause.clone());
+    ///
+    ///    dup.disassociate_use(datause.get_key());
+    /// }
+    /// ```
+    pub fn disassociate_use(&mut self, key: String) {
+        self.uses.remove(&key);
+    }
+
     /// Retrieves all the associated DataCategory objects
     ///
     /// #Example
@@ -299,6 +390,48 @@ impl DUP {
     /// ```
     pub fn get_subjects(&mut self) -> Vec<DataSubject> {
         self.subjects.clone().into_values().collect()
+    }
+
+    /// Retrieves all the associated DataUse objects
+    ///
+    /// #Example
+    ///
+    /// ```rust
+    /// extern crate pbd;
+    ///
+    /// use pbd::dua::policy::DUP;
+    /// use pbd::dua::data_use::{DataUse, LegalBasis, SpecialCategory};
+    ///
+    /// fn main() {
+    ///     let mut dup = DUP::new(
+    ///         "General Policy".to_string(),
+    ///         "This is a high-level policy.".to_string(),
+    ///         "1.0.1".to_string()
+    ///     );
+    ///
+    ///     let datause = DataUse::new(
+    ///         "Provide the capability".to_string(),
+    ///         "Provide, give, or make available the product, service, application or system.".to_string(),
+    ///         "provide".to_string(),
+    ///         "default_organization".to_string(),
+    ///         None,
+    ///         Some(LegalBasis::LegitimateInterest),
+    ///         Some(SpecialCategory::VitalInterests),
+    ///         Some(vec!("marketing team".to_string(), "dog shelter".to_string())),
+    ///         false,
+    ///         Some("https://example.org/legitimate_interest_assessment".to_string()),
+    ///         None,
+    ///         false,
+    ///         true
+    ///     );
+    ///
+    ///     dup.associate_use(datause);
+    ///
+    ///    assert_eq!(dup.get_uses().len(), 1);
+    /// }
+    /// ```
+    pub fn get_uses(&mut self) -> Vec<DataUse> {
+        self.uses.clone().into_values().collect()
     }
 
     /// Retrieves a reference to the specified DataCategory that is associated with the policy
@@ -386,6 +519,53 @@ impl DUP {
         self.subjects.get(&key)
     }
 
+    /// Retrieves a reference to the specified DataUse that is associated with the policy
+    ///
+    /// # Arguments
+    ///
+    /// * key: String - The key of the Data Use to retrieve.</br>
+    ///
+    /// #Example
+    ///
+    /// ```rust
+    /// extern crate pbd;
+    ///
+    /// use pbd::dua::policy::DUP;
+    /// use pbd::dua::data_use::{DataUse, LegalBasis, SpecialCategory};
+    ///
+    /// fn main() {
+    ///     let mut dup = DUP::new(
+    ///         "General Policy".to_string(),
+    ///         "This is a high-level policy.".to_string(),
+    ///         "1.0.1".to_string()
+    ///     );
+    ///
+    ///     let datause = DataUse::new(
+    ///         "Provide the capability".to_string(),
+    ///         "Provide, give, or make available the product, service, application or system.".to_string(),
+    ///         "provide".to_string(),
+    ///         "default_organization".to_string(),
+    ///         None,
+    ///         Some(LegalBasis::LegitimateInterest),
+    ///         Some(SpecialCategory::VitalInterests),
+    ///         Some(vec!("marketing team".to_string(), "dog shelter".to_string())),
+    ///         false,
+    ///         Some("https://example.org/legitimate_interest_assessment".to_string()),
+    ///         None,
+    ///         false,
+    ///         true
+    ///     );
+    ///
+    ///    dup.associate_use(datause.clone());
+    ///
+    ///    let retrieved_use = dup.get_use(datause.get_key()).unwrap();
+    ///    println!("{}", retrieved_use.description);
+    /// }
+    /// ```
+    pub fn get_use(&mut self, key: String) -> Option<&DataUse> {
+        self.uses.get(&key)
+    }
+
     /// Determines if the specified DataCategory key is associated with the policy
     ///
     /// # Arguments
@@ -468,12 +648,59 @@ impl DUP {
     pub fn has_subject(&mut self, key: String) -> bool {
         self.subjects.contains_key(&key)
     }
+
+    /// Determines if the specified DataUse key is associated with the policy
+    ///
+    /// # Arguments
+    ///
+    /// * key: String - The key of the Data Use to check.</br>
+    ///
+    /// #Example
+    ///
+    /// ```rust
+    /// extern crate pbd;
+    ///
+    /// use pbd::dua::policy::DUP;
+    /// use pbd::dua::data_use::{DataUse, LegalBasis, SpecialCategory};
+    ///
+    /// fn main() {
+    ///     let mut dup = DUP::new(
+    ///         "General Policy".to_string(),
+    ///         "This is a high-level policy.".to_string(),
+    ///         "1.0.1".to_string()
+    ///     );
+    ///
+    ///     let datause = DataUse::new(
+    ///         "Provide the capability".to_string(),
+    ///         "Provide, give, or make available the product, service, application or system.".to_string(),
+    ///         "provide".to_string(),
+    ///         "default_organization".to_string(),
+    ///         None,
+    ///         Some(LegalBasis::LegitimateInterest),
+    ///         Some(SpecialCategory::VitalInterests),
+    ///         Some(vec!("marketing team".to_string(), "dog shelter".to_string())),
+    ///         false,
+    ///         Some("https://example.org/legitimate_interest_assessment".to_string()),
+    ///         None,
+    ///         false,
+    ///         true
+    ///     );
+    ///
+    ///    dup.associate_use(datause.clone());
+    ///
+    ///    assert_eq!(dup.has_use(datause.get_key()), true);
+    /// }
+    /// ```
+    pub fn has_use(&mut self, key: String) -> bool {
+        self.uses.contains_key(&key)
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::dua::data_subject::{DataRights, DataSubject, Right, Strategy};
+    use crate::dua::data_use::{DataUse, LegalBasis, SpecialCategory};
 
     fn get_data_category() -> DataCategory {
         let category = DataCategory::new(
@@ -508,6 +735,29 @@ mod tests {
         subject
     }
 
+    fn get_data_use() -> DataUse {
+        let datause = DataUse::new(
+            "Provide the capability".to_string(),
+            "Provide, give, or make available the product, service, application or system."
+                .to_string(),
+            "provide".to_string(),
+            "default_organization".to_string(),
+            None,
+            Some(LegalBasis::LegitimateInterest),
+            Some(SpecialCategory::VitalInterests),
+            Some(vec![
+                "marketing team".to_string(),
+                "dog shelter".to_string(),
+            ]),
+            false,
+            Some("https://example.org/legitimate_interest_assessment".to_string()),
+            None,
+            false,
+            true,
+        );
+        datause
+    }
+
     fn get_dup() -> DUP {
         let dup = DUP::new(
             "General Policy".to_string(),
@@ -532,6 +782,13 @@ mod tests {
     }
 
     #[test]
+    fn test_dup_associate_use_ok() {
+        let mut dup = get_dup();
+        dup.associate_use(get_data_use());
+        assert_eq!(dup.get_uses().len(), 1);
+    }
+
+    #[test]
     fn test_dup_disassociate_category_ok() {
         let mut dup = get_dup();
         dup.associate_category(get_data_category());
@@ -549,6 +806,16 @@ mod tests {
 
         dup.disassociate_subject(get_data_subject().get_key());
         assert_eq!(dup.get_subjects().len(), 0);
+    }
+
+    #[test]
+    fn test_dup_disassociate_use_ok() {
+        let mut dup = get_dup();
+        dup.associate_use(get_data_use());
+        assert_eq!(dup.get_uses().len(), 1);
+
+        dup.disassociate_use(get_data_use().get_key());
+        assert_eq!(dup.get_uses().len(), 0);
     }
 
     #[test]
@@ -570,6 +837,15 @@ mod tests {
     }
 
     #[test]
+    fn test_dup_get_use_ok() {
+        let mut dup = get_dup();
+        dup.associate_use(get_data_use());
+
+        let use2 = dup.get_use(get_data_use().get_key()).unwrap();
+        assert_eq!(use2.description, get_data_use().description);
+    }
+
+    #[test]
     fn test_dup_has_category_ok() {
         let mut dup = get_dup();
         dup.associate_category(get_data_category());
@@ -581,5 +857,12 @@ mod tests {
         let mut dup = get_dup();
         dup.associate_subject(get_data_subject());
         assert_eq!(dup.has_subject(get_data_subject().get_key()), true);
+    }
+
+    #[test]
+    fn test_dup_has_use_ok() {
+        let mut dup = get_dup();
+        dup.associate_use(get_data_use());
+        assert_eq!(dup.has_use(get_data_use().get_key()), true);
     }
 }
