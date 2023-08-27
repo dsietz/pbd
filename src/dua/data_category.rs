@@ -4,7 +4,6 @@
 //!
 
 use super::data_categories;
-use derive_more::Display;
 
 /// Represents a Data Category
 #[derive(Debug, Deserialize, Clone, PartialEq, Serialize)]
