@@ -60,7 +60,7 @@ pub static DUA_HEADER: &str = "Data-Usage-Agreement";
 pub struct DUA {
     /// The common name of the Data Usage Agreement, (e.g.: For Billing Purpose)
     pub agreement_name: String,
-    /// The URI where the version of the DUA can be found, (e.g.: https://iStore.example.org/dua/v2/billing.pdf)
+    /// The URI where the version of the DUA (the signed Data Usage Policy) can be found, (e.g.: https://iStore.example.org/dua/v2/billing.pdf)
     pub location: String,
     /// The Unix Epoch time when the DUA was agreed to
     pub agreed_dtm: u64,
