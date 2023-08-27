@@ -38,7 +38,7 @@ impl DUP {
     ///
     /// #Example
     ///
-    /// ```
+    /// ```rust
     /// extern crate pbd;
     ///
     /// use pbd::dua::policy::DUP;
@@ -69,7 +69,7 @@ impl DUP {
     ///
     /// #Example
     ///
-    /// ```
+    /// ```rust
     /// extern crate pbd;
     ///
     /// use pbd::dua::policy::DUP;
@@ -95,14 +95,14 @@ impl DUP {
     /// }
     /// ```
     pub fn add_category(&mut self, category: DataCategory) {
-        self.categories.insert(category.fides_key.clone(), category);
+        self.categories.insert(category.get_key().clone(), category);
     }
 
     /// Retrieves all the associates a DataCategory object to the policy
     ///
     /// #Example
     ///
-    /// ```
+    /// ```rust
     /// extern crate pbd;
     ///
     /// use pbd::dua::policy::DUP;
@@ -133,40 +133,8 @@ impl DUP {
         self.categories.clone().into_values().collect()
     }
 
-    /// Disassociates the specified DataCategory object from the policy
-    ///
-    /// #Example
-    ///
-    /// ```
-    /// extern crate pbd;
-    ///
-    /// use pbd::dua::policy::DUP;
-    /// use pbd::dua::data_category::DataCategory;
-    ///
-    /// fn main() {
-    ///     let mut dup = DUP::new(
-    ///         "General Policy".to_string(),
-    ///         "This is a high-level policy.".to_string(),
-    ///         "1.0.1".to_string()
-    ///     );
-    ///     let cat = DataCategory::new(
-    ///        "Authentication Data".to_string(),
-    ///        "Data used to manage access to the system.".to_string(),
-    ///        "system.authentication".to_string(),
-    ///        "default_organization".to_string(),
-    ///        Some("system".to_string()),
-    ///        None,                       
-    ///        false,
-    ///        true,
-    ///    );
-    ///
-    ///    dup.add_category(cat.clone());
-    ///
-    ///    dup.remove_category(cat);
-    /// }
-    /// ```
-    pub fn remove_category(&mut self, category: DataCategory) {
-        self.categories.remove(&category.fides_key);
+    pub fn has_category(&mut self, key: String) -> bool {
+        self.categories.contains_key(&key)
     }
 
     /// Disassociates the specified DataCategory object from the policy using the fides key
@@ -177,7 +145,7 @@ impl DUP {
     ///
     /// #Example
     ///
-    /// ```
+    /// ```rust
     /// extern crate pbd;
     ///
     /// use pbd::dua::policy::DUP;
@@ -202,10 +170,10 @@ impl DUP {
     ///
     ///    dup.add_category(cat.clone());
     ///
-    ///    dup.remove_category_by_key(cat.fides_key);
+    ///    dup.remove_category(cat.get_key());
     /// }
     /// ```
-    pub fn remove_category_by_key(&mut self, key: String) {
+    pub fn remove_category(&mut self, key: String) {
         self.categories.remove(&key);
     }
 }
@@ -238,13 +206,17 @@ mod tests {
     }
 
     #[test]
-    fn test_dup_add_remove_category_ok() {
+    fn test_dup_add_category_ok() {
         let mut dup = get_dup();
         dup.add_category(get_data_category());
         assert_eq!(dup.get_categories().len(), 1);
+    }
 
-        dup.remove_category(get_data_category());
-        assert_eq!(dup.get_categories().len(), 0);
+    #[test]
+    fn test_dup_has_category_ok() {
+        let mut dup = get_dup();
+        dup.add_category(get_data_category());
+        assert_eq!(dup.has_category(get_data_category().get_key()), true);
     }
 
     #[test]
@@ -253,7 +225,7 @@ mod tests {
         dup.add_category(get_data_category());
         assert_eq!(dup.get_categories().len(), 1);
 
-        dup.remove_category_by_key(get_data_category().fides_key);
+        dup.remove_category(get_data_category().get_key());
         assert_eq!(dup.get_categories().len(), 0);
     }
 }

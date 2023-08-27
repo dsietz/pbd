@@ -33,7 +33,7 @@ impl LegalBasis {
     ///
     /// #Example
     ///
-    /// ```
+    /// ```rust
     /// extern crate pbd;
     ///
     /// use pbd::dua::data_use::LegalBasis;
@@ -89,7 +89,7 @@ impl SpecialCategory {
     ///
     /// #Example
     ///
-    /// ```
+    /// ```rust
     /// extern crate pbd;
     ///
     /// use pbd::dua::data_use::SpecialCategory;
@@ -167,7 +167,7 @@ impl DataUse {
     ///
     /// #Example
     ///
-    /// ```
+    /// ```rust
     /// extern crate pbd;
     ///
     /// use pbd::dua::data_use::{DataUse, LegalBasis, SpecialCategory};
@@ -231,7 +231,7 @@ impl DataUse {
     ///
     /// #Example
     ///
-    /// ```
+    /// ```rust
     /// extern crate pbd;
     ///
     /// use pbd::dua::data_use::DataUse;
@@ -255,7 +255,7 @@ impl DataUse {
     ///
     /// #Example
     ///
-    /// ```
+    /// ```rust
     /// extern crate pbd;
     ///
     /// use pbd::dua::data_use::{DataUse, LegalBasis, SpecialCategory};
@@ -295,7 +295,7 @@ impl DataUseFactory {
     ///
     /// #Example
     ///
-    /// ```
+    /// ```rust
     /// extern crate pbd;
     ///
     /// use pbd::dua::data_use::DataUseFactory;
@@ -399,7 +399,7 @@ impl DataUseFactory {
     ///
     /// #Example
     ///
-    /// ```
+    /// ```rust
     /// extern crate pbd;
     ///
     /// use pbd::dua::data_use::DataUseFactory;
@@ -428,7 +428,7 @@ impl DataUseFactory {
     ///
     /// #Example
     ///
-    /// ```
+    /// ```rust
     /// extern crate pbd;
     ///
     /// use pbd::dua::data_use::DataUseFactory;
@@ -464,7 +464,7 @@ impl DataUseFactory {
     ///
     /// #Example
     ///
-    /// ```
+    /// ```rust
     /// extern crate pbd;
     ///
     /// use pbd::dua::data_use::DataUseFactory;
@@ -500,7 +500,7 @@ impl DataUseFactory {
     ///
     /// #Example
     ///
-    /// ```
+    /// ```rust
     /// extern crate pbd;
     ///
     /// use pbd::dua::data_use::DataUseFactory;
@@ -533,7 +533,7 @@ impl DataUseFactory {
     ///
     /// #Example
     ///
-    /// ```
+    /// ```rust
     /// extern crate pbd;
     ///
     /// use pbd::dua::data_use::DataUseFactory;
@@ -576,7 +576,7 @@ impl DataUseFactory {
     ///
     /// #Example
     ///
-    /// ```
+    /// ```rust
     /// extern crate pbd;
     ///
     /// use pbd::dua::data_use::DataUseFactory;

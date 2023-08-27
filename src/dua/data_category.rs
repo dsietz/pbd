@@ -43,7 +43,7 @@ impl DataCategory {
     ///
     /// #Example
     ///
-    /// ```
+    /// ```rust
     /// extern crate pbd;
     ///
     /// use pbd::dua::data_category::DataCategory;
@@ -61,7 +61,6 @@ impl DataCategory {
     ///     );
     /// }
     /// ```
-    ///
     pub fn new(
         nme: String,
         descr: String,
@@ -84,6 +83,34 @@ impl DataCategory {
         }
     }
 
+    /// Retrieve the unique identifier of the DataCatgegory object
+    ///
+    /// #Example
+    ///
+    /// ```rust
+    /// extern crate pbd;
+    ///
+    /// use pbd::dua::data_category::DataCategory;
+    ///
+    /// fn main() {
+    ///     let category = DataCategory::new(
+    ///         "Authentication Data".to_string(),
+    ///         "Data used to manage access to the system.".to_string(),
+    ///         "system.authentication".to_string(),
+    ///         "default_organization".to_string(),
+    ///         Some("system".to_string()), // parent key
+    ///         None, // tags
+    ///         false,
+    ///         true
+    ///     );
+    ///     
+    ///     assert_eq!(category.get_key(), "system.authentication".to_string());
+    /// }
+    /// ```
+    pub fn get_key(&self) -> String {
+        self.fides_key.clone()
+    }
+
     /// Constructs a Data Category object from a serialized string
     ///
     /// # Arguments
@@ -92,7 +119,7 @@ impl DataCategory {
     ///
     /// #Example
     ///
-    /// ```
+    /// ```rust
     /// extern crate pbd;
     ///
     /// use pbd::dua::data_category::DataCategory;
@@ -116,7 +143,7 @@ impl DataCategory {
     ///
     /// #Example
     ///
-    /// ```
+    /// ```rust
     /// extern crate pbd;
     ///
     /// use pbd::dua::data_category::DataCategory;
@@ -151,7 +178,7 @@ impl DataCategoryFactory {
     ///
     /// #Example
     ///
-    /// ```
+    /// ```rust
     /// extern crate pbd;
     ///
     /// use pbd::dua::data_category::DataCategoryFactory;
@@ -215,7 +242,7 @@ impl DataCategoryFactory {
     ///
     /// #Example
     ///
-    /// ```
+    /// ```rust
     /// extern crate pbd;
     ///
     /// use pbd::dua::data_category::DataCategoryFactory;
@@ -244,7 +271,7 @@ impl DataCategoryFactory {
     ///
     /// #Example
     ///
-    /// ```
+    /// ```rust
     /// extern crate pbd;
     ///
     /// use pbd::dua::data_category::DataCategoryFactory;
@@ -280,7 +307,7 @@ impl DataCategoryFactory {
     ///
     /// #Example
     ///
-    /// ```
+    /// ```rust
     /// extern crate pbd;
     ///
     /// use pbd::dua::data_category::DataCategoryFactory;
@@ -316,7 +343,7 @@ impl DataCategoryFactory {
     ///
     /// #Example
     ///
-    /// ```
+    /// ```rust
     /// extern crate pbd;
     ///
     /// use pbd::dua::data_category::DataCategoryFactory;
@@ -349,7 +376,7 @@ impl DataCategoryFactory {
     ///
     /// #Example
     ///
-    /// ```
+    /// ```rust
     /// extern crate pbd;
     ///
     /// use pbd::dua::data_category::DataCategoryFactory;
@@ -392,7 +419,7 @@ impl DataCategoryFactory {
     ///
     /// #Example
     ///
-    /// ```
+    /// ```rust
     /// extern crate pbd;
     ///
     /// use pbd::dua::data_category::DataCategoryFactory;
@@ -444,6 +471,11 @@ mod tests {
             true,
         );
         category
+    }
+
+    #[test]
+    fn test_data_category_get_key() {
+        assert_eq!(get_data_category().get_key(), "system.authentication".to_string());
     }
 
     #[test]

@@ -56,7 +56,7 @@ This SDK comes with the executable examples for each of the features. The code f
 #### Data Privacy Inspector
 1. From the command line terminal, start the service using: `cargo run --example data-privacy-inspector`
 2. Then make the following http request
-```
+```http
 POST / HTTP/1.1
 Host: localhost:8088
 Content-Type: plain/text
@@ -80,7 +80,7 @@ Robert
 #### Data Security Guard
 1. From the command line terminal, start the service using: `cargo run --example data-security-guard`
 2. Then make the following http request
-```
+```http
 GET / HTTP/1.1
 Host: localhost:8088
 Content-Type: application/json
@@ -92,7 +92,7 @@ Content-Length: 1097
 #### Data Tracker Chain
 1. From the command line terminal, start the service using: `cargo run --example data-tracker-chain`
 2. Then make the following http request
-```
+```http
 GET / HTTP/1.1
 Host: localhost:8088
 Content-Type: application/json
@@ -102,7 +102,7 @@ Data-Tracker-Chain: W3siaWRlbnRpZmllciI6eyJkYXRhX2lkIjoib3JkZXJ+Y2xvdGhpbmd+aVN0
 #### Data Usage Agreement
 1. From the command line terminal, start the service using: `cargo run --example data-usage-agreement`
 2. Then make the following http request
-```
+```http
 GET / HTTP/1.1
 Host: localhost:8088
 Content-Type: application/json

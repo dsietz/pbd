@@ -39,7 +39,7 @@ impl Right {
     ///
     /// #Example
     ///
-    /// ```
+    /// ```rust
     /// extern crate pbd;
     ///
     /// use pbd::dua::data_subject::Right;
@@ -87,7 +87,7 @@ impl Strategy {
     ///
     /// #Example
     ///
-    /// ```
+    /// ```rust
     /// extern crate pbd;
     ///
     /// use pbd::dua::data_subject::Strategy;
@@ -137,7 +137,7 @@ impl DataRights {
     ///
     /// #Example
     ///
-    /// ```
+    /// ```rust
     /// extern crate pbd;
     ///
     /// use pbd::dua::data_subject::{DataRights, Right, Strategy};
@@ -158,7 +158,7 @@ impl DataRights {
     ///
     /// #Example
     ///
-    /// ```
+    /// ```rust
     /// extern crate pbd;
     ///
     /// use pbd::dua::data_subject::{DataRights, Right, Strategy};
@@ -178,7 +178,7 @@ impl DataRights {
     ///
     /// #Example
     ///
-    /// ```
+    /// ```rust
     /// extern crate pbd;
     ///
     /// use pbd::dua::data_subject::{DataRights, Right, Strategy};
@@ -200,7 +200,7 @@ impl DataRights {
     ///
     /// #Example
     ///
-    /// ```
+    /// ```rust
     /// extern crate pbd;
     ///
     /// use pbd::dua::DUA;
@@ -224,7 +224,7 @@ impl DataRights {
     ///
     /// #Example
     ///
-    /// ```
+    /// ```rust
     /// extern crate pbd;
     ///
     /// use pbd::dua::DUA;
@@ -287,7 +287,7 @@ impl DataSubject {
     ///
     /// #Example
     ///
-    /// ```
+    /// ```rust
     /// extern crate pbd;
     ///
     /// use pbd::dua::data_subject::{DataSubject, DataRights, Right, Strategy};
@@ -335,7 +335,7 @@ impl DataSubject {
     ///
     /// #Example
     ///
-    /// ```
+    /// ```rust
     /// extern crate pbd;
     ///
     /// use pbd::dua::data_subject::{DataSubject, DataRights, Right, Strategy};
@@ -367,7 +367,7 @@ impl DataSubject {
     ///
     /// #Example
     ///
-    /// ```
+    /// ```rust
     /// extern crate pbd;
     ///
     /// use pbd::dua::data_subject::{DataSubject, DataRights, Right, Strategy};
@@ -406,7 +406,7 @@ impl DataSubjectFactory {
     ///
     /// #Example
     ///
-    /// ```
+    /// ```rust
     /// extern crate pbd;
     ///
     /// use pbd::dua::data_subject::DataSubjectFactory;
@@ -485,7 +485,7 @@ impl DataSubjectFactory {
     ///
     /// #Example
     ///
-    /// ```
+    /// ```rust
     /// extern crate pbd;
     ///
     /// use pbd::dua::data_subject::DataSubjectFactory;
@@ -514,7 +514,7 @@ impl DataSubjectFactory {
     ///
     /// #Example
     ///
-    /// ```
+    /// ```rust
     /// extern crate pbd;
     ///
     /// use pbd::dua::data_subject::DataSubjectFactory;
@@ -550,7 +550,7 @@ impl DataSubjectFactory {
     ///
     /// #Example
     ///
-    /// ```
+    /// ```rust
     /// extern crate pbd;
     ///
     /// use pbd::dua::data_subject::DataSubjectFactory;

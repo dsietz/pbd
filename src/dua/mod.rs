@@ -33,7 +33,7 @@
 //! ---
 //!
 //! One way is to incorporate the use of DUA objects is directly in the code.
-//! ```
+//! ```rust
 //! extern crate pbd;
 //!
 //! use pbd::dua::DUA;
@@ -77,7 +77,7 @@ impl DUA {
     ///
     /// #Example
     ///
-    /// ```
+    /// ```rust
     /// extern crate pbd;
     ///
     /// use pbd::dua::DUA;
@@ -107,7 +107,7 @@ impl DUA {
     ///
     /// #Example
     ///
-    /// ```
+    /// ```rust
     /// extern crate pbd;
     ///
     /// use pbd::dua::DUA;
@@ -131,7 +131,7 @@ impl DUA {
     ///
     /// #Example
     ///
-    /// ```
+    /// ```rust
     /// extern crate pbd;
     ///
     /// use pbd::dua::DUA;

@@ -9,7 +9,7 @@
 //!
 //! Utilizing the PrivacyGuard structure to generate a RSA keypair
 //!
-//! ```
+//! ```rust
 //! extern crate pbd;
 //!
 //! use pbd::dsg::{PrivacyGuard, PrivacySecurityGuard, TransferSet};
@@ -23,7 +23,7 @@
 //!
 //! Implementing the PrivacySecurityGuard trait to generate a RSA keypair
 //!
-//! ```
+//! ```rust
 //! extern crate pbd;
 //!
 //! use pbd::dsg::{PrivacySecurityGuard};
