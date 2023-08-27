@@ -248,10 +248,10 @@ impl DataCategoryFactory {
     ///
     /// fn main() {
     ///     let factory = DataCategoryFactory::new();
-    ///     assert_eq!(factory.get_data_categories().len(), 85);
+    ///     assert_eq!(factory.get_categories().len(), 85);
     /// }
     /// ```
-    pub fn get_data_categories(&self) -> Vec<DataCategory> {
+    pub fn get_categories(&self) -> Vec<DataCategory> {
         let filtered: Vec<DataCategory> = self
             .data_categories
             .iter()
@@ -278,13 +278,13 @@ impl DataCategoryFactory {
     /// fn main() {
     ///     let factory = DataCategoryFactory::new();
     ///
-    ///     let category = match factory.get_data_category_by_key("system.authentication".to_string()) {
+    ///     let category = match factory.get_category_by_key("system.authentication".to_string()) {
     ///         Some(s) => s,
     ///         None => panic!("Could not find it!"),
     ///     };
     /// }
     /// ```
-    pub fn get_data_category_by_key(&self, key: String) -> Option<DataCategory> {
+    pub fn get_category_by_key(&self, key: String) -> Option<DataCategory> {
         let filtered: Vec<DataCategory> = self
             .data_categories
             .iter()
@@ -314,13 +314,13 @@ impl DataCategoryFactory {
     /// fn main() {
     ///     let factory = DataCategoryFactory::new();
     ///
-    ///     let datause = match factory.get_data_category_by_name("Authentication Data".to_string()) {
+    ///     let datause = match factory.get_category_by_name("Authentication Data".to_string()) {
     ///         Some(s) => s,
     ///         None => panic!("Could not find it!"),
     ///     };
     /// }
     /// ```
-    pub fn get_data_category_by_name(&self, name: String) -> Option<DataCategory> {
+    pub fn get_category_by_name(&self, name: String) -> Option<DataCategory> {
         let filtered: Vec<DataCategory> = self
             .data_categories
             .iter()
@@ -350,11 +350,11 @@ impl DataCategoryFactory {
     /// fn main() {
     ///     let factory = DataCategoryFactory::new();
     ///
-    ///     let children = factory.get_data_category_children_by_key("user.behavior".to_string());
+    ///     let children = factory.get_category_children_by_key("user.behavior".to_string());
     ///     assert_eq!(children.len(), 4);
     /// }
     /// ```
-    pub fn get_data_category_children_by_key(&self, key: String) -> Vec<DataCategory> {
+    pub fn get_category_children_by_key(&self, key: String) -> Vec<DataCategory> {
         let filtered: Vec<DataCategory> = self
             .data_categories
             .iter()
@@ -383,12 +383,12 @@ impl DataCategoryFactory {
     /// fn main() {
     ///     let factory = DataCategoryFactory::new();
     ///
-    ///     let parent = factory.get_data_category_parent_by_key("user.biometric".to_string());
+    ///     let parent = factory.get_category_parent_by_key("user.biometric".to_string());
     ///     assert_eq!(parent.unwrap().get_key(), "user".to_string());
     /// }
     /// ```
-    pub fn get_data_category_parent_by_key(&self, key: String) -> Option<DataCategory> {
-        let child = self.get_data_category_by_key(key);
+    pub fn get_category_parent_by_key(&self, key: String) -> Option<DataCategory> {
+        let child = self.get_category_by_key(key);
         match child {
             Some(c) => {
                 let filtered: Vec<DataCategory> = self
@@ -440,7 +440,7 @@ impl DataCategoryFactory {
             None => Vec::new(),
         };
 
-        let child = match self.get_data_category_by_key(key.clone()) {
+        let child = match self.get_category_by_key(key.clone()) {
             Some(c) => c,
             None => panic!("Invalid DataCategory fides_key {}", key),
         };
@@ -496,14 +496,14 @@ mod tests {
     #[test]
     fn test_data_category_factory_get_categories_ok() {
         let factory = DataCategoryFactory::new();
-        assert_eq!(factory.get_data_categories().len(), 85);
+        assert_eq!(factory.get_categories().len(), 85);
     }
 
     #[test]
-    fn test_data_category_factory_get_data_category_by_key() {
+    fn test_data_category_factory_get_category_by_key() {
         let factory = DataCategoryFactory::new();
 
-        let category = match factory.get_data_category_by_key("system.authentication".to_string()) {
+        let category = match factory.get_category_by_key("system.authentication".to_string()) {
             Some(s) => s,
             None => panic!("Data Use not found!"),
         };
@@ -512,10 +512,10 @@ mod tests {
     }
 
     #[test]
-    fn test_data_category_factory_get_data_category_by_name() {
+    fn test_data_category_factory_get_category_by_name() {
         let factory = DataCategoryFactory::new();
 
-        let category = match factory.get_data_category_by_name("Authentication Data".to_string()) {
+        let category = match factory.get_category_by_name("Authentication Data".to_string()) {
             Some(s) => s,
             None => panic!("Authentication Data not found!"),
         };
@@ -524,9 +524,9 @@ mod tests {
     }
 
     #[test]
-    fn test_data_category_factory_get_data_category_children_by_key() {
+    fn test_data_category_factory_get_category_children_by_key() {
         let factory = DataCategoryFactory::new();
-        let list = factory.get_data_category_children_by_key("user.behavior".to_string());
+        let list = factory.get_category_children_by_key("user.behavior".to_string());
         assert_eq!(list.len(), 4);
         assert_eq!(
             list.iter()
@@ -563,10 +563,10 @@ mod tests {
     }
 
     #[test]
-    fn test_data_category_factory_get_data_category_parent_by_key() {
+    fn test_data_category_factory_get_category_parent_by_key() {
         let factory = DataCategoryFactory::new();
         let parent =
-            factory.get_data_category_parent_by_key("user.behavior.browsing_history".to_string());
+            factory.get_category_parent_by_key("user.behavior.browsing_history".to_string());
         assert_eq!(parent.unwrap().fides_key, "user.behavior".to_string());
     }
 

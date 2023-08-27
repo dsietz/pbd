@@ -439,10 +439,10 @@ impl DataUseFactory {
     ///
     /// fn main() {
     ///     let factory = DataUseFactory::new();
-    ///     assert_eq!(factory.get_data_uses().len(), 52);
+    ///     assert_eq!(factory.get_uses().len(), 52);
     /// }
     /// ```
-    pub fn get_data_uses(&self) -> Vec<DataUse> {
+    pub fn get_uses(&self) -> Vec<DataUse> {
         let filtered: Vec<DataUse> = self
             .data_uses
             .iter()
@@ -469,13 +469,13 @@ impl DataUseFactory {
     /// fn main() {
     ///     let factory = DataUseFactory::new();
     ///     
-    ///     let subject = match factory.get_data_use_by_key("essential.service.operations.support".to_string()) {
+    ///     let subject = match factory.get_use_by_key("essential.service.operations.support".to_string()) {
     ///         Some(s) => s,
     ///         None => panic!("Could not find it!"),
     ///     };
     /// }
     /// ```
-    pub fn get_data_use_by_key(&self, key: String) -> Option<DataUse> {
+    pub fn get_use_by_key(&self, key: String) -> Option<DataUse> {
         let filtered: Vec<DataUse> = self
             .data_uses
             .iter()
@@ -505,13 +505,13 @@ impl DataUseFactory {
     /// fn main() {
     ///     let factory = DataUseFactory::new();
     ///     
-    ///     let datause = match factory.get_data_use_by_name("Essential for Operations Support".to_string()) {
+    ///     let datause = match factory.get_use_by_name("Essential for Operations Support".to_string()) {
     ///         Some(s) => s,
     ///         None => panic!("Could not find it!"),
     ///     };
     /// }
     /// ```
-    pub fn get_data_use_by_name(&self, name: String) -> Option<DataUse> {
+    pub fn get_use_by_name(&self, name: String) -> Option<DataUse> {
         let filtered: Vec<DataUse> = self
             .data_uses
             .iter()
@@ -541,11 +541,11 @@ impl DataUseFactory {
     /// fn main() {
     ///     let factory = DataUseFactory::new();
     ///     
-    ///     let children = factory.get_data_use_children_by_key("marketing.advertising".to_string());
+    ///     let children = factory.get_use_children_by_key("marketing.advertising".to_string());
     ///     assert_eq!(children.len(), 6);
     /// }
     /// ```
-    pub fn get_data_use_children_by_key(&self, key: String) -> Vec<DataUse> {
+    pub fn get_use_children_by_key(&self, key: String) -> Vec<DataUse> {
         let filtered: Vec<DataUse> = self
             .data_uses
             .iter()
@@ -574,12 +574,12 @@ impl DataUseFactory {
     /// fn main() {
     ///     let factory = DataUseFactory::new();
     ///     
-    ///     let parent = factory.get_data_use_parent_by_key("marketing.advertising".to_string());
+    ///     let parent = factory.get_use_parent_by_key("marketing.advertising".to_string());
     ///     assert_eq!(parent.unwrap().get_key(), "marketing".to_string());
     /// }
     /// ```
-    pub fn get_data_use_parent_by_key(&self, key: String) -> Option<DataUse> {
-        let child = self.get_data_use_by_key(key);
+    pub fn get_use_parent_by_key(&self, key: String) -> Option<DataUse> {
+        let child = self.get_use_by_key(key);
         match child {
             Some(c) => {
                 let filtered: Vec<DataUse> = self
@@ -631,7 +631,7 @@ impl DataUseFactory {
             None => Vec::new(),
         };
 
-        let child = match self.get_data_use_by_key(key.clone()) {
+        let child = match self.get_use_by_key(key.clone()) {
             Some(c) => c,
             None => panic!("Invalid DataUse fides_key {}", key),
         };
@@ -692,15 +692,15 @@ mod tests {
     #[test]
     fn test_data_use_factory_get_uses_ok() {
         let factory = DataUseFactory::new();
-        assert_eq!(factory.get_data_uses().len(), 52);
+        assert_eq!(factory.get_uses().len(), 52);
     }
 
     #[test]
-    fn test_data_use_factory_get_data_use_by_key() {
+    fn test_data_use_factory_get_use_by_key() {
         let factory = DataUseFactory::new();
 
         let datause =
-            match factory.get_data_use_by_key("essential.service.operations.support".to_string()) {
+            match factory.get_use_by_key("essential.service.operations.support".to_string()) {
                 Some(s) => s,
                 None => panic!("Data Use not found!"),
             };
@@ -709,11 +709,11 @@ mod tests {
     }
 
     #[test]
-    fn test_data_use_factory_get_data_use_by_name() {
+    fn test_data_use_factory_get_use_by_name() {
         let factory = DataUseFactory::new();
 
         let datause =
-            match factory.get_data_use_by_name("Essential for Operations Support".to_string()) {
+            match factory.get_use_by_name("Essential for Operations Support".to_string()) {
                 Some(s) => s,
                 None => panic!("Essential for Operations Support not found!"),
             };
@@ -722,9 +722,9 @@ mod tests {
     }
 
     #[test]
-    fn test_data_use_factory_get_data_use_children_by_key() {
+    fn test_data_use_factory_get_use_children_by_key() {
         let factory = DataUseFactory::new();
-        let list = factory.get_data_use_children_by_key("marketing.advertising".to_string());
+        let list = factory.get_use_children_by_key("marketing.advertising".to_string());
         assert_eq!(list.len(), 6);
         assert_eq!(
             list.iter()
@@ -769,9 +769,9 @@ mod tests {
     }
 
     #[test]
-    fn test_data_use_factory_get_data_use_parent_by_key() {
+    fn test_data_use_factory_get_use_parent_by_key() {
         let factory = DataUseFactory::new();
-        let parent = factory.get_data_use_parent_by_key("marketing.advertising".to_string());
+        let parent = factory.get_use_parent_by_key("marketing.advertising".to_string());
         assert_eq!(parent.unwrap().get_key(), "marketing".to_string());
     }
 

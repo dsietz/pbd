@@ -10,71 +10,69 @@
 //! ### Usage
 //! A DUP (Data Usage Policy) allows us to define standardized usage policies that can be easily understood by a user, will also being able to apply it programmatically during the application runtime.
 //! These "Opt-In" policies can then be added to the DUA (Data Usage Agreement) so that applications and processors (e.g.: microservices) can dynamically determine if and how they are permitted to utilize the data prior to processing it.
-//! 
+//!
 //! ```rust
 //! extern crate pbd;
 //!
-//! use pbd::dua::policy::DUP;
-//! use pbd::dua::data_category::DataCategory;
-//! use pbd::dua::data_subject::{DataRights, DataSubject, Right, Strategy};
-//! use pbd::dua::data_use::{DataUse, LegalBasis, SpecialCategory};
+//! use pbd::dua::policy::{Condition, DUP};
+//! use pbd::dua::data_category::DataCategoryFactory;
+//! use pbd::dua::data_subject::DataSubjectFactory;
+//! use pbd::dua::data_use::DataUseFactory;
 //!
-//! fn get_policy() -> DUP {
-//!     let mut dup = DUP::new(
-//!         "General Policy".to_string(),
-//!         "This is a high-level policy.".to_string(),
-//!         "1.0.1".to_string()
-//!     );    
-//!     let category = DataCategory::new(
-//!        "Authentication Data".to_string(),
-//!        "Data used to manage access to the system.".to_string(),
-//!        "system.authentication".to_string(),
-//!        "default_organization".to_string(),
-//!        Some("system".to_string()),
-//!        None,                       
-//!        false,
-//!        true,
-//!    );
-//!    let subject = DataSubject::new(
-//!        "Consultant".to_string(),
-//!        "An individual employed in a consultative/temporary capacity by the organization.".to_string(),
-//!        "consultant".to_string(),
-//!        "default_organization".to_string(),
-//!        Some(vec!["work".to_string(), "temporary".to_string()]),
-//!        Some(DataRights::new(Strategy::ALL, vec![Right::Informed, Right::Access])),
-//!        false,
-//!        false,
-//!        true
-//!    );
-//!    let datause = DataUse::new(
-//!        "Provide the capability".to_string(),
-//!        "Provide, give, or make available the product, service, application or system.".to_string(),
-//!        "provide".to_string(),
-//!        "default_organization".to_string(),
-//!        None,
-//!        Some(LegalBasis::LegitimateInterest),
-//!        Some(SpecialCategory::VitalInterests),
-//!        Some(vec!("marketing team".to_string(), "dog shelter".to_string())),
-//!        false,
-//!        Some("https://example.org/legitimate_interest_assessment".to_string()),
-//!        None,
-//!        false,
-//!        true
-//!    );
-//! 
+//! fn get_defined_policy() -> DUP {
+//!    let category_factory = DataCategoryFactory::new();
+//!    let subject_factory = DataSubjectFactory::new();
+//!    let use_factory = DataUseFactory::new();
+//!
+//!    let mut dup = DUP::new(
+//!        "General Policy".to_string(),
+//!        "This is a high-level policy.".to_string(),
+//!        "1.0.1".to_string()
+//!    );    
+//!
 //!    // associate some classifications to the policy
-//!    dup.associate_category(category);
-//!    dup.associate_subject(subject);
-//!    dup.associate_use(datause);
-//! 
+//!    dup.associate_category(category_factory.get_category_by_key("system.authentication".to_string()).unwrap());
+//!    dup.associate_category(category_factory.get_category_by_key("user.contact.email".to_string()).unwrap());
+//!    dup.associate_category(category_factory.get_category_by_key("user.contact.phone_number".to_string()).unwrap());
+//!    dup.associate_subject(subject_factory.get_subject_by_key("customer".to_string()).unwrap());
+//!    dup.associate_use(use_factory.get_use_by_key("essential.service.authentication".to_string()).unwrap());
+//!
 //!    dup
 //! }
-//! 
-//! fn main() {
-//!    let policy = get_policy();
+//!
+//! fn get_processor_conditions() -> Vec<Condition> {
+//!    let mut conditions: Vec<Condition> = Vec::new();
+//!    let category_factory = DataCategoryFactory::new();
+//!    let subject_factory = DataSubjectFactory::new();
+//!    let use_factory = DataUseFactory::new();
+//!    
+//!    conditions.push(Condition::Category(category_factory.get_category_by_key("user.contact.email".to_string()).unwrap().get_key()));
+//!    conditions.push(Condition::Subject(subject_factory.get_subject_by_key("customer".to_string()).unwrap().get_key()));
+//!    conditions.push(Condition::Use(use_factory.get_use_by_key("marketing.advertising.profiling".to_string()).unwrap().get_key()));
+//!
+//!    conditions
 //! }
-//! ``` 
+//!
+//! fn main() {
+//!    // A policy that defines the acceptable conditions for using the data
+//!    let mut policy = get_defined_policy();
+//!
+//!    // A list of conditions that the processor has been configured to apply to data
+//!    let conditions = get_processor_conditions();
 //! 
+//!    // Check to see if the processor is permitted to use the data based on its privacy configurations
+//!    let conflicts = policy.match_conditions(conditions);
+//!
+//!    match conflicts.len() > 0 {
+//!       true => {
+//!          for conflict in conflicts.iter() {
+//!             println!("Blocked due to Condition key {}", conflict.to_string());
+//!          }
+//!       },
+//!       false => println!("Allowed - Process the data."), 
+//!    }
+//! }
+//! ```
 use super::data_category::DataCategory;
 use super::data_subject::DataSubject;
 use super::data_use::DataUse;
