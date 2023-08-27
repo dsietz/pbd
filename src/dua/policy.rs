@@ -7,7 +7,74 @@
 //!
 //! You can use the [Privacy Taxonomy Explorer](https://ethyca.github.io/fideslang/explorer/) for a graphic representation of the Fides classification groups.
 //!
+//! ### Usage
+//! A DUP (Data Usage Policy) allows us to define standardized usage policies that can be easily understood by a user, will also being able to apply it programmatically during the application runtime.
+//! These "Opt-In" policies can then be added to the DUA (Data Usage Agreement) so that applications and processors (e.g.: microservices) can dynamically determine if and how they are permitted to utilize the data prior to processing it.
+//! 
+//! ```rust
+//! extern crate pbd;
 //!
+//! use pbd::dua::policy::DUP;
+//! use pbd::dua::data_category::DataCategory;
+//! use pbd::dua::data_subject::{DataRights, DataSubject, Right, Strategy};
+//! use pbd::dua::data_use::{DataUse, LegalBasis, SpecialCategory};
+//!
+//! fn get_policy() -> DUP {
+//!     let mut dup = DUP::new(
+//!         "General Policy".to_string(),
+//!         "This is a high-level policy.".to_string(),
+//!         "1.0.1".to_string()
+//!     );    
+//!     let category = DataCategory::new(
+//!        "Authentication Data".to_string(),
+//!        "Data used to manage access to the system.".to_string(),
+//!        "system.authentication".to_string(),
+//!        "default_organization".to_string(),
+//!        Some("system".to_string()),
+//!        None,                       
+//!        false,
+//!        true,
+//!    );
+//!    let subject = DataSubject::new(
+//!        "Consultant".to_string(),
+//!        "An individual employed in a consultative/temporary capacity by the organization.".to_string(),
+//!        "consultant".to_string(),
+//!        "default_organization".to_string(),
+//!        Some(vec!["work".to_string(), "temporary".to_string()]),
+//!        Some(DataRights::new(Strategy::ALL, vec![Right::Informed, Right::Access])),
+//!        false,
+//!        false,
+//!        true
+//!    );
+//!    let datause = DataUse::new(
+//!        "Provide the capability".to_string(),
+//!        "Provide, give, or make available the product, service, application or system.".to_string(),
+//!        "provide".to_string(),
+//!        "default_organization".to_string(),
+//!        None,
+//!        Some(LegalBasis::LegitimateInterest),
+//!        Some(SpecialCategory::VitalInterests),
+//!        Some(vec!("marketing team".to_string(), "dog shelter".to_string())),
+//!        false,
+//!        Some("https://example.org/legitimate_interest_assessment".to_string()),
+//!        None,
+//!        false,
+//!        true
+//!    );
+//! 
+//!    // associate some classifications to the policy
+//!    dup.associate_category(category);
+//!    dup.associate_subject(subject);
+//!    dup.associate_use(datause);
+//! 
+//!    dup
+//! }
+//! 
+//! fn main() {
+//!    let policy = get_policy();
+//! }
+//! ``` 
+//! 
 use super::data_category::DataCategory;
 use super::data_subject::DataSubject;
 use super::data_use::DataUse;
