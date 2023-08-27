@@ -712,11 +712,11 @@ mod tests {
     fn test_data_use_factory_get_use_by_name() {
         let factory = DataUseFactory::new();
 
-        let datause =
-            match factory.get_use_by_name("Essential for Operations Support".to_string()) {
-                Some(s) => s,
-                None => panic!("Essential for Operations Support not found!"),
-            };
+        let datause = match factory.get_use_by_name("Essential for Operations Support".to_string())
+        {
+            Some(s) => s,
+            None => panic!("Essential for Operations Support not found!"),
+        };
 
         assert_eq!(datause.get_key(), "essential.service.operations.support");
     }

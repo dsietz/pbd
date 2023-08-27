@@ -59,7 +59,7 @@
 //!
 //!    // A list of conditions that the processor has been configured to apply to data
 //!    let conditions = get_processor_conditions();
-//! 
+//!
 //!    // Check to see if the processor is permitted to use the data based on its privacy configurations
 //!    let conflicts = policy.match_conditions(conditions);
 //!
@@ -69,7 +69,7 @@
 //!             println!("Blocked due to Condition key {}", conflict.to_string());
 //!          }
 //!       },
-//!       false => println!("Allowed - Process the data."), 
+//!       false => println!("Allowed - Process the data."),
 //!    }
 //! }
 //! ```
