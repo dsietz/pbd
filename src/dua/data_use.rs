@@ -123,7 +123,7 @@ pub struct DataUse {
     /// A human-readable description of the Data Use
     pub description: String,
     /// The fides key of the Data Use
-    pub fides_key: String,
+    fides_key: String,
     /// The fides key of the organization to which this Data Use belongs.
     pub organization_fides_key: String,
     /// The fides key of the the Data Use's parent.
@@ -221,6 +221,39 @@ impl DataUse {
             is_default: ind_default,
             active: ind_active,
         }
+    }
+
+    /// Retrieve the unique identifier of the DataUse object
+    ///
+    /// #Example
+    ///
+    /// ```rust
+    /// extern crate pbd;
+    ///
+    /// use pbd::dua::data_use::{DataUse, LegalBasis, SpecialCategory};
+    ///
+    /// fn main() {
+    ///     let datause = DataUse::new(
+    ///         "Provide the capability".to_string(),
+    ///         "Provide, give, or make available the product, service, application or system.".to_string(),
+    ///         "provide".to_string(),
+    ///         "default_organization".to_string(),
+    ///         None,
+    ///         Some(LegalBasis::LegitimateInterest),
+    ///         Some(SpecialCategory::VitalInterests),
+    ///         Some(vec!("marketing team".to_string(), "dog shelter".to_string())),
+    ///         false,
+    ///         Some("https://example.org/legitimate_interest_assessment".to_string()),
+    ///         None,
+    ///         false,
+    ///         true
+    ///     );
+    ///     
+    ///     assert_eq!(datause.get_key(), "provide".to_string());
+    /// }
+    /// ```
+    pub fn get_key(&self) -> String {
+        self.fides_key.clone()
     }
 
     /// Constructs a Data Use object from a serialized string
@@ -542,7 +575,7 @@ impl DataUseFactory {
     ///     let factory = DataUseFactory::new();
     ///     
     ///     let parent = factory.get_data_use_parent_by_key("marketing.advertising".to_string());
-    ///     assert_eq!(parent.unwrap().fides_key, "marketing".to_string());
+    ///     assert_eq!(parent.unwrap().get_key(), "marketing".to_string());
     /// }
     /// ```
     pub fn get_data_use_parent_by_key(&self, key: String) -> Option<DataUse> {
@@ -672,7 +705,7 @@ mod tests {
                 None => panic!("Data Use not found!"),
             };
 
-        assert_eq!(datause.fides_key, "essential.service.operations.support");
+        assert_eq!(datause.get_key(), "essential.service.operations.support");
     }
 
     #[test]
@@ -685,7 +718,7 @@ mod tests {
                 None => panic!("Essential for Operations Support not found!"),
             };
 
-        assert_eq!(datause.fides_key, "essential.service.operations.support");
+        assert_eq!(datause.get_key(), "essential.service.operations.support");
     }
 
     #[test]
@@ -695,7 +728,7 @@ mod tests {
         assert_eq!(list.len(), 6);
         assert_eq!(
             list.iter()
-                .map(|s| s.fides_key.clone())
+                .map(|s| s.get_key().clone())
                 .filter(|k| k == "marketing.advertising.frequency_capping")
                 .collect::<Vec<_>>()
                 .len(),
@@ -703,7 +736,7 @@ mod tests {
         );
         assert_eq!(
             list.iter()
-                .map(|s| s.fides_key.clone())
+                .map(|s| s.get_key().clone())
                 .filter(|k| k == "marketing.advertising.negative_targeting")
                 .collect::<Vec<_>>()
                 .len(),
@@ -711,7 +744,7 @@ mod tests {
         );
         assert_eq!(
             list.iter()
-                .map(|s| s.fides_key.clone())
+                .map(|s| s.get_key().clone())
                 .filter(|k| k == "marketing.advertising.profiling")
                 .collect::<Vec<_>>()
                 .len(),
@@ -719,7 +752,7 @@ mod tests {
         );
         assert_eq!(
             list.iter()
-                .map(|s| s.fides_key.clone())
+                .map(|s| s.get_key().clone())
                 .filter(|k| k == "marketing.advertising.serving")
                 .collect::<Vec<_>>()
                 .len(),
@@ -727,7 +760,7 @@ mod tests {
         );
         assert_eq!(
             list.iter()
-                .map(|s| s.fides_key.clone())
+                .map(|s| s.get_key().clone())
                 .filter(|k| k == "marketing.advertising.third_party")
                 .collect::<Vec<_>>()
                 .len(),
@@ -739,7 +772,7 @@ mod tests {
     fn test_data_use_factory_get_data_use_parent_by_key() {
         let factory = DataUseFactory::new();
         let parent = factory.get_data_use_parent_by_key("marketing.advertising".to_string());
-        assert_eq!(parent.unwrap().fides_key, "marketing".to_string());
+        assert_eq!(parent.unwrap().get_key(), "marketing".to_string());
     }
 
     #[test]

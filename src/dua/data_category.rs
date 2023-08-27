@@ -14,7 +14,7 @@ pub struct DataCategory {
     /// A human-readable description of the Data Category
     pub description: String,
     /// The fides key of the Data Category
-    pub fides_key: String,
+    fides_key: String,
     /// The fides key of the organization to which this Data Category belongs.
     pub organization_fides_key: String,
     /// The fides key of the the Data Category's parent.
@@ -385,7 +385,7 @@ impl DataCategoryFactory {
     ///     let factory = DataCategoryFactory::new();
     ///
     ///     let parent = factory.get_data_category_parent_by_key("user.biometric".to_string());
-    ///     assert_eq!(parent.unwrap().fides_key, "user".to_string());
+    ///     assert_eq!(parent.unwrap().get_key(), "user".to_string());
     /// }
     /// ```
     pub fn get_data_category_parent_by_key(&self, key: String) -> Option<DataCategory> {
@@ -475,7 +475,10 @@ mod tests {
 
     #[test]
     fn test_data_category_get_key() {
-        assert_eq!(get_data_category().get_key(), "system.authentication".to_string());
+        assert_eq!(
+            get_data_category().get_key(),
+            "system.authentication".to_string()
+        );
     }
 
     #[test]

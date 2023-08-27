@@ -133,15 +133,51 @@ impl DUP {
         self.categories.clone().into_values().collect()
     }
 
+    /// Determines if the specified DataCategory key is associated with the policy
+    ///
+    /// # Arguments
+    ///
+    /// * key: String - The key of the Data Category to check.</br>
+    ///
+    /// #Example
+    ///
+    /// ```rust
+    /// extern crate pbd;
+    ///
+    /// use pbd::dua::policy::DUP;
+    /// use pbd::dua::data_category::DataCategory;
+    ///
+    /// fn main() {
+    ///     let mut dup = DUP::new(
+    ///         "General Policy".to_string(),
+    ///         "This is a high-level policy.".to_string(),
+    ///         "1.0.1".to_string()
+    ///     );
+    ///     let cat = DataCategory::new(
+    ///        "Authentication Data".to_string(),
+    ///        "Data used to manage access to the system.".to_string(),
+    ///        "system.authentication".to_string(),
+    ///        "default_organization".to_string(),
+    ///        Some("system".to_string()),
+    ///        None,                       
+    ///        false,
+    ///        true,
+    ///    );
+    ///
+    ///    dup.add_category(cat.clone());
+    ///
+    ///    assert_eq!(dup.has_category(cat.get_key()), true);
+    /// }
+    /// ```
     pub fn has_category(&mut self, key: String) -> bool {
         self.categories.contains_key(&key)
     }
 
-    /// Disassociates the specified DataCategory object from the policy using the fides key
+    /// Disassociates the specified DataCategory object from the policy using the key
     ///
     /// # Arguments
     ///
-    /// * key: String - The fides kay of the Data Category to remove.</br>
+    /// * key: String - The key of the Data Category to remove.</br>
     ///
     /// #Example
     ///

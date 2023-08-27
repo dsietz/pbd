@@ -255,7 +255,7 @@ pub struct DataSubject {
     /// A human-readable description of the Data Subject
     pub description: String,
     /// The fides key of the Data Subject
-    pub fides_key: String,
+    fides_key: String,
     /// The fides key of the organization to which this Data Subject belongs.
     pub organization_fides_key: String,
     /// List of labels related to the Data Subject
@@ -394,6 +394,35 @@ impl DataSubject {
             None => None,
         }
     }
+
+    /// Retrieve the unique identifier of the DataSubject object
+    ///
+    /// #Example
+    ///
+    /// ```rust
+    /// extern crate pbd;
+    ///
+    /// use pbd::dua::data_subject::{DataSubject, DataRights, Right, Strategy};
+    ///
+    /// fn main() {
+    ///     let subject = DataSubject::new(
+    ///         "Consultant".to_string(),
+    ///         "An individual employed in a consultative/temporary capacity by the organization.".to_string(),
+    ///         "consultant".to_string(),
+    ///         "default_organization".to_string(),
+    ///         Some(vec!["work".to_string(), "temporary".to_string()]),
+    ///         Some(DataRights::new(Strategy::ALL, vec![Right::Informed, Right::Access])),
+    ///         false,
+    ///         false,
+    ///         true
+    ///     );
+    ///     
+    ///     assert_eq!(subject.get_key(), "consultant".to_string());
+    /// }
+    /// ```
+    pub fn get_key(&self) -> String {
+        self.fides_key.clone()
+    }
 }
 
 /// Represents a Data Subject Factory
@@ -510,7 +539,7 @@ impl DataSubjectFactory {
     ///
     /// # Arguments
     ///
-    /// * key: String - The string that represents the DataSubject fides_key.</br>
+    /// * key: String - The string that represents the DataSubject key.</br>
     ///
     /// #Example
     ///
@@ -623,7 +652,7 @@ mod tests {
             None => panic!("Customer not found!"),
         };
 
-        assert_eq!(subject.fides_key, "customer");
+        assert_eq!(subject.get_key(), "customer");
         assert_eq!(subject.get_data_strategy(), None);
         assert_eq!(subject.get_data_rights(), None);
     }
@@ -637,7 +666,7 @@ mod tests {
             None => panic!("Citizen Voter not found!"),
         };
 
-        assert_eq!(subject.fides_key, "citizen_voter");
+        assert_eq!(subject.get_key(), "citizen_voter");
         assert_eq!(subject.get_data_strategy().unwrap(), Strategy::INCLUDE);
         assert_eq!(subject.get_data_rights().unwrap().len(), 5);
     }
@@ -651,7 +680,7 @@ mod tests {
             None => panic!("Citizen Voter not found!"),
         };
 
-        assert_eq!(subject.fides_key, "commuter");
+        assert_eq!(subject.get_key(), "commuter");
         assert_eq!(subject.get_data_strategy(), None);
         assert_eq!(subject.get_data_rights(), None);
     }
