@@ -774,7 +774,7 @@ impl DUP {
     ///
     ///    dup.associate_category(category.clone());
     ///    dup.associate_use(datause.clone());
-    /// 
+    ///
     ///    let mut conditions: Vec<Condition> = Vec::new();
     ///    conditions.push(Condition::Category(category.get_key()));
     ///    conditions.push(Condition::Subject(subject.get_key()));
