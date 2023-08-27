@@ -8,7 +8,7 @@
 //! You can use the [Privacy Taxonomy Explorer](https://ethyca.github.io/fideslang/explorer/) for a graphic representation of the Fides classification groups.
 //!
 //!
-use super::data_category::{DataCategory};
+use super::data_category::DataCategory;
 // use super::data_subject;
 // use super::data_use;
 use std::collections::BTreeMap;
@@ -81,7 +81,7 @@ impl DUP {
     ///         "This is a high-level policy.".to_string(),
     ///         "1.0.1".to_string()
     ///     );
-    /// 
+    ///
     ///     dup.add_category(DataCategory::new(
     ///        "Authentication Data".to_string(),
     ///        "Data used to manage access to the system.".to_string(),
@@ -114,7 +114,7 @@ impl DUP {
     ///         "This is a high-level policy.".to_string(),
     ///         "1.0.1".to_string()
     ///     );
-    /// 
+    ///
     ///     dup.add_category(DataCategory::new(
     ///        "Authentication Data".to_string(),
     ///        "Data used to manage access to the system.".to_string(),
@@ -125,7 +125,7 @@ impl DUP {
     ///        false,
     ///        true,
     ///    ));
-    /// 
+    ///
     ///    assert_eq!(dup.get_categories().len(), 1);
     /// }
     /// ```
@@ -159,9 +159,9 @@ impl DUP {
     ///        false,
     ///        true,
     ///    );
-    /// 
+    ///
     ///    dup.add_category(cat.clone());
-    /// 
+    ///
     ///    dup.remove_category(cat);
     /// }
     /// ```
@@ -170,11 +170,11 @@ impl DUP {
     }
 
     /// Disassociates the specified DataCategory object from the policy using the fides key
-    /// 
+    ///
     /// # Arguments
     ///
     /// * key: String - The fides kay of the Data Category to remove.</br>
-    /// 
+    ///
     /// #Example
     ///
     /// ```
@@ -199,9 +199,9 @@ impl DUP {
     ///        false,
     ///        true,
     ///    );
-    /// 
+    ///
     ///    dup.add_category(cat.clone());
-    /// 
+    ///
     ///    dup.remove_category_by_key(cat.fides_key);
     /// }
     /// ```
@@ -228,7 +228,7 @@ mod tests {
         category
     }
 
-    fn get_dup() -> DUP{
+    fn get_dup() -> DUP {
         let dup = DUP::new(
             "General Policy".to_string(),
             "This is a high-level policy.".to_string(),

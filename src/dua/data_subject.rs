@@ -1,7 +1,7 @@
 //! ### Background
 //! Data Subjects in the taxonomy are designed to support common privacy regulations and standards out of the box, these include GDPR, CCPA, LGPD and ISO 19944.
 //! Referencing: [data_uses.csv](https://ethyca.github.io/fideslang/csv/data_subjects.csv)
-//! 
+//!
 
 use super::data_subjects;
 use derive_more::Display;
@@ -511,7 +511,7 @@ impl DataSubjectFactory {
     /// # Arguments
     ///
     /// * key: String - The string that represents the DataSubject fides_key.</br>
-    /// 
+    ///
     /// #Example
     ///
     /// ```
@@ -543,11 +543,11 @@ impl DataSubjectFactory {
     }
 
     /// Searches the list of active DataSubjects and retrieves the DataSubject object with the specified name
-    /// 
+    ///
     /// # Arguments
     ///
     /// * name: String - The string that represents the DataSubject name.</br>
-    /// 
+    ///
     /// #Example
     ///
     /// ```

@@ -211,221 +211,221 @@ impl DataCategoryFactory {
         list
     }
 
-        /// Returns a list of all the active DataCategory objects
-        ///
-        /// #Example
-        ///
-        /// ```
-        /// extern crate pbd;
-        ///
-        /// use pbd::dua::data_category::DataCategoryFactory;
-        ///
-        /// fn main() {
-        ///     let factory = DataCategoryFactory::new();
-        ///     assert_eq!(factory.get_data_categories().len(), 85);
-        /// }
-        /// ```
-        pub fn get_data_categories(&self) -> Vec<DataCategory> {
-            let filtered: Vec<DataCategory> = self
-                .data_categories
-                .iter()
-                .map(|s| s.clone())
-                .filter(|s| s.active == true)
-                .collect();
+    /// Returns a list of all the active DataCategory objects
+    ///
+    /// #Example
+    ///
+    /// ```
+    /// extern crate pbd;
+    ///
+    /// use pbd::dua::data_category::DataCategoryFactory;
+    ///
+    /// fn main() {
+    ///     let factory = DataCategoryFactory::new();
+    ///     assert_eq!(factory.get_data_categories().len(), 85);
+    /// }
+    /// ```
+    pub fn get_data_categories(&self) -> Vec<DataCategory> {
+        let filtered: Vec<DataCategory> = self
+            .data_categories
+            .iter()
+            .map(|s| s.clone())
+            .filter(|s| s.active == true)
+            .collect();
 
-            filtered.clone()
+        filtered.clone()
+    }
+
+    /// Searches the list of active DataCategories and retrieves the DataCategory object with the specified name
+    ///
+    /// # Arguments
+    ///
+    /// * key: String - The string that represents the DataCategory fides_key.</br>
+    ///
+    /// #Example
+    ///
+    /// ```
+    /// extern crate pbd;
+    ///
+    /// use pbd::dua::data_category::DataCategoryFactory;
+    ///
+    /// fn main() {
+    ///     let factory = DataCategoryFactory::new();
+    ///
+    ///     let category = match factory.get_data_category_by_key("system.authentication".to_string()) {
+    ///         Some(s) => s,
+    ///         None => panic!("Could not find it!"),
+    ///     };
+    /// }
+    /// ```
+    pub fn get_data_category_by_key(&self, key: String) -> Option<DataCategory> {
+        let filtered: Vec<DataCategory> = self
+            .data_categories
+            .iter()
+            .map(|s| s.clone())
+            .filter(|s| s.fides_key == key)
+            .collect();
+        match filtered.len() {
+            0 => None,
+            1 => Some(filtered[0].clone()),
+            _ => panic!("Duplicate DataUse objects found!"),
         }
+    }
 
-        /// Searches the list of active DataCategories and retrieves the DataCategory object with the specified name
-        ///
-        /// # Arguments
-        ///
-        /// * key: String - The string that represents the DataCategory fides_key.</br>
-        ///
-        /// #Example
-        ///
-        /// ```
-        /// extern crate pbd;
-        ///
-        /// use pbd::dua::data_category::DataCategoryFactory;
-        ///
-        /// fn main() {
-        ///     let factory = DataCategoryFactory::new();
-        ///
-        ///     let category = match factory.get_data_category_by_key("system.authentication".to_string()) {
-        ///         Some(s) => s,
-        ///         None => panic!("Could not find it!"),
-        ///     };
-        /// }
-        /// ```
-        pub fn get_data_category_by_key(&self, key: String) -> Option<DataCategory> {
-            let filtered: Vec<DataCategory> = self
-                .data_categories
-                .iter()
-                .map(|s| s.clone())
-                .filter(|s| s.fides_key == key)
-                .collect();
-            match filtered.len() {
-                0 => None,
-                1 => Some(filtered[0].clone()),
-                _ => panic!("Duplicate DataUse objects found!"),
-            }
+    /// Searches the list of active DataCategories and retrieves the DataCategory object with the specified name
+    ///
+    /// # Arguments
+    ///
+    /// * name: String - The string that represents the DataCategory name.</br>
+    ///
+    /// #Example
+    ///
+    /// ```
+    /// extern crate pbd;
+    ///
+    /// use pbd::dua::data_category::DataCategoryFactory;
+    ///
+    /// fn main() {
+    ///     let factory = DataCategoryFactory::new();
+    ///
+    ///     let datause = match factory.get_data_category_by_name("Authentication Data".to_string()) {
+    ///         Some(s) => s,
+    ///         None => panic!("Could not find it!"),
+    ///     };
+    /// }
+    /// ```
+    pub fn get_data_category_by_name(&self, name: String) -> Option<DataCategory> {
+        let filtered: Vec<DataCategory> = self
+            .data_categories
+            .iter()
+            .map(|s| s.clone())
+            .filter(|s| s.name == name)
+            .collect();
+        match filtered.len() {
+            0 => None,
+            1 => Some(filtered[0].clone()),
+            _ => panic!("Duplicate DataUse objects found!"),
         }
+    }
 
-        /// Searches the list of active DataCategories and retrieves the DataCategory object with the specified name
-        ///
-        /// # Arguments
-        ///
-        /// * name: String - The string that represents the DataCategory name.</br>
-        ///
-        /// #Example
-        ///
-        /// ```
-        /// extern crate pbd;
-        ///
-        /// use pbd::dua::data_category::DataCategoryFactory;
-        ///
-        /// fn main() {
-        ///     let factory = DataCategoryFactory::new();
-        ///
-        ///     let datause = match factory.get_data_category_by_name("Authentication Data".to_string()) {
-        ///         Some(s) => s,
-        ///         None => panic!("Could not find it!"),
-        ///     };
-        /// }
-        /// ```
-        pub fn get_data_category_by_name(&self, name: String) -> Option<DataCategory> {
-            let filtered: Vec<DataCategory> = self
-                .data_categories
-                .iter()
-                .map(|s| s.clone())
-                .filter(|s| s.name == name)
-                .collect();
-            match filtered.len() {
-                0 => None,
-                1 => Some(filtered[0].clone()),
-                _ => panic!("Duplicate DataUse objects found!"),
-            }
-        }
+    /// Searches the list of active DataCategories and retrieves all the children of the DataCategory object
+    ///
+    /// # Arguments
+    ///
+    /// * key: String - The string that represents the parent DataCategory fides_key.</br>
+    ///
+    /// #Example
+    ///
+    /// ```
+    /// extern crate pbd;
+    ///
+    /// use pbd::dua::data_category::DataCategoryFactory;
+    ///
+    /// fn main() {
+    ///     let factory = DataCategoryFactory::new();
+    ///
+    ///     let children = factory.get_data_category_children_by_key("user.behavior".to_string());
+    ///     assert_eq!(children.len(), 4);
+    /// }
+    /// ```
+    pub fn get_data_category_children_by_key(&self, key: String) -> Vec<DataCategory> {
+        let filtered: Vec<DataCategory> = self
+            .data_categories
+            .iter()
+            .map(|s| s.clone())
+            .filter(|s| match s.parent_key.clone() {
+                Some(k) => k == key,
+                None => false,
+            })
+            .collect();
+        filtered
+    }
 
-        /// Searches the list of active DataCategories and retrieves all the children of the DataCategory object
-        ///
-        /// # Arguments
-        ///
-        /// * key: String - The string that represents the parent DataCategory fides_key.</br>
-        ///
-        /// #Example
-        ///
-        /// ```
-        /// extern crate pbd;
-        ///
-        /// use pbd::dua::data_category::DataCategoryFactory;
-        ///
-        /// fn main() {
-        ///     let factory = DataCategoryFactory::new();
-        ///
-        ///     let children = factory.get_data_category_children_by_key("user.behavior".to_string());
-        ///     assert_eq!(children.len(), 4);
-        /// }
-        /// ```
-        pub fn get_data_category_children_by_key(&self, key: String) -> Vec<DataCategory> {
-            let filtered: Vec<DataCategory> = self
-                .data_categories
-                .iter()
-                .map(|s| s.clone())
-                .filter(|s| match s.parent_key.clone() {
-                    Some(k) => k == key,
-                    None => false,
-                })
-                .collect();
-            filtered
-        }
+    /// Searches the list of active DataCategories and retrieves the parent of the DataCategory object
+    ///
+    /// # Arguments
+    ///
+    /// * key: String - The string that represents the child DataCategory fides_key.</br>
+    ///
+    /// #Example
+    ///
+    /// ```
+    /// extern crate pbd;
+    ///
+    /// use pbd::dua::data_category::DataCategoryFactory;
+    ///
+    /// fn main() {
+    ///     let factory = DataCategoryFactory::new();
+    ///
+    ///     let parent = factory.get_data_category_parent_by_key("user.biometric".to_string());
+    ///     assert_eq!(parent.unwrap().fides_key, "user".to_string());
+    /// }
+    /// ```
+    pub fn get_data_category_parent_by_key(&self, key: String) -> Option<DataCategory> {
+        let child = self.get_data_category_by_key(key);
+        match child {
+            Some(c) => {
+                let filtered: Vec<DataCategory> = self
+                    .data_categories
+                    .iter()
+                    .map(|s| s.clone())
+                    .filter(|s| match c.parent_key.clone() {
+                        Some(pk) => s.fides_key == pk,
+                        None => false,
+                    })
+                    .collect();
 
-        /// Searches the list of active DataCategories and retrieves the parent of the DataCategory object
-        ///
-        /// # Arguments
-        ///
-        /// * key: String - The string that represents the child DataCategory fides_key.</br>
-        ///
-        /// #Example
-        ///
-        /// ```
-        /// extern crate pbd;
-        ///
-        /// use pbd::dua::data_category::DataCategoryFactory;
-        ///
-        /// fn main() {
-        ///     let factory = DataCategoryFactory::new();
-        ///
-        ///     let parent = factory.get_data_category_parent_by_key("user.biometric".to_string());
-        ///     assert_eq!(parent.unwrap().fides_key, "user".to_string());
-        /// }
-        /// ```
-        pub fn get_data_category_parent_by_key(&self, key: String) -> Option<DataCategory> {
-            let child = self.get_data_category_by_key(key);
-            match child {
-                Some(c) => {
-                    let filtered: Vec<DataCategory> = self
-                        .data_categories
-                        .iter()
-                        .map(|s| s.clone())
-                        .filter(|s| match c.parent_key.clone() {
-                            Some(pk) => s.fides_key == pk,
-                            None => false,
-                        })
-                        .collect();
-
-                    match filtered.len() {
-                        1 => Some(filtered[0].clone()),
-                        _ => None,
-                    }
+                match filtered.len() {
+                    1 => Some(filtered[0].clone()),
+                    _ => None,
                 }
-                None => None,
             }
+            None => None,
         }
+    }
 
-        /// Retrieves the reversed heirarchy list (Child -> Parent) of DataCategories for the DataCategory object
-        ///
-        /// # Arguments
-        ///
-        /// * key: String - The string that represents the child DataCategory fides_key.</br>
-        ///
-        /// #Example
-        ///
-        /// ```
-        /// extern crate pbd;
-        ///
-        /// use pbd::dua::data_category::DataCategoryFactory;
-        ///
-        /// fn main() {
-        ///     let factory = DataCategoryFactory::new();
-        ///
-        ///     let heirarchy = factory.get_reverse_heirarchy_by_key("user.contact.address.city".to_string(), None);
-        ///     assert_eq!(heirarchy.len(), 4);
-        /// }
-        /// ```
-        pub fn get_reverse_heirarchy_by_key(
-            &self,
-            key: String,
-            heirarchy: Option<Vec<DataCategory>>,
-        ) -> Vec<DataCategory> {
-            let mut list = match heirarchy {
-                Some(h) => h,
-                None => Vec::new(),
-            };
+    /// Retrieves the reversed heirarchy list (Child -> Parent) of DataCategories for the DataCategory object
+    ///
+    /// # Arguments
+    ///
+    /// * key: String - The string that represents the child DataCategory fides_key.</br>
+    ///
+    /// #Example
+    ///
+    /// ```
+    /// extern crate pbd;
+    ///
+    /// use pbd::dua::data_category::DataCategoryFactory;
+    ///
+    /// fn main() {
+    ///     let factory = DataCategoryFactory::new();
+    ///
+    ///     let heirarchy = factory.get_reverse_heirarchy_by_key("user.contact.address.city".to_string(), None);
+    ///     assert_eq!(heirarchy.len(), 4);
+    /// }
+    /// ```
+    pub fn get_reverse_heirarchy_by_key(
+        &self,
+        key: String,
+        heirarchy: Option<Vec<DataCategory>>,
+    ) -> Vec<DataCategory> {
+        let mut list = match heirarchy {
+            Some(h) => h,
+            None => Vec::new(),
+        };
 
-            let child = match self.get_data_category_by_key(key.clone()) {
-                Some(c) => c,
-                None => panic!("Invalid DataCategory fides_key {}", key),
-            };
+        let child = match self.get_data_category_by_key(key.clone()) {
+            Some(c) => c,
+            None => panic!("Invalid DataCategory fides_key {}", key),
+        };
 
-            list.push(child.clone());
+        list.push(child.clone());
 
-            match child.parent_key {
-                Some(p) => self.get_reverse_heirarchy_by_key(p, Some(list)),
-                None => list,
-            }
+        match child.parent_key {
+            Some(p) => self.get_reverse_heirarchy_by_key(p, Some(list)),
+            None => list,
         }
+    }
 }
 
 #[cfg(test)]
@@ -450,10 +450,7 @@ mod tests {
     fn test_data_category_from_serialized_ok() {
         let serialized = r#"{"name":"Authentication Data","description":"Data used to manage access to the system.","fides_key":"system.authentication","organization_fides_key":"default_organization","parent_key":"system","tags":null,"is_default":false,"active":true}"#;
         let category = DataCategory::from_serialized(serialized);
-        assert_eq!(
-            category.name,
-            "Authentication Data".to_string()
-        );
+        assert_eq!(category.name, "Authentication Data".to_string());
     }
 
     #[test]
@@ -472,11 +469,10 @@ mod tests {
     fn test_data_category_factory_get_data_category_by_key() {
         let factory = DataCategoryFactory::new();
 
-        let category =
-            match factory.get_data_category_by_key("system.authentication".to_string()) {
-                Some(s) => s,
-                None => panic!("Data Use not found!"),
-            };
+        let category = match factory.get_data_category_by_key("system.authentication".to_string()) {
+            Some(s) => s,
+            None => panic!("Data Use not found!"),
+        };
 
         assert_eq!(category.fides_key, "system.authentication");
     }
@@ -485,11 +481,10 @@ mod tests {
     fn test_data_category_factory_get_data_category_by_name() {
         let factory = DataCategoryFactory::new();
 
-        let category =
-            match factory.get_data_category_by_name("Authentication Data".to_string()) {
-                Some(s) => s,
-                None => panic!("Authentication Data not found!"),
-            };
+        let category = match factory.get_data_category_by_name("Authentication Data".to_string()) {
+            Some(s) => s,
+            None => panic!("Authentication Data not found!"),
+        };
 
         assert_eq!(category.fides_key, "system.authentication");
     }
@@ -536,17 +531,16 @@ mod tests {
     #[test]
     fn test_data_category_factory_get_data_category_parent_by_key() {
         let factory = DataCategoryFactory::new();
-        let parent = factory.get_data_category_parent_by_key("user.behavior.browsing_history".to_string());
+        let parent =
+            factory.get_data_category_parent_by_key("user.behavior.browsing_history".to_string());
         assert_eq!(parent.unwrap().fides_key, "user.behavior".to_string());
     }
 
     #[test]
     fn test_data_category_factory_get_reverse_heirarchy_by_key() {
         let factory = DataCategoryFactory::new();
-        let heirarchy = factory.get_reverse_heirarchy_by_key(
-            "user.contact.address.city".to_string(),
-            None,
-        );
+        let heirarchy =
+            factory.get_reverse_heirarchy_by_key("user.contact.address.city".to_string(), None);
         assert_eq!(heirarchy.len(), 4);
     }
 }
