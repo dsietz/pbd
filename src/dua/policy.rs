@@ -406,7 +406,7 @@ impl DUP {
     ///         "This is a high-level policy.".to_string(),
     ///         "1.0.1".to_string()
     ///     );
-    /// 
+    ///
     ///     let cat = DataCategory::new(
     ///        "Authentication Data".to_string(),
     ///        "Data used to manage access to the system.".to_string(),
@@ -447,7 +447,7 @@ impl DUP {
     ///         "This is a high-level policy.".to_string(),
     ///         "1.0.1".to_string()
     ///     );
-    /// 
+    ///
     ///     let subject = DataSubject::new(
     ///         "Consultant".to_string(),
     ///         "An individual employed in a consultative/temporary capacity by the organization.".to_string(),
