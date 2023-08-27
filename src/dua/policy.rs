@@ -12,8 +12,26 @@ use super::data_category::DataCategory;
 use super::data_subject::DataSubject;
 use super::data_use::DataUse;
 use std::collections::BTreeMap;
-// use derive_more::Display;
+use derive_more::Display;
 
+/// An Enum of any possible item keys that can be associated to a policy
+#[derive(Display, Clone)]
+pub enum Condition {
+    Category(String),
+    Subject(String),
+    Use(String),
+}
+
+// impl Condition {
+//     ///
+//     pub fn get_key(&self) -> String {
+//         match self {
+//             Condition::Category(String) => self.fides_key,
+//             Condition::Subject(String) => self.get_key(),
+//             Condition::Use(String) => self.get_key(),
+//         }
+//     }
+// }
 /// Represents a Data Usage Policy (DUP)
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct DUP {
@@ -694,6 +712,34 @@ impl DUP {
     pub fn has_use(&mut self, key: String) -> bool {
         self.uses.contains_key(&key)
     }
+
+    pub fn match_conditions(&mut self, conditions: Vec<Condition>) -> Vec<Condition> {
+        let mut conflicts = Vec::new();
+        for condition in conditions.into_iter() {
+            match condition.clone() {
+                Condition::Category(String) => {
+                    match self.has_category(condition.to_string()) {
+                        false => conflicts.push(condition),
+                        true => {}
+                    };
+                }
+                Condition::Subject(String) => {
+                    match self.has_subject(condition.to_string()) {
+                        false => conflicts.push(condition),
+                        true => {}
+                    };
+                },
+                Condition::Use(String) => {
+                    match self.has_use(condition.to_string()) {
+                        false => conflicts.push(condition),
+                        true => {}
+                    };
+                },
+            }
+        }
+
+        conflicts
+    }
 }
 
 #[cfg(test)]
@@ -864,5 +910,46 @@ mod tests {
         let mut dup = get_dup();
         dup.associate_use(get_data_use());
         assert_eq!(dup.has_use(get_data_use().get_key()), true);
+    }
+
+    #[test]
+    fn test_dup_match_conditions_all_found() {
+        let mut dup = get_dup();
+        let mut conditions: Vec<Condition> = Vec::new();
+        conditions.push(Condition::Category(get_data_category().get_key()));
+        conditions.push(Condition::Subject(get_data_subject().get_key()));
+        conditions.push(Condition::Use(get_data_use().get_key()));
+        let conflicts = dup.match_conditions(conditions);
+        assert_eq!(conflicts.len(), 3);
+    }
+
+    #[test]
+    fn test_dup_match_conditions_none_found() {
+        let mut dup = get_dup();
+        dup.associate_category(get_data_category());
+        dup.associate_subject(get_data_subject());
+        dup.associate_use(get_data_use());
+
+        let mut conditions: Vec<Condition> = Vec::new();
+        conditions.push(Condition::Category(get_data_category().get_key()));
+        conditions.push(Condition::Subject(get_data_subject().get_key()));
+        conditions.push(Condition::Use(get_data_use().get_key()));
+        let conflicts = dup.match_conditions(conditions);
+        assert_eq!(conflicts.len(), 0);
+    }
+
+    #[test]
+    fn test_dup_match_conditions_some_found() {
+        let mut dup = get_dup();
+        dup.associate_category(get_data_category());
+        dup.associate_use(get_data_use());
+
+        let mut conditions: Vec<Condition> = Vec::new();
+        conditions.push(Condition::Category(get_data_category().get_key()));
+        conditions.push(Condition::Subject(get_data_subject().get_key()));
+        conditions.push(Condition::Use(get_data_use().get_key()));
+        let conflicts = dup.match_conditions(conditions);
+        assert_eq!(conflicts.len(), 1);
+        assert_eq!(conflicts[0].to_string(), get_data_subject().get_key());
     }
 }
