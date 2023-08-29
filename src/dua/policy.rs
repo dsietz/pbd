@@ -274,6 +274,87 @@ impl DUP {
         self.uses.insert(usage.get_key().clone(), usage);
     }
 
+    pub fn as_text(&mut self) -> String {
+        let line_feed = "\r\n";
+        let mut policy = String::new();
+        policy.push_str(&self.name);
+        policy.push_str(line_feed);
+        policy.push_str(line_feed);
+
+        // Data Subjects
+        policy.push_str("Data will be collected from ");
+        match self.get_subjects().len() {
+            0 => {
+                policy.push_str("all types of users.");
+            }
+            _ => {
+                policy.push_str("the following types of users: ");
+                let count = self.get_subjects().len();
+                for (idx, subject) in self.get_subjects().iter().enumerate() {
+                    policy.push_str(&subject.name);
+                    let delimiter = match idx < count - 2 {
+                        true => ", ",
+                        false => match idx == count - 1 {
+                            true => ".",
+                            false => " and ",
+                        },
+                    };
+                    policy.push_str(delimiter);
+                }
+                policy.push_str(line_feed);
+            }
+        }
+
+        // Data Categories
+        policy.push_str("The data being collected will be ");
+        match self.get_categories().len() {
+            0 => {
+                policy.push_str("include all types of data.");
+            }
+            _ => {
+                policy.push_str("limited to the following data: ");
+                let count = self.get_categories().len();
+                for (idx, category) in self.get_categories().iter().enumerate() {
+                    policy.push_str(&category.name);
+                    let delimiter = match idx < count - 2 {
+                        true => ", ",
+                        false => match idx == count - 1 {
+                            true => ".",
+                            false => " and ",
+                        },
+                    };
+                    policy.push_str(delimiter);
+                }
+                policy.push_str(line_feed);
+            }
+        }
+
+        // Data Uses
+        policy.push_str("The data collected can be used for ");
+        match self.get_uses().len() {
+            0 => {
+                policy.push_str("various purposes.");
+            }
+            _ => {
+                policy.push_str("the following purposes: ");
+                let count = self.get_uses().len();
+                for (idx, usage) in self.get_uses().iter().enumerate() {
+                    policy.push_str(&usage.name);
+                    let delimiter = match idx < count - 2 {
+                        true => ", ",
+                        false => match idx == count - 1 {
+                            true => ".",
+                            false => " and ",
+                        },
+                    };
+                    policy.push_str(delimiter);
+                }
+                policy.push_str(line_feed);
+            }
+        }
+
+        policy
+    }
     /// Disassociates the specified DataCategory object from the policy using the key
     ///
     /// # Arguments
@@ -400,6 +481,30 @@ impl DUP {
     /// ```
     pub fn disassociate_use(&mut self, key: String) {
         self.uses.remove(&key);
+    }
+
+    /// Constructs a DUP object from a serialized string
+    ///
+    /// # Arguments
+    ///
+    /// * serialized: &str - The string that represents the serialized object.</br>
+    ///
+    /// #Example
+    ///
+    /// ```rust
+    /// extern crate pbd;
+    ///
+    /// use pbd::dua::policy::DUP;
+    ///
+    /// fn main() {
+    ///     let serialized = r#"{"name":"General Policy","description":"This is a high-level policy.","version":"1.0.1","categories":{"system.authentication":{"name":"Authentication Data","description":"Data used to manage access to the system.","fides_key":"system.authentication","organization_fides_key":"default_organization","parent_key":"system","tags":null,"is_default":true,"active":true}},"subjects":{"consultant":{"name":"Consultant","description":"An individual employed in a consultative/temporary capacity by the organization.","fides_key":"consultant","organization_fides_key":"default_organization","tags":null,"rights":null,"automated_decisions_or_profiling":false,"is_default":true,"active":true}},"uses":{"essential.service.authentication":{"name":"Essential Service Authentication","description":"Authenticate users to the product, service, application or system.","fides_key":"essential.service.authentication","organization_fides_key":"default_organization","parent_key":"essential.service","legal_basis":null,"special_category":null,"recipent":null,"legitimate_interest":false,"legitimate_interest_impact_assessment":null,"tags":null,"is_default":true,"active":true}}}"#;
+    ///     let mut dup = DUP::from_serialized(&serialized);
+    ///     
+    ///     assert_eq!(dup.get_categories().len(), 1);
+    /// }
+    /// ```
+    pub fn from_serialized(serialized: &str) -> DUP {
+        serde_json::from_str(&serialized).unwrap()
     }
 
     /// Retrieves all the associated DataCategory objects
@@ -877,68 +982,73 @@ impl DUP {
 
         conflicts
     }
+
+    /// Serialize a DUP object
+    ///
+    /// # Arguments
+    ///
+    /// * serialized: &str - The string that represents the serialized object.</br>
+    ///
+    /// #Example
+    ///
+    /// ```rust
+    /// extern crate pbd;
+    ///
+    /// use pbd::dua::policy::{Condition, DUP};
+    /// use pbd::dua::data_category::DataCategoryFactory;
+    /// use pbd::dua::data_subject::DataSubjectFactory;
+    /// use pbd::dua::data_use::DataUseFactory;
+    ///
+    /// fn main() {
+    ///     let mut dup = DUP::new(
+    ///         "General Policy".to_string(),
+    ///         "This is a high-level policy.".to_string(),
+    ///         "1.0.1".to_string()
+    ///     );
+    ///     let category_factory = DataCategoryFactory::new();
+    ///     let subject_factory = DataSubjectFactory::new();
+    ///     let use_factory = DataUseFactory::new();
+    ///
+    ///    dup.associate_category(category_factory.get_category_by_key("system.authentication".to_string()).unwrap());
+    ///    dup.associate_subject(subject_factory.get_subject_by_key("consultant".to_string()).unwrap());
+    ///    dup.associate_use(use_factory.get_use_by_key("analytics.reporting".to_string()).unwrap());
+    ///     
+    ///     println!("{:?}", dup.serialize());
+    /// }
+    /// ```
+    pub fn serialize(&mut self) -> String {
+        serde_json::to_string(&self).unwrap()
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::dua::data_subject::{DataRights, DataSubject, Right, Strategy};
-    use crate::dua::data_use::{DataUse, LegalBasis, SpecialCategory};
+    use crate::dua::data_category::DataCategoryFactory;
+    use crate::dua::data_subject::DataSubjectFactory;
+    use crate::dua::data_use::DataUseFactory;
+    use std::fs::File;
+    use std::io::prelude::*;
 
     fn get_data_category() -> DataCategory {
-        let category = DataCategory::new(
-            "Authentication Data".to_string(),
-            "Data used to manage access to the system.".to_string(),
-            "system.authentication".to_string(),
-            "default_organization".to_string(),
-            Some("system".to_string()), // parent key
-            None,                       // tags
-            false,
-            true,
-        );
-        category
+        let factory = DataCategoryFactory::new();
+        factory
+            .get_category_by_key("system.authentication".to_string())
+            .unwrap()
     }
 
     fn get_data_subject() -> DataSubject {
-        let subject = DataSubject::new(
-            "Consultant".to_string(),
-            "An individual employed in a consultative/temporary capacity by the organization."
-                .to_string(),
-            "consultant".to_string(),
-            "default_organization".to_string(),
-            Some(vec!["work".to_string(), "temporary".to_string()]),
-            Some(DataRights::new(
-                Strategy::ALL,
-                vec![Right::Informed, Right::Access],
-            )),
-            false,
-            false,
-            true,
-        );
-        subject
+        let factory = DataSubjectFactory::new();
+        factory
+            .get_subject_by_key("consultant".to_string())
+            .unwrap()
     }
 
     fn get_data_use() -> DataUse {
-        let datause = DataUse::new(
-            "Provide the capability".to_string(),
-            "Provide, give, or make available the product, service, application or system."
-                .to_string(),
-            "provide".to_string(),
-            "default_organization".to_string(),
-            None,
-            Some(LegalBasis::LegitimateInterest),
-            Some(SpecialCategory::VitalInterests),
-            Some(vec![
-                "marketing team".to_string(),
-                "dog shelter".to_string(),
-            ]),
-            false,
-            Some("https://example.org/legitimate_interest_assessment".to_string()),
-            None,
-            false,
-            true,
-        );
-        datause
+        let factory = DataUseFactory::new();
+        factory
+            .get_use_by_key("essential.service.authentication".to_string())
+            .unwrap()
     }
 
     fn get_dup() -> DUP {
@@ -962,6 +1072,46 @@ mod tests {
         let mut dup = get_dup();
         dup.associate_subject(get_data_subject());
         assert_eq!(dup.get_subjects().len(), 1);
+    }
+
+    #[test]
+    fn test_dup_as_text() {
+        let cfactory = DataCategoryFactory::new();
+        let sfactory = DataSubjectFactory::new();
+        let ufactory = DataUseFactory::new();
+        let mut dup = get_dup();
+
+        dup.associate_category(
+            cfactory
+                .get_category_by_key("user.behavior.browsing_history".to_string())
+                .unwrap(),
+        );
+        dup.associate_category(
+            cfactory
+                .get_category_by_key("user.behavior.media_consumption".to_string())
+                .unwrap(),
+        );
+        dup.associate_subject(sfactory.get_subject_by_key("customer".to_string()).unwrap());
+        dup.associate_subject(sfactory.get_subject_by_key("prospect".to_string()).unwrap());
+        dup.associate_use(
+            ufactory
+                .get_use_by_key("marketing.advertising.profiling".to_string())
+                .unwrap(),
+        );
+        dup.associate_use(
+            ufactory
+                .get_use_by_key("marketing.advertising.serving".to_string())
+                .unwrap(),
+        );
+        dup.associate_use(
+            ufactory
+                .get_use_by_key("marketing.communications.email".to_string())
+                .unwrap(),
+        );
+
+        print!("{}", dup.as_text());
+        let mut file = File::create("./tests/output/policy.txt").unwrap();
+        file.write_all(dup.as_text().as_bytes()).unwrap();
     }
 
     #[test]
@@ -1088,5 +1238,17 @@ mod tests {
         let conflicts = dup.match_conditions(conditions);
         assert_eq!(conflicts.len(), 1);
         assert_eq!(conflicts[0].to_string(), get_data_subject().get_key());
+    }
+
+    #[test]
+    fn test_dup_serialize_ok() {
+        let serialized = r#"{"name":"General Policy","description":"This is a high-level policy.","version":"1.0.1","categories":{"system.authentication":{"name":"Authentication Data","description":"Data used to manage access to the system.","fides_key":"system.authentication","organization_fides_key":"default_organization","parent_key":"system","tags":null,"is_default":true,"active":true}},"subjects":{"consultant":{"name":"Consultant","description":"An individual employed in a consultative/temporary capacity by the organization.","fides_key":"consultant","organization_fides_key":"default_organization","tags":null,"rights":null,"automated_decisions_or_profiling":false,"is_default":true,"active":true}},"uses":{"essential.service.authentication":{"name":"Essential Service Authentication","description":"Authenticate users to the product, service, application or system.","fides_key":"essential.service.authentication","organization_fides_key":"default_organization","parent_key":"essential.service","legal_basis":null,"special_category":null,"recipent":null,"legitimate_interest":false,"legitimate_interest_impact_assessment":null,"tags":null,"is_default":true,"active":true}}}"#;
+        let mut dup = get_dup();
+
+        dup.associate_category(get_data_category());
+        dup.associate_subject(get_data_subject());
+        dup.associate_use(get_data_use());
+
+        assert_eq!(dup.serialize(), serialized);
     }
 }

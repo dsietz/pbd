@@ -1,0 +1,5 @@
+General Policy
+
+Data will be collected from the following types of users: Customer and Prospect.
+The data being collected will be limited to the following data: Browsing History and Media Consumption.
+The data collected can be used for the following purposes: Profiling for Advertising, Essential for Serving Ads and Marketing Email Communications.
