@@ -1,4 +1,7 @@
 General Policy
+(version: 1.0.1)
+
+This is a high-level policy.
 
 Data will be collected from the following types of users: Customer and Prospect.
 The data being collected will be limited to the following data: Browsing History and Media Consumption.

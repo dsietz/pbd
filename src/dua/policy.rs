@@ -138,7 +138,6 @@ impl DUP {
     ///     );
     /// }
     /// ```
-    ///
     pub fn new(nme: String, descr: String, ver: String) -> Self {
         DUP {
             name: nme,
@@ -274,10 +273,81 @@ impl DUP {
         self.uses.insert(usage.get_key().clone(), usage);
     }
 
+    /// Converts the policy to a human readable format as text
+    ///
+    /// #Example
+    ///
+    /// ```rust
+    /// extern crate pbd;
+    ///
+    /// use pbd::dua::policy::DUP;
+    /// use pbd::dua::data_category::DataCategoryFactory;
+    /// use pbd::dua::data_subject::DataSubjectFactory;
+    /// use pbd::dua::data_use::DataUseFactory;
+    ///
+    /// fn main() {
+    ///     let cfactory = DataCategoryFactory::new();
+    ///     let sfactory = DataSubjectFactory::new();
+    ///     let ufactory = DataUseFactory::new();
+    ///     let mut dup = DUP::new(
+    ///         "General Marketing Policy".to_string(),
+    ///         "This policy explains the manner in which your data will be used for marketing purposes.".to_string(),
+    ///         "1.0.0".to_string()
+    ///     );
+    /// 
+    ///     dup.associate_category(
+    ///         cfactory
+    ///             .get_category_by_key("user.behavior.browsing_history".to_string())
+    ///             .unwrap(),
+    ///     );
+    ///     dup.associate_category(
+    ///         cfactory
+    ///             .get_category_by_key("user.behavior.media_consumption".to_string())
+    ///             .unwrap(),
+    ///     );
+    ///     dup.associate_subject(sfactory.get_subject_by_key("customer".to_string()).unwrap());
+    ///     dup.associate_subject(sfactory.get_subject_by_key("prospect".to_string()).unwrap());
+    ///     dup.associate_use(
+    ///         ufactory
+    ///             .get_use_by_key("marketing.advertising.profiling".to_string())
+    ///             .unwrap(),
+    ///     );
+    ///     dup.associate_use(
+    ///         ufactory
+    ///             .get_use_by_key("marketing.advertising.serving".to_string())
+    ///             .unwrap(),
+    ///     );
+    ///     dup.associate_use(
+    ///         ufactory
+    ///             .get_use_by_key("marketing.communications.email".to_string())
+    ///             .unwrap(),
+    ///     );
+    ///     
+    ///     print!("{}", dup.as_text());
+    /// 
+    ///     /* General Marketing Policy
+    ///      * (version: 1.0.0)
+    ///      * 
+    ///      * This policy explains the manner in which your data will be used for marketing purposes.
+    ///      * 
+    ///      * Data will be collected from the following types of users: Customer and Prospect.
+    ///      * The data being collected will be limited to the following data: Browsing History and Media Consumption.
+    ///      * The data collected can be used for the following purposes: Profiling for Advertising, Essential for Serving Ads and Marketing Email Communications.
+    ///     */ 
+    /// }
+    /// ```
     pub fn as_text(&mut self) -> String {
         let line_feed = "\r\n";
         let mut policy = String::new();
         policy.push_str(&self.name);
+        policy.push_str(line_feed);
+        policy.push_str("(version: ");
+        policy.push_str(&self.version);
+        policy.push_str(")");
+        policy.push_str(line_feed);
+        policy.push_str(line_feed);
+
+        policy.push_str(&self.description);
         policy.push_str(line_feed);
         policy.push_str(line_feed);
 
