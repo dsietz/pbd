@@ -8,7 +8,7 @@
 //! You can use the [Privacy Taxonomy Explorer](https://ethyca.github.io/fideslang/explorer/) for a graphic representation of the Fides classification groups.
 //!
 //! ### Usage
-//! A DUP (Data Usage Policy) allows us to define standardized usage policies that can be easily understood by a user, will also being able to apply it programmatically during the application runtime.
+//! A DUP (Data Usage Policy) allows us to define standardized usage policies that can be easily understood by a user, while also being able to apply it programmatically during the application runtime.
 //! These "Opt-In" policies can then be added to the DUA (Data Usage Agreement) so that applications and processors (e.g.: microservices) can dynamically determine if and how they are permitted to utilize the data prior to processing it.
 //!
 //! ```rust
@@ -87,16 +87,6 @@ pub enum Condition {
     Use(String),
 }
 
-// impl Condition {
-//     ///
-//     pub fn get_key(&self) -> String {
-//         match self {
-//             Condition::Category(String) => self.fides_key,
-//             Condition::Subject(String) => self.get_key(),
-//             Condition::Use(String) => self.get_key(),
-//         }
-//     }
-// }
 /// Represents a Data Usage Policy (DUP)
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct DUP {
@@ -294,7 +284,7 @@ impl DUP {
     ///         "This policy explains the manner in which your data will be used for marketing purposes.".to_string(),
     ///         "1.0.0".to_string()
     ///     );
-    /// 
+    ///
     ///     dup.associate_category(
     ///         cfactory
     ///             .get_category_by_key("user.behavior.browsing_history".to_string())
@@ -324,16 +314,181 @@ impl DUP {
     ///     );
     ///     
     ///     print!("{}", dup.as_text());
-    /// 
+    ///
     ///     /* General Marketing Policy
     ///      * (version: 1.0.0)
-    ///      * 
+    ///      *
     ///      * This policy explains the manner in which your data will be used for marketing purposes.
-    ///      * 
+    ///      *
     ///      * Data will be collected from the following types of users: Customer and Prospect.
     ///      * The data being collected will be limited to the following data: Browsing History and Media Consumption.
     ///      * The data collected can be used for the following purposes: Profiling for Advertising, Essential for Serving Ads and Marketing Email Communications.
-    ///     */ 
+    ///     */
+    /// }
+    /// ```
+    pub fn as_html(&mut self) -> String {
+        let line_feed = "</br>";
+        let mut policy = String::new();
+        policy.push_str("<div className='dup' name='");
+        policy.push_str(&self.name);
+        policy.push_str("'>");
+        policy.push_str(&self.name);
+        policy.push_str("</div>");
+        policy.push_str(line_feed);
+        policy.push_str("<div className='dup-verion' name='");
+        policy.push_str(&self.version);
+        policy.push_str("'>");
+        policy.push_str("(version: ");
+        policy.push_str(&self.version);
+        policy.push_str(")");
+        policy.push_str("</div>");
+        policy.push_str(line_feed);
+        policy.push_str(line_feed);
+        policy.push_str("<div className='dup-description' name='");
+        policy.push_str(&self.name);
+        policy.push_str(" Description'><b>");
+        policy.push_str(&self.description);
+        policy.push_str("</b>");
+        policy.push_str(line_feed);
+        policy.push_str(line_feed);
+
+        // Data Subjects
+        policy.push_str("Data will be collected from ");
+        match self.get_subjects().len() {
+            0 => {
+                policy.push_str("all types of users.");
+            }
+            _ => {
+                policy.push_str("the following types of users: ");
+                let count = self.get_subjects().len();
+                for (idx, subject) in self.get_subjects().iter().enumerate() {
+                    policy.push_str(&subject.name);
+                    let delimiter = match idx < count - 2 {
+                        true => ", ",
+                        false => match idx == count - 1 {
+                            true => ".",
+                            false => " and ",
+                        },
+                    };
+                    policy.push_str(delimiter);
+                }
+                policy.push_str(line_feed);
+            }
+        }
+
+        // Data Categories
+        policy.push_str("The data being collected will be ");
+        match self.get_categories().len() {
+            0 => {
+                policy.push_str("include all types of data.");
+            }
+            _ => {
+                policy.push_str("limited to the following data: ");
+                let count = self.get_categories().len();
+                for (idx, category) in self.get_categories().iter().enumerate() {
+                    policy.push_str(&category.name);
+                    let delimiter = match idx < count - 2 {
+                        true => ", ",
+                        false => match idx == count - 1 {
+                            true => ".",
+                            false => " and ",
+                        },
+                    };
+                    policy.push_str(delimiter);
+                }
+                policy.push_str(line_feed);
+            }
+        }
+
+        // Data Uses
+        policy.push_str("The data collected can be used for ");
+        match self.get_uses().len() {
+            0 => {
+                policy.push_str("various purposes.");
+            }
+            _ => {
+                policy.push_str("the following purposes: ");
+                let count = self.get_uses().len();
+                for (idx, usage) in self.get_uses().iter().enumerate() {
+                    policy.push_str(&usage.name);
+                    let delimiter = match idx < count - 2 {
+                        true => ", ",
+                        false => match idx == count - 1 {
+                            true => ".",
+                            false => " and ",
+                        },
+                    };
+                    policy.push_str(delimiter);
+                }
+                policy.push_str(line_feed);
+            }
+        }
+
+        policy.push_str("</div>");
+        policy
+    }
+
+    /// Converts the policy to a human readable format as text
+    ///
+    /// #Example
+    ///
+    /// ```rust
+    /// extern crate pbd;
+    ///
+    /// use pbd::dua::policy::DUP;
+    /// use pbd::dua::data_category::DataCategoryFactory;
+    /// use pbd::dua::data_subject::DataSubjectFactory;
+    /// use pbd::dua::data_use::DataUseFactory;
+    ///
+    /// fn main() {
+    ///     let cfactory = DataCategoryFactory::new();
+    ///     let sfactory = DataSubjectFactory::new();
+    ///     let ufactory = DataUseFactory::new();
+    ///     let mut dup = DUP::new(
+    ///         "General Marketing Policy".to_string(),
+    ///         "This policy explains the manner in which your data will be used for marketing purposes.".to_string(),
+    ///         "1.0.0".to_string()
+    ///     );
+    ///
+    ///     dup.associate_category(
+    ///         cfactory
+    ///             .get_category_by_key("user.behavior.browsing_history".to_string())
+    ///             .unwrap(),
+    ///     );
+    ///     dup.associate_category(
+    ///         cfactory
+    ///             .get_category_by_key("user.behavior.media_consumption".to_string())
+    ///             .unwrap(),
+    ///     );
+    ///     dup.associate_subject(sfactory.get_subject_by_key("customer".to_string()).unwrap());
+    ///     dup.associate_subject(sfactory.get_subject_by_key("prospect".to_string()).unwrap());
+    ///     dup.associate_use(
+    ///         ufactory
+    ///             .get_use_by_key("marketing.advertising.profiling".to_string())
+    ///             .unwrap(),
+    ///     );
+    ///     dup.associate_use(
+    ///         ufactory
+    ///             .get_use_by_key("marketing.advertising.serving".to_string())
+    ///             .unwrap(),
+    ///     );
+    ///     dup.associate_use(
+    ///         ufactory
+    ///             .get_use_by_key("marketing.communications.email".to_string())
+    ///             .unwrap(),
+    ///     );
+    ///     
+    ///     print!("{}", dup.as_text());
+    ///
+    ///     /* General Marketing Policy
+    ///      * (version: 1.0.0)
+    ///      *
+    ///      * This policy explains the manner in which your data will be used for marketing purposes.
+    ///      *
+    ///      * Data will be collected from the following types of users: Customer and Prospect.
+    ///      * The data being collected will be limited to the following data: Browsing History and Media Consumption.
+    ///      * The data collected can be used for the following purposes: Profiling for Advertising, Essential for Serving Ads and Marketing Email Communications.
+    ///     */
     /// }
     /// ```
     pub fn as_text(&mut self) -> String {
@@ -425,6 +580,7 @@ impl DUP {
 
         policy
     }
+
     /// Disassociates the specified DataCategory object from the policy using the key
     ///
     /// # Arguments
@@ -1142,6 +1298,46 @@ mod tests {
         let mut dup = get_dup();
         dup.associate_subject(get_data_subject());
         assert_eq!(dup.get_subjects().len(), 1);
+    }
+
+    #[test]
+    fn test_dup_as_html() {
+        let cfactory = DataCategoryFactory::new();
+        let sfactory = DataSubjectFactory::new();
+        let ufactory = DataUseFactory::new();
+        let mut dup = get_dup();
+
+        dup.associate_category(
+            cfactory
+                .get_category_by_key("user.behavior.browsing_history".to_string())
+                .unwrap(),
+        );
+        dup.associate_category(
+            cfactory
+                .get_category_by_key("user.behavior.media_consumption".to_string())
+                .unwrap(),
+        );
+        dup.associate_subject(sfactory.get_subject_by_key("customer".to_string()).unwrap());
+        dup.associate_subject(sfactory.get_subject_by_key("prospect".to_string()).unwrap());
+        dup.associate_use(
+            ufactory
+                .get_use_by_key("marketing.advertising.profiling".to_string())
+                .unwrap(),
+        );
+        dup.associate_use(
+            ufactory
+                .get_use_by_key("marketing.advertising.serving".to_string())
+                .unwrap(),
+        );
+        dup.associate_use(
+            ufactory
+                .get_use_by_key("marketing.communications.email".to_string())
+                .unwrap(),
+        );
+
+        print!("{}", dup.as_html());
+        let mut file = File::create("./tests/output/policy.html").unwrap();
+        file.write_all(dup.as_html().as_bytes()).unwrap();
     }
 
     #[test]
