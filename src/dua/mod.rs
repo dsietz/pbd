@@ -26,20 +26,20 @@
 //!     >
 //!     > *HTTP Header*
 //!     >
-//!     > Data-Usage-Agreement: [{"agreement_name":"billing","location":"www.dua.org/billing.pdf","agreed_dtm": 1553988607}]
+//!     > Data-Usage-Agreement: [{"agreement_name":"billing","location":"https://iStore.example.org/dup/v2/billing.pdf","agreed_dtm": 1553988607}]
 //!     
 //!
 //!
 //! ---
 //!
 //! One way is to incorporate the use of DUA objects is directly in the code.
-//! ```
+//! ```rust
 //! extern crate pbd;
 //!
 //! use pbd::dua::DUA;
 //!
 //! fn main() {
-//!     let serialized = r#"{ "agreement_name": "For Billing Purpose", "location": "www.dua.org/billing.pdf", "agreed_dtm": 1553988607 }"#;
+//!     let serialized = r#"{ "agreement_name": "For Billing Purpose", "location": "https://iStore.example.org/dup/v2/billing.pdf", "agreed_dtm": 1553988607 }"#;
 //!     let dua = DUA::from_serialized(&serialized);
 //!
 //!     match dua.agreement_name.as_ref() {
@@ -47,7 +47,12 @@
 //!          _ => println!("Oops: We can't use the data this way!")
 //!      }
 //!     
-//!     // Addtionally, check which version of the agreement aligns with the agreed_dtm (if the agreement is under version control).
+//!     // Additionally, retrieve the Data Usage Policy that was agreed to using the DUA `location` attribute and
+//!     // check how the Data Usage Policy allows the processor (Actor) to use the data,
+//!     // (e.g.: The DUP may have only an associated usage of `essential.service.payment_processing`
+//!     //        with an associated category of `user.financial.credit_card`, so the bank account information
+//!     //        sent to the processor cannot be used to process a payment because the customer never agreed
+//!     //        to have their bank account data used in that manner).
 //! }
 //! ```
 //!    
@@ -60,7 +65,7 @@ pub static DUA_HEADER: &str = "Data-Usage-Agreement";
 pub struct DUA {
     /// The common name of the Data Usage Agreement, (e.g.: For Billing Purpose)
     pub agreement_name: String,
-    /// The URI where the version of the DUA can be found, (e.g.: https://iStore.example.org/dua/v2/billing.pdf)
+    /// The URI where the version of the DUP (the agreed upon Data Usage Policy) can be found, (e.g.: https://iStore.example.org/dup/v2/billing.pdf)
     pub location: String,
     /// The Unix Epoch time when the DUA was agreed to
     pub agreed_dtm: u64,
@@ -77,7 +82,7 @@ impl DUA {
     ///
     /// #Example
     ///
-    /// ```
+    /// ```rust
     /// extern crate pbd;
     ///
     /// use pbd::dua::DUA;
@@ -107,7 +112,7 @@ impl DUA {
     ///
     /// #Example
     ///
-    /// ```
+    /// ```rust
     /// extern crate pbd;
     ///
     /// use pbd::dua::DUA;
@@ -131,7 +136,7 @@ impl DUA {
     ///
     /// #Example
     ///
-    /// ```
+    /// ```rust
     /// extern crate pbd;
     ///
     /// use pbd::dua::DUA;
@@ -154,9 +159,14 @@ impl DUA {
     }
 }
 
+mod data_categories;
+pub mod data_category;
+pub mod data_subject;
+mod data_subjects;
+pub mod data_use;
+mod data_uses;
 pub mod error;
-pub mod extractor;
-pub mod middleware;
+pub mod policy;
 
 // Unit Tests
 #[cfg(test)]

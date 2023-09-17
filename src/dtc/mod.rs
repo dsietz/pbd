@@ -12,7 +12,7 @@
 //! ### Usage
 //! Whenever the data is touched by a processor or landed in a location, we have the Tracker add a Marker its MarkerChain.
 //!
-//! ```
+//! ```rust
 //! extern crate pbd;
 //!
 //! use pbd::dtc::Tracker;
@@ -30,7 +30,7 @@
 //!
 //! We can ensure that the MarkerChain has been tampered with outside of the Tracker's control (e.g.: `tracker.serialize()` => change the JSON => `Tracker::from_serialize()`)
 //! by calling the `is_valid()` method.
-//! ```
+//! ```rust
 //! extern crate pbd;
 //! extern crate json;
 //!
@@ -86,7 +86,7 @@ impl MarkerIdentifier {
     ///
     /// #Example
     ///
-    /// ```
+    /// ```rust
     /// extern crate pbd;
     ///
     /// use pbd::dtc::Marker;
@@ -126,7 +126,7 @@ impl Marker {
     ///
     /// #Example
     ///
-    /// ```
+    /// ```rust
     /// extern crate pbd;
     ///
     /// use pbd::dtc::Marker;
@@ -171,7 +171,7 @@ impl Marker {
     ///
     /// #Example
     ///
-    /// ```
+    /// ```rust
     /// extern crate pbd;
     ///
     /// use pbd::dtc::Marker;
@@ -202,7 +202,7 @@ impl Marker {
     ///
     /// #Example
     ///
-    /// ```
+    /// ```rust
     /// extern crate pbd;
     ///
     /// use pbd::dtc::Marker;
@@ -233,7 +233,7 @@ impl Tracker {
     ///
     /// #Example
     ///
-    /// ```
+    /// ```rust
     /// extern crate pbd;
     ///
     /// use pbd::dtc::Tracker;
@@ -264,7 +264,7 @@ impl Tracker {
     ///
     /// #Example
     ///
-    /// ```
+    /// ```rust
     /// extern crate pbd;
     ///
     /// use pbd::dtc::Tracker;
@@ -291,7 +291,7 @@ impl Tracker {
     ///
     /// #Example
     ///
-    /// ```
+    /// ```rust
     /// extern crate pbd;
     ///
     /// use pbd::dtc::Tracker;
@@ -318,7 +318,7 @@ impl Tracker {
     ///
     /// #Example
     ///
-    /// ```
+    /// ```rust
     /// extern crate pbd;
     ///
     /// use pbd::dtc::Tracker;
@@ -342,7 +342,7 @@ impl Tracker {
     ///
     /// #Example
     ///
-    /// ```
+    /// ```rust
     /// extern crate pbd;
     ///
     /// use pbd::dtc::Tracker;
@@ -363,7 +363,7 @@ impl Tracker {
     ///
     /// #Example
     ///
-    /// ```
+    /// ```rust
     /// extern crate pbd;
     ///
     /// use pbd::dtc::Tracker;
@@ -398,7 +398,7 @@ impl Tracker {
     ///
     /// #Example
     ///
-    /// ```
+    /// ```rust
     /// extern crate pbd;
     ///
     /// use pbd::dtc::Tracker;
@@ -419,7 +419,7 @@ impl Tracker {
     ///
     /// #Example
     ///
-    /// ```
+    /// ```rust
     /// extern crate pbd;
     ///
     /// use pbd::dtc::Tracker;
@@ -437,8 +437,6 @@ impl Tracker {
 }
 
 pub mod error;
-pub mod extractor;
-pub mod middleware;
 
 // Unit Tests
 #[cfg(test)]

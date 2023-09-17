@@ -1,6 +1,5 @@
 //! Data Privacy Inspector specific Errors
 
-use actix_web::ResponseError;
 use derive_more::Display;
 use std::error;
 
@@ -12,8 +11,6 @@ pub enum Error {
 }
 
 impl error::Error for Error {}
-
-impl ResponseError for Error {}
 
 #[cfg(test)]
 mod tests {

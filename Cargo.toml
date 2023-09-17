@@ -1,6 +1,6 @@
 [package]
 name = "pbd"
-version = "0.4.1"
+version = "0.5.0"
 authors = ["dsietz <davidsietz@yahoo.com>"]
 edition = "2018"
 readme = "README.md"
@@ -26,8 +26,8 @@ maintenance = {status = "actively-developed"}
 
 [features]
 default = ["dua", "dtc", "dsg", "dpi"]
-dua = ["actix-web", "actix-service", "futures", "rayon", "reqwest"] # Data Usage Agreement funcitonality
-dtc =["actix-web", "actix-service", "pow_sha256", "base64"] # Data Tracker Chain functionality
+dua = ["futures", "rayon", "reqwest"] # Data Usage Agreement functionality
+dtc =["pow_sha256", "base64"] # Data Tracker Chain functionality
 dsg =["bytes", "openssl", "rand"] # Data Security Guard functionality
 dpi = ["multimap", "eddie", "levenshtein", "rayon", "regex", "rust-tfidf"] # Data Privacy Inspector functionality
 
@@ -39,9 +39,6 @@ serde_derive = "~1.0"
 serde_json = "~1.0"
 derive_more = "~0.99"
 json = "~0.12"
-#actix-rt = { version = "1.1", optional = true }
-actix-web = { version = "~3", optional = true }
-actix-service = { version = "^1", optional = true }
 futures = { version = "~0.3", optional = true }
 rayon = { version = "~1.5", optional = true }
 pow_sha256 = { version = "~0.2", optional = true }
@@ -49,7 +46,7 @@ base64 = { version = "~0.12", optional = true }
 rand = { version = "~0.7", optional = true }
 openssl = { version = "~0.10", optional = true }
 bytes = { version = "~0.5", optional = true }
-regex = { version = "~1.4", optional = true }
+regex = { version = "~1.9", optional = true }
 eddie = { version = "~0.4", optional = true }
 multimap = { version = "~0.8.2", optional = true }
 rust-tfidf = { version = "~1.1", optional = true }
@@ -62,3 +59,4 @@ features = ["blocking"]
 
 [dev-dependencies]
 actix-rt = "^1"
+actix-web = "~3"
